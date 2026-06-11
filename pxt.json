@@ -1,5 +1,5 @@
 {
-    "name": "pxt-double-vl53l0x-mcp23017",
+    "name": "AnDoo",
     "version": "0.0.2",
     "description": "Dual VL53L0X and MCP23017 extension for micro:bit",
     "dependencies": {
