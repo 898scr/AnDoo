@@ -65,7 +65,7 @@ namespace doubleVL53L0X {
     }
 }
 
-//% color="#4G85E6" weight=90 icon="\uf00a" block="MCP23017拡張"
+//% color="#4185E6" weight=90 icon="\uf00a" block="MCP23017拡張"
 namespace mcp23017 {
     const MCP23017_ADDR = 0x20; // MCP23017の標準I2Cアドレス
 
