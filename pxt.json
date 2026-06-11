@@ -1,7 +1,7 @@
 {
-    "name": "pxt-double-vl53l0x",
-    "version": "0.0.1",
-    "description": "Dual VL53L0X sensor extension for micro:bit",
+    "name": "pxt-double-vl53l0x-mcp23017",
+    "version": "0.0.2",
+    "description": "Dual VL53L0X and MCP23017 extension for micro:bit",
     "dependencies": {
         "core": "*",
         "microphone": "*"

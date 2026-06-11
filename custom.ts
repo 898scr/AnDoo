@@ -1,7 +1,3 @@
-/// <reference path="../../node_modules/pxt-core/built/pxtsim.d.ts"/>
-/// <reference path="../../node_modules/pxt-core/localtypings/pxtarm.d.ts"/>
-/// <reference path="../../node_modules/pxt-core/localtypings/pxtcore.d.ts"/>
-
 //% color="#00BCD4" weight=100 icon="\uf140" block="2連VL53L0X"
 namespace doubleVL53L0X {
     const ADDR_A = 0x30; // 変更後のセンサーAの番号
@@ -29,28 +25,20 @@ namespace doubleVL53L0X {
      */
     //% block="センサーを初期化 XSHUT_A %pinA XSHUT_B %pinB"
     export function initSensors(pinA: DigitalPin, pinB: DigitalPin): void {
-        // 1. 両方のセンサーを一旦眠らせる
         pins.digitalWritePin(pinA, 0);
         pins.digitalWritePin(pinB, 0);
         basic.pause(50);
 
-        // 2. センサーAだけを起こす
         pins.digitalWritePin(pinA, 1);
         basic.pause(50);
 
-        // 3. 起きているセンサーAのアドレスを 0x29 -> 0x30 に書き換える
-        // (レジスタ 0x8A に新しいアドレスを書き込みます)
         i2cWriteReg(0x29, 0x8A, ADDR_A);
         basic.pause(10);
 
-        // 4. センサーBを起こす（こっちは初期値 0x29 のままになる）
         pins.digitalWritePin(pinB, 1);
         basic.pause(50);
 
-        // 5. それぞれのセンサーの初期設定（データ測定を有効化）
-        // センサーA (0x30)
-        i2cWriteReg(ADDR_A, 0x00, 0x01); // 開始コマンドなど
-        // センサーB (0x29)
+        i2cWriteReg(ADDR_A, 0x00, 0x01);
         i2cWriteReg(ADDR_B, 0x00, 0x01);
         
         basic.pause(50);
@@ -61,9 +49,7 @@ namespace doubleVL53L0X {
      */
     //% block="センサーAの距離 (mm)"
     export function getDistanceA(): number {
-        // VL53L0Xの距離データレジスタ(0x14)から読み取り
         let dist = i2cRead2Bytes(ADDR_A, 0x14);
-        // エラー値（通常20mm以下やエラー時は大きな値になります）の簡易フィルター
         if (dist > 8000) return 0;
         return dist;
     }
@@ -76,5 +62,111 @@ namespace doubleVL53L0X {
         let dist = i2cRead2Bytes(ADDR_B, 0x14);
         if (dist > 8000) return 0;
         return dist;
+    }
+}
+
+//% color="#4G85E6" weight=90 icon="\uf00a" block="MCP23017拡張"
+namespace mcp23017 {
+    const MCP23017_ADDR = 0x20; // MCP23017の標準I2Cアドレス
+
+    const IODIRA = 0x00; // ポートAの入出力設定
+    const IODIRB = 0x01; // ポートBの入出力設定
+    const GPIOA = 0x12;  // ポートAのデータ
+    const GPIOB = 0x13;  // ポートBのデータ
+
+    let current_output_a = 0x00;
+    let current_output_b = 0x00;
+
+    export enum MCPPin {
+        A0 = 0, A1 = 1, A2 = 2, A3 = 3, A4 = 4, A5 = 5, A6 = 6, A7 = 7,
+        B0 = 8, B1 = 9, B2 = 10, B3 = 11, B4 = 12, B5 = 13, B6 = 14, B7 = 15
+    }
+
+    export enum PinMode {
+        //% block="出力"
+        Output = 0,
+        //% block="入力"
+        Input = 1
+    }
+
+    function writeReg(reg: number, val: number): void {
+        let buf = pins.createBuffer(2);
+        buf.setNumber(NumberFormat.UInt8LE, 0, reg);
+        buf.setNumber(NumberFormat.UInt8LE, 1, val);
+        pins.i2cWriteBuffer(MCP23017_ADDR, buf);
+    }
+
+    function readReg(reg: number): number {
+        pins.i2cWriteNumber(MCP23017_ADDR, reg, NumberFormat.UInt8LE, true);
+        return pins.i2cReadNumber(MCP23017_ADDR, NumberFormat.UInt8LE, false);
+    }
+
+    /**
+     * MCP23017を初期化します（すべてのピンを出力モードにします）
+     */
+    //% block="MCP23017を初期化する"
+    export function init(): void {
+        writeReg(IODIRA, 0x00);
+        writeReg(IODIRB, 0x00);
+        writeReg(GPIOA, 0x00);
+        writeReg(GPIOB, 0x00);
+        current_output_a = 0x00;
+        current_output_b = 0x00;
+    }
+
+    /**
+     * 指定したピンのモード（入力・出力）を設定します
+     */
+    //% block="MCP23017の ピン %pin を %mode に設定"
+    export function setPinMode(pin: MCPPin, mode: PinMode): void {
+        let isB = pin >= 8;
+        let bit = isB ? pin - 8 : pin;
+        let reg = isB ? IODIRB : IODIRA;
+        
+        let current_dir = readReg(reg);
+        if (mode == PinMode.Input) {
+            current_dir |= (1 << bit);
+        } else {
+            current_dir &= ~(1 << bit);
+        }
+        writeReg(reg, current_dir);
+    }
+
+    /**
+     * 指定したピンにデジタル値（1または0）を出力します
+     */
+    //% block="MCP23017の ピン %pin に %value を出力"
+    //% value.min=0 value.max=1
+    export function digitalWrite(pin: MCPPin, value: number): void {
+        let isB = pin >= 8;
+        let bit = isB ? pin - 8 : pin;
+        let reg = isB ? GPIOB : GPIOA;
+        let current_val = isB ? current_output_b : current_output_a;
+
+        if (value == 1) {
+            current_val |= (1 << bit);
+        } else {
+            current_val &= ~(1 << bit);
+        }
+
+        if (isB) {
+            current_output_b = current_val;
+        } else {
+            current_output_a = current_val;
+        }
+        writeReg(reg, current_val);
+    }
+
+    /**
+     * 指定したピンのデジタル入力状態（1または0）を読み取ります
+     */
+    //% block="MCP23017の ピン %pin の入力状態"
+    export function digitalRead(pin: MCPPin): number {
+        let isB = pin >= 8;
+        let bit = isB ? pin - 8 : pin;
+        let reg = isB ? GPIOB : GPIOA;
+
+        let reg_val = readReg(reg);
+        return (reg_val >> bit) & 1;
     }
 }
