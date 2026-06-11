@@ -32,12 +32,15 @@ namespace doubleVL53L0X {
         pins.digitalWritePin(pinA, 1);
         basic.pause(50);
 
-        i2cWriteReg(0x29, 0x8A, ADDR_A);
+        // 0x29(初期アドレス)のセンサーAを、ADDR_A(0x30)に変更する
+        // VL53L0XのI2Cアドレスレジスタは0x22
+        i2cWriteReg(0x29, 0x22, ADDR_A);
         basic.pause(10);
 
         pins.digitalWritePin(pinB, 1);
         basic.pause(50);
 
+        // センサーの開始処理
         i2cWriteReg(ADDR_A, 0x00, 0x01);
         i2cWriteReg(ADDR_B, 0x00, 0x01);
         
