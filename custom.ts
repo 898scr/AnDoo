@@ -3,10 +3,6 @@ namespace doubleVL53L0X {
     const ADDR_A = 0x30; // 変更後のセンサーAの番号
     const ADDR_B = 0x29; // センサーBの番号（初期値のまま）
 
-    // 計算された角度を一時的に保存しておく内部の変数
-    let calculated_angle = 0;
-
-    // I2Cに1バイト書き込むヘルパー関数
     function i2cWriteReg(addr: number, reg: number, val: number): void {
         let buf = pins.createBuffer(2);
         buf.setNumber(NumberFormat.UInt8LE, 0, reg);
@@ -14,7 +10,6 @@ namespace doubleVL53L0X {
         pins.i2cWriteBuffer(addr, buf);
     }
 
-    // I2Cから2バイト（距離データ）を読み込むヘルパー関数
     function i2cRead2Bytes(addr: number, reg: number): number {
         pins.i2cWriteNumber(addr, reg, NumberFormat.UInt8LE, true);
         let buf = pins.i2cReadBuffer(addr, 2);
@@ -23,8 +18,6 @@ namespace doubleVL53L0X {
 
     /**
      * 2つのVL53L0Xセンサーを初期化し、片方のアドレスを変更します。
-     * @param pinA センサーAのXSHUTピン, eg: DigitalPin.P0
-     * @param pinB センサーBのXSHUTピン, eg: DigitalPin.P1
      */
     //% block="センサーを初期化 XSHUT_A %pinA XSHUT_B %pinB"
     export function initSensors(pinA: DigitalPin, pinB: DigitalPin): void {
@@ -35,19 +28,16 @@ namespace doubleVL53L0X {
         pins.digitalWritePin(pinA, 1);
         basic.pause(50);
 
-        // 0x29(初期アドレス)のセンサーAを、ADDR_A(0x30)に変更する
         i2cWriteReg(0x29, 0x22, ADDR_A);
         basic.pause(10);
 
         pins.digitalWritePin(pinB, 1);
         basic.pause(50);
 
-        // センサーの開始処理
         i2cWriteReg(ADDR_A, 0x00, 0x01);
         i2cWriteReg(ADDR_B, 0x00, 0x01);
         
         basic.pause(50);
-        calculated_angle = 0; // 角度も0で初期化
     }
 
     /**
@@ -69,48 +59,53 @@ namespace doubleVL53L0X {
         if (dist > 8000) return 0;
         return dist;
     }
+}
 
-    /**
-     * 2つのセンサーの値とセンサー間距離から、現在の傾き角度を計算します（四角いブロック）
-     * @param sensorDistance センサーとセンサーの間の距離 (mm), eg: 50
-     */
-    //% block="センサーの角度を計算する センサー間距離 %sensorDistance (mm)"
-    //% sensorDistance.defl=50
-    export function calculateAngle(sensorDistance: number): void {
-        let distA = getDistanceA();
-        let distB = getDistanceB();
-        
-        // どちらかのセンサーがエラー（0）の場合は計算をスキップ
-        if (distA == 0 || distB == 0) {
-            calculated_angle = 0;
-            return;
-        }
-        
-        let diff = distA - distB;
-        // arctan(差 / センサー間距離) でラジアンを計算
-        let rad = Math.atan2(diff, sensorDistance);
-        // 度数法（degree）に変換して四捨五入
-        let deg = rad * 180 / Math.PI;
-        calculated_angle = Math.round(deg);
+//% color="#FF9800" weight=95 icon="\uf05b" block="単体実験用VL53L0X"
+namespace singleVL53L0X {
+    const ADDR = 0x29; // 初期状態（アドレス変更なし）
+
+    function i2cWriteReg(addr: number, reg: number, val: number): void {
+        let buf = pins.createBuffer(2);
+        buf.setNumber(NumberFormat.UInt8LE, 0, reg);
+        buf.setNumber(NumberFormat.UInt8LE, 1, val);
+        pins.i2cWriteBuffer(addr, buf);
+    }
+
+    function i2cRead2Bytes(addr: number, reg: number): number {
+        pins.i2cWriteNumber(addr, reg, NumberFormat.UInt8LE, true);
+        let buf = pins.i2cReadBuffer(addr, 2);
+        return (buf.getUint8(0) << 8) | buf.getUint8(1);
     }
 
     /**
-     * 計算された最新の角度（度）を返します（丸いブロック）
+     * 1個のセンサーをシンプルに初期化します（XSHUT制御なし）
      */
-    //% block="計算された角度"
-    export function getCalculatedAngle(): number {
-        return calculated_angle;
+    //% block="【実験用】センサーを初期化する"
+    export function initSingle(): void {
+        i2cWriteReg(ADDR, 0x00, 0x01);
+        basic.pause(50);
+    }
+
+    /**
+     * 1個のセンサーから距離を取得します（mm）
+     */
+    //% block="【実験用】センサーの距離 (mm)"
+    export function getSingleDistance(): number {
+        let dist = i2cRead2Bytes(ADDR, 0x14);
+        if (dist > 8000) return 0;
+        return dist;
     }
 }
 
 //% color="#4185E6" weight=90 icon="\uf00a" block="MCP23017拡張"
 namespace mcp23017 {
-    const MCP23017_ADDR = 0x20; // MCP23017の標準I2Cアドレス
+    const MCP23017_ADDR = 0x20;
 
-    const IODIRA = 0x00; // ポートAの入出力設定
-    const IODIRB = 0x01; // ポートBの入出力設定
-    const GPIOA = 0x12;  // ポートAのデータ
-    const GPIOB = 0x13;  // ポートBのデータ
+    const IODIRA = 0x00;
+    const IODIRB = 0x01;
+    const GPIOA = 0x12;
+    const GPIOB = 0x13;
 
     let current_output_a = 0x00;
     let current_output_b = 0x00;
@@ -140,7 +135,7 @@ namespace mcp23017 {
     }
 
     /**
-     * MCP23017を初期化します（すべてのピンを出力モードにします）
+     * MCP23017を初期化します
      */
     //% block="MCP23017を初期化する"
     export function init(): void {
@@ -153,7 +148,7 @@ namespace mcp23017 {
     }
 
     /**
-     * 指定したピンのモード（入力・出力）を設定します
+     * 指定したピンのモードを設定します
      */
     //% block="MCP23017の ピン %pin を %mode に設定"
     export function setPinMode(pin: MCPPin, mode: PinMode): void {
@@ -171,7 +166,7 @@ namespace mcp23017 {
     }
 
     /**
-     * 指定したピンにデジタル値（1または0）を出力します
+     * 指定したピンにデジタル値を出力します
      */
     //% block="MCP23017の ピン %pin に %value を出力"
     //% value.min=0 value.max=1
@@ -196,7 +191,7 @@ namespace mcp23017 {
     }
 
     /**
-     * 指定したピンのデジタル入力状態（1または0）を読み取ります
+     * 指定したピンのデジタル入力状態を読み取ります
      */
     //% block="MCP23017の ピン %pin の入力状態"
     export function digitalRead(pin: MCPPin): number {
