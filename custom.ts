@@ -72,18 +72,11 @@ namespace singleVL53L0X {
         pins.i2cWriteBuffer(addr, buf);
     }
 
-    function i2cRead2Bytes(addr: number, reg: number): number {
-        pins.i2cWriteNumber(addr, reg, NumberFormat.UInt8LE, true);
-        let buf = pins.i2cReadBuffer(addr, 2);
-        return (buf.getUint8(0) << 8) | buf.getUint8(1);
-    }
-
     /**
      * 1個のセンサーを公式と同じ手順で確実に初期化します
      */
     //% block="【実験用】センサーを初期化する"
     export function initSingle(): void {
-        // 公式ライブラリが実行している、センサーを眠りから起こすための標準手順
         i2cWriteReg(ADDR, 0x88, 0x00);
         i2cWriteReg(ADDR, 0x80, 0x01);
         i2cWriteReg(ADDR, 0xff, 0x01);
@@ -93,19 +86,24 @@ namespace singleVL53L0X {
         i2cWriteReg(ADDR, 0xff, 0x00);
         i2cWriteReg(ADDR, 0x80, 0x00);
 
-        // 連続測定モードを開始
+        // 連続測定モード（高頻度測定）を開始
         i2cWriteReg(ADDR, 0x00, 0x02); 
         basic.pause(50);
     }
 
     /**
-     * 1個のセンサーから距離を取得します（mm）
+     * 1個のセンサーから距離を取得します（公式互換の確実な読み出し）
      */
     //% block="【実験用】センサーの距離 (mm)"
     export function getSingleDistance(): number {
-        // 0x14番地（距離データが入る部屋）から読み込む
-        let dist = i2cRead2Bytes(ADDR, 0x14);
-        if (dist > 8000 || dist == 0) return 0;
+        // 0x14番地から始まる12バイトの環境データを一気にバッファに読み出す（公式ライブラリの手順）
+        pins.i2cWriteNumber(ADDR, 0x14, NumberFormat.UInt8LE, true);
+        let buf = pins.i2cReadBuffer(ADDR, 12);
+        
+        // 12バイト中の10番目と11番目に、計算済みの距離データ（mm）が格納されている
+        let dist = (buf.getUint8(10) << 8) | buf.getUint8(11);
+        
+        if (dist > 8000 || dist <= 20) return 0; // 異常値や近すぎる場合は0にする
         return dist;
     }
 }
