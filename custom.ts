@@ -1,7 +1,7 @@
 //% color="#00BCD4" weight=100 icon="\uf140" block="2連VL53L0X"
 namespace doubleVL53L0X {
-    const ADDR_A = 0x30; // 変更後のセンサーAの番号
-    const ADDR_B = 0x29; // センサーBの番号（初期値のまま）
+    const ADDR_A = 0x30;
+    const ADDR_B = 0x29;
 
     function i2cWriteReg(addr: number, reg: number, val: number): void {
         let buf = pins.createBuffer(2);
@@ -63,7 +63,7 @@ namespace doubleVL53L0X {
 
 //% color="#FF9800" weight=95 icon="\uf05b" block="単体実験用VL53L0X"
 namespace singleVL53L0X {
-    const ADDR = 0x29; // 初期状態（アドレス変更なし）
+    const ADDR = 0x29;
 
     function i2cWriteReg(addr: number, reg: number, val: number): void {
         let buf = pins.createBuffer(2);
@@ -79,11 +79,22 @@ namespace singleVL53L0X {
     }
 
     /**
-     * 1個のセンサーをシンプルに初期化します（XSHUT制御なし）
+     * 1個のセンサーを公式と同じ手順で確実に初期化します
      */
     //% block="【実験用】センサーを初期化する"
     export function initSingle(): void {
+        // 公式ライブラリが実行している、センサーを眠りから起こすための標準手順
+        i2cWriteReg(ADDR, 0x88, 0x00);
+        i2cWriteReg(ADDR, 0x80, 0x01);
+        i2cWriteReg(ADDR, 0xff, 0x01);
+        i2cWriteReg(ADDR, 0x00, 0x00);
+        i2cWriteReg(ADDR, 0x91, 0x3c);
         i2cWriteReg(ADDR, 0x00, 0x01);
+        i2cWriteReg(ADDR, 0xff, 0x00);
+        i2cWriteReg(ADDR, 0x80, 0x00);
+
+        // 連続測定モードを開始
+        i2cWriteReg(ADDR, 0x00, 0x02); 
         basic.pause(50);
     }
 
@@ -92,8 +103,9 @@ namespace singleVL53L0X {
      */
     //% block="【実験用】センサーの距離 (mm)"
     export function getSingleDistance(): number {
+        // 0x14番地（距離データが入る部屋）から読み込む
         let dist = i2cRead2Bytes(ADDR, 0x14);
-        if (dist > 8000) return 0;
+        if (dist > 8000 || dist == 0) return 0;
         return dist;
     }
 }
