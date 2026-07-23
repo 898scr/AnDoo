@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>2.5D メタバース MVP</title>
+    <!-- Phaser3 (ゲームエンジン) と Socket.io (通信) を読み込む -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
+        #game-container { box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #ui-container { position: absolute; top: 20px; left: 20px; z-index: 10; }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <h2>所持金: <span id="money-display">0</span> G</h2>
+        <p>WASD または 矢印キー で移動してコインを集めよう！</p>
+    </div>
+    <div id="game-container"></div>
+
+<script>
+// ==========================================
+// 1. 接続先サーバーURL（★Renderデプロイ後に変更する）
+// ==========================================
+const SERVER_URL = 'http://localhost:3000'; // 例: 'https://my-metaverse-backend.onrender.com'
+
+// ==========================================
+// 2. Phaser (フロントエンド) の設定
+// ==========================================
+class MainScene extends Phaser.Scene {
+    constructor() { super('MainScene'); }
+
+    create() {
+        this.socket = io(SERVER_URL);
+        this.otherPlayers = this.add.group();
+        this.coins = this.physics.add.group();
+        
+        // プレイヤーとコインの見た目をプログラムで生成（画像用意不要にするため）
+        this.generateTextures();
+
+        // サーバーから情報を受け取る処理
+        this.socket.on('currentPlayers', (players) => {
+            Object.keys(players).forEach((id) => {
+                if (players[id].playerId === this.socket.id) {
+                    this.addPlayer(this, players[id]);
+                } else {
+                    this.addOtherPlayer(this, players[id]);
+                }
+            });
+        });
+
+        this.socket.on('newPlayer', (playerInfo) => {
+            this.addOtherPlayer(this, playerInfo);
+        });
+
+        this.socket.on('playerDisconnected', (playerId) => {
+            this.otherPlayers.getChildren().forEach((otherPlayer) => {
+                if (playerId === otherPlayer.playerId) {
+                    otherPlayer.destroy();
+                    otherPlayer.nameText.destroy();
+                }
+            });
+        });
+
+        this.socket.on('playerMoved', (playerInfo) => {
+            this.otherPlayers.getChildren().forEach((otherPlayer) => {
+                if (playerInfo.playerId === otherPlayer.playerId) {
+                    otherPlayer.setPosition(playerInfo.x, playerInfo.y);
+                    otherPlayer.nameText.setPosition(playerInfo.x, playerInfo.y - 25);
+                    // Y座標で重なり順を更新 (2.5D表現の肝)
+                    otherPlayer.setDepth(playerInfo.y);
+                    otherPlayer.nameText.setDepth(playerInfo.y + 1);
+                }
+            });
+        });
+
+        // コイン（経済システム）の同期
+        this.socket.on('currentCoins', (coins) => {
+            Object.keys(coins).forEach((id) => this.addCoin(coins[id]));
+        });
+
+        this.socket.on('newCoin', (coinInfo) => {
+            this.addCoin(coinInfo);
+        });
+
+        this.socket.on('coinCollected', (coinId) => {
+            this.coins.getChildren().forEach((coin) => {
+                if(coin.coinId === coinId) coin.destroy();
+            });
+        });
+
+        this.socket.on('economyUpdate', (info) => {
+            if(info.id === this.socket.id) {
+                document.getElementById('money-display').innerText = info.money;
+            }
+        });
+
+        // キーボード入力設定
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
+    }
+
+    update() {
+        if (this.player) {
+            const speed = 200;
+            this.player.body.setVelocity(0);
+
+            // 移動制御
+            if (this.cursors.left.isDown || this.wasd.left.isDown) this.player.body.setVelocityX(-speed);
+            else if (this.cursors.right.isDown || this.wasd.right.isDown) this.player.body.setVelocityX(speed);
+            
+            if (this.cursors.up.isDown || this.wasd.up.isDown) this.player.body.setVelocityY(-speed);
+            else if (this.cursors.down.isDown || this.wasd.down.isDown) this.player.body.setVelocityY(speed);
+
+            // 自分のY座標を更新して2.5Dの重なりを表現
+            this.player.setDepth(this.player.y);
+            this.playerNameText.setPosition(this.player.x, this.player.y - 25);
+            this.playerNameText.setDepth(this.player.y + 1);
+
+            // 動いたらサーバーへ送信
+            const x = this.player.x;
+            const y = this.player.y;
+            if (this.player.oldPosition && (x !== this.player.oldPosition.x || y !== this.player.oldPosition.y)) {
+                this.socket.emit('playerMovement', { x: x, y: y });
+            }
+            this.player.oldPosition = { x: x, y: y };
+        }
+    }
+
+    // 自分のキャラを画面に追加
+    addPlayer(scene, playerInfo) {
+        scene.player = scene.physics.add.sprite(playerInfo.x, playerInfo.y, 'player').setTint(playerInfo.color);
+        scene.player.setCollideWorldBounds(true);
+        scene.playerNameText = scene.add.text(playerInfo.x, playerInfo.y - 25, 'You', { fontSize: '14px', fill: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 0.5);
+        
+        // コインとの当たり判定
+        scene.physics.add.overlap(scene.player, scene.coins, (player, coin) => {
+            this.socket.emit('collectCoin', coin.coinId);
+            coin.destroy(); // クライアント側でも一旦消す
+        });
+    }
+
+    // 他のプレイヤーを画面に追加
+    addOtherPlayer(scene, playerInfo) {
+        const otherPlayer = scene.add.sprite(playerInfo.x, playerInfo.y, 'player').setTint(playerInfo.color);
+        otherPlayer.playerId = playerInfo.playerId;
+        otherPlayer.nameText = scene.add.text(playerInfo.x, playerInfo.y - 25, 'Player', { fontSize: '12px', fill: '#aaaaaa', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
+        scene.otherPlayers.add(otherPlayer);
+    }
+
+    // コインを画面に追加
+    addCoin(coinInfo) {
+        const coin = this.coins.create(coinInfo.x, coinInfo.y, 'coin');
+        coin.coinId = coinInfo.id;
+        coin.setDepth(coinInfo.y); // コインもYソート
+        // アニメーション風の動き
+        this.tweens.add({ targets: coin, y: coin.y - 10, duration: 1000, yoyo: true, repeat: -1 });
+    }
+
+    // ドット絵風のテクスチャを自動生成する
+    generateTextures() {
+        const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+        
+        // キャラクター (ちょっとした箱型でドット絵感を出す)
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillRect(0, 0, 32, 32);
+        graphics.fillStyle(0x000000, 0.3); // 影
+        graphics.fillRect(0, 24, 32, 8);
+        graphics.generateTexture('player', 32, 32);
+        graphics.clear();
+
+        // コイン (黄色いダイヤ型)
+        graphics.fillStyle(0xffcc00, 1);
+        graphics.fillCircle(10, 10, 10);
+        graphics.fillStyle(0xffaa00, 1); // 立体感
+        graphics.fillCircle(10, 10, 6);
+        graphics.generateTexture('coin', 20, 20);
+    }
+}
+
+const config = {
+    type: Phaser.AUTO,
+    parent: 'game-container',
+    width: 800,
+    height: 600,
+    pixelArt: true, // ドット絵をくっきり表示
+    physics: {
+        default: 'arcade',
+        arcade: { debug: false }
+    },
+    scene: [MainScene]
+};
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
