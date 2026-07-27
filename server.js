@@ -2,188 +2,218 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-// パスワードのハッシュ化などに使う標準モジュール（今回は簡易的にcryptoを使用）
 const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- 簡易データベース（メモリ上に保存。サーバー再起動で消える点に注意） ---
-// 本格運用時はMongoDBやPostgreSQLなどのデータベースを使用します。
-const usersDb = {}; // 登録ユーザー情報 { "email@example.com": { passwordHash: "...", money: 0 } }
-const players = {}; // 現在接続中のプレイヤー情報 { socketId: { email, x, y, z, rotation, color, money } }
-let coins = {};     // マップ上のコイン情報 { coinId: { x, y, z } }
-
-// --- 初期設定 ---
-const MAX_COINS = 30; // マップ上に存在する最大コイン数
-const MAP_SIZE = 50;  // マップの一辺の長さ
-
-// JSONデータを受け取るための設定
+// JSONと静的ファイルのルーティング設定
 app.use(express.json());
-// publicフォルダ内の静的ファイルを配信
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ルートへのアクセスでpublic/index.htmlを返す
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// パスワードをハッシュ化する関数（セキュリティ対策）
+// メモリデータベース（※本番運用時はMongoDB等に置き換えてください）
+const usersDb = {}; // { "email": { passwordHash: "...", money: 1000 } }
+const players = {}; // 接続中のプレイヤー情報
+let coins = {};     // 空間のコイン情報
+
+// 経済システム用のグローバル変数
+let economyMultiplier = 1.0; 
+const MAP_SIZE = 80;
+const MAX_COINS = 40;
+const COIN_BASE_VALUE = 10; // コイン1枚の基本価値
+
+// パスワードのハッシュ化関数
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// 乱数でスポーン色を選択
-function getRandomColor() {
-    const colors = [0xff4d4d, 0x4d94ff, 0x4dff88, 0xffd633, 0xff4dff, 0x00ffff];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// ランダムな位置にコインを生成する関数
+// 初期コイン生成関数
 function spawnCoin() {
     const id = crypto.randomUUID();
-    // 障害物がないであろうランダムな座標（簡易的に範囲内でランダム）
     coins[id] = {
         id: id,
         x: (Math.random() - 0.5) * (MAP_SIZE - 4),
-        y: 0.5, // コインの高さ
+        y: 0.5, // 地面より少し上
         z: (Math.random() - 0.5) * (MAP_SIZE - 4)
     };
     return coins[id];
 }
+for (let i = 0; i < MAX_COINS; i++) spawnCoin();
 
-// 初期コインの生成
-for(let i = 0; i < MAX_COINS; i++) {
-    spawnCoin();
-}
+// 経済（市場価値）の変動ループ：30秒ごとに倍率が 0.5倍 〜 2.5倍 の間でランダムに変化
+setInterval(() => {
+    // 0.50 〜 2.50の範囲でランダム
+    economyMultiplier = (Math.random() * 2.0 + 0.5).toFixed(2);
+    console.log(`[経済変動] 現在の市場倍率: x${economyMultiplier}`);
+    // 全員に新しい倍率を通知
+    io.emit('marketUpdate', economyMultiplier);
+}, 30000);
 
-// ==========================================
-// 1. 簡易メール認証API (Express)
-// ==========================================
-
-// 新規登録エンドポイント
+// API: 新規登録
 app.post('/api/register', (req, res) => {
     const { email, password } = req.body;
-    
-    if (!email || !password) {
-        return res.status(400).json({ success: false, message: 'メールアドレスとパスワードを入力してください' });
-    }
-    if (usersDb[email]) {
-        return res.status(400).json({ success: false, message: 'このメールアドレスは既に登録されています' });
-    }
+    if (!email || !password) return res.status(400).json({ success: false, message: '入力が不完全です' });
+    if (usersDb[email]) return res.status(400).json({ success: false, message: '既に登録されています' });
 
-    // ユーザー情報を保存
-    usersDb[email] = {
-        passwordHash: hashPassword(password),
-        money: 0 // 初期所持金
-    };
-    console.log(`新規登録: ${email}`);
-    res.json({ success: true, message: '登録が完了しました。ログインしてください。' });
+    usersDb[email] = { passwordHash: hashPassword(password), money: 500 }; // 初期資金500G
+    res.json({ success: true, message: '登録完了。ログインしてください。' });
 });
 
-// ログインエンドポイント
+// API: ログイン
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
-    
     const user = usersDb[email];
     if (!user || user.passwordHash !== hashPassword(password)) {
-        return res.status(401).json({ success: false, message: 'メールアドレスまたはパスワードが間違っています' });
+        return res.status(401).json({ success: false, message: '認証に失敗しました' });
     }
-
-    console.log(`ログイン成功: ${email}`);
-    // 成功時、ユーザーデータ（パスワード以外）を返す
     res.json({ success: true, email: email, money: user.money });
 });
 
-// ==========================================
-// 2 & 4. リアルタイム通信 & 経済システム (Socket.io)
-// ==========================================
-
-// クライアント側から認証情報（email）を受け取って接続を許可するミドルウェア
+// Socket.io 接続前の認証チェック
 io.use((socket, next) => {
     const email = socket.handshake.auth.email;
-    if (!email || !usersDb[email]) {
-        return next(new Error('Authentication error'));
-    }
-    socket.email = email; // ソケットにメールアドレスを紐付け
+    if (!email || !usersDb[email]) return next(new Error('Auth failed'));
+    socket.email = email;
     next();
 });
 
 io.on('connection', (socket) => {
-    console.log(`プレイヤー接続 (${socket.email}): ${socket.id}`);
+    console.log(`[接続] ${socket.email} (${socket.id})`);
     
-    const userDbData = usersDb[socket.email];
-
-    // 新規プレイヤーの初期位置・パラメータ設定
+    // 新規プレイヤーの初期化
     players[socket.id] = {
         id: socket.id,
         email: socket.email,
-        x: (Math.random() - 0.5) * 10,
-        y: 0.75,
-        z: (Math.random() - 0.5) * 10,
-        rotation: 0, // 向きの情報を追加
-        color: getRandomColor(),
-        money: userDbData.money // DBから所持金を読み込み
+        x: (Math.random() - 0.5) * 20,
+        y: 1, // 3Dオブジェクトの中心高さ
+        z: (Math.random() - 0.5) * 20,
+        rotation: 0,
+        color: Math.floor(Math.random() * 0xffffff)
     };
 
-    // 接続者本人へ現在の全プレイヤーとコイン情報を送信
-    socket.emit('initData', { players: players, coins: coins });
-
-    // 他の全プレイヤーへ新プレイヤーの参加を通知
+    // 接続者へ初期データを送信（全員の場所、コイン、現在の経済倍率）
+    socket.emit('initData', { 
+        players: players, 
+        coins: coins,
+        multiplier: economyMultiplier 
+    });
+    // 他のプレイヤーに新規参戦を通知
     socket.broadcast.emit('newPlayer', players[socket.id]);
 
-    // 位置と向きの更新を受信
-    socket.on('playerMovement', (movementData) => {
+    // 1. 移動と向きの同期
+    socket.on('playerMovement', (data) => {
         if (players[socket.id]) {
-            players[socket.id].x = movementData.x;
-            players[socket.id].y = movementData.y;
-            players[socket.id].z = movementData.z;
-            players[socket.id].rotation = movementData.rotation; // 向きも更新
-            
-            // 他のプレイヤーに同期
+            players[socket.id].x = data.x;
+            players[socket.id].y = data.y;
+            players[socket.id].z = data.z;
+            players[socket.id].rotation = data.rotation;
             socket.broadcast.emit('playerMoved', players[socket.id]);
         }
     });
 
-    // コイン取得処理 (経済システム)
+    // 2. コイン回収（経済倍率の適用）
     socket.on('collectCoin', (coinId) => {
         if (coins[coinId] && players[socket.id]) {
-            // サーバー側でコインを削除
-            delete coins[coinId];
+            delete coins[coinId]; // サーバーから削除
             
-            // プレイヤーの所持金を増やす (例: 10コイン)
-            const earnAmount = 10;
-            players[socket.id].money += earnAmount;
-            usersDb[socket.email].money += earnAmount; // DBも更新
-
-            console.log(`${socket.email} がコイン取得. 所持金: ${players[socket.id].money}`);
-
-            // 全員にどのコインが消えたかを通知
+            // 現在の倍率を掛けた金額を計算 (四捨五入して整数にする)
+            const reward = Math.round(COIN_BASE_VALUE * parseFloat(economyMultiplier));
+            usersDb[socket.email].money += reward;
+            
+            // 全員にコイン消失を通知
             io.emit('coinCollected', coinId);
-            
-            // 本人に所持金更新を通知
-            socket.emit('moneyUpdated', players[socket.id].money);
+            // 本人にステータス更新と通知テキストを送信
+            socket.emit('moneyUpdated', usersDb[socket.email].money);
+            socket.emit('notification', { type: 'success', text: `コイン獲得！ (x${economyMultiplier}倍) +${reward}G` });
 
-            // 新しいコインを補充（遅延を入れて少し待たせる）
-            setTimeout(() => {
-                const newCoin = spawnCoin();
-                io.emit('newCoin', newCoin);
-            }, 3000); // 3秒後に補充
+            // 3秒後に再生成
+            setTimeout(() => { io.emit('newCoin', spawnCoin()); }, 3000);
+        }
+    });
+
+    // 3. P2P送金機能
+    socket.on('sendMoney', (data) => {
+        const { targetEmail, amount } = data;
+        const parsedAmount = parseInt(amount, 10);
+
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            return socket.emit('notification', { type: 'error', text: '正しい金額を入力してください' });
+        }
+        if (targetEmail === socket.email) {
+            return socket.emit('notification', { type: 'error', text: '自分自身には送金できません' });
+        }
+        if (usersDb[socket.email].money < parsedAmount) {
+            return socket.emit('notification', { type: 'error', text: '残高が不足しています' });
+        }
+        if (!usersDb[targetEmail]) {
+            return socket.emit('notification', { type: 'error', text: '指定されたユーザーは存在しません' });
+        }
+
+        // 送金処理
+        usersDb[socket.email].money -= parsedAmount;
+        usersDb[targetEmail].money += parsedAmount;
+
+        // 送信元へ通知
+        socket.emit('moneyUpdated', usersDb[socket.email].money);
+        socket.emit('notification', { type: 'success', text: `${targetEmail} へ ${parsedAmount}G 送金しました` });
+
+        // 送信先がオンラインならリアルタイム通知
+        const targetSocket = Object.values(players).find(p => p.email === targetEmail);
+        if (targetSocket) {
+            io.to(targetSocket.id).emit('moneyUpdated', usersDb[targetEmail].money);
+            io.to(targetSocket.id).emit('notification', { type: 'info', text: `${socket.email} から ${parsedAmount}G 受け取りました！` });
+        }
+    });
+
+    // 4. ギャンブル（ダイス）機能
+    socket.on('playGamble', (data) => {
+        const betAmount = parseInt(data.amount, 10);
+        if (isNaN(betAmount) || betAmount <= 0) {
+            return socket.emit('notification', { type: 'error', text: '正しい賭け金を入力してください' });
+        }
+        if (usersDb[socket.email].money < betAmount) {
+            return socket.emit('notification', { type: 'error', text: '残高が不足しています' });
+        }
+
+        // まず賭け金を引く
+        usersDb[socket.email].money -= betAmount;
+        
+        // ダイスを振る (1〜6)
+        const diceRoll = Math.floor(Math.random() * 6) + 1;
+        let isWin = false;
+        let reward = 0;
+
+        // ルール: 4, 5, 6 が出たら勝ち。配当は 賭け金 × 現在の経済倍率 (最低1.1倍保証)
+        if (diceRoll >= 4) {
+            isWin = true;
+            const mult = Math.max(parseFloat(economyMultiplier), 1.1); // 最低1.1倍は勝つようにする
+            reward = Math.round(betAmount * mult);
+            usersDb[socket.email].money += reward;
+        }
+
+        // 結果を本人に返す
+        socket.emit('moneyUpdated', usersDb[socket.email].money);
+        if (isWin) {
+            socket.emit('notification', { type: 'success', text: `🎲 ${diceRoll}が出た！ 大当たり！ ${reward}G 獲得！` });
+        } else {
+            socket.emit('notification', { type: 'error', text: `🎲 ${diceRoll}が出た... ハズレ。 ${betAmount}G 没収。` });
         }
     });
 
     // 切断処理
     socket.on('disconnect', () => {
-        console.log(`プレイヤー切断 (${socket.email}): ${socket.id}`);
-        // 最終的な所持金をDBに保存（今回は随時保存しているので省略可能）
+        console.log(`[切断] ${socket.email}`);
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
     });
 });
 
-// Renderの環境変数PORTまたはローカル3000を使用
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`メタバースサーバーが起動しました。 Port: ${PORT}`);
+    console.log(`3D Metaverse Server running on port ${PORT}`);
 });

@@ -3,84 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Metaverse with Auth & Economy</title>
+    <title>3D Metaverse - Economy & Gambling</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-        }
-
-        /* ログイン画面のスタイル */
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
+        
+        /* ログイン画面 */
         #login-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-        .login-box {
-            background: rgba(30, 41, 59, 0.9);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            width: 300px;
-            text-align: center;
-        }
-        .login-box h2 { margin-top: 0; color: #38bdf8; }
-        .login-box input {
-            width: 90%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #334155;
-            border-radius: 6px;
-            background: #0f172a;
-            color: white;
-        }
-        .login-box button {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 6px;
-            background: #0ea5e9;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .login-box button:hover { background: #0284c7; }
-        .error-msg { color: #ef4444; font-size: 0.8rem; height: 1.2rem; }
+        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; }
+        .panel input { width: 100%; box-sizing: border-box; padding: 10px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; }
+        .panel button { width: 100%; padding: 10px; margin: 8px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: #0ea5e9; color: white; }
+        .btn-primary:hover { background: #0284c7; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
-        /* ゲームUIのスタイル */
-        #game-ui {
-            display: none; /* 初期状態は非表示 */
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-            background: rgba(15, 23, 42, 0.75);
-            padding: 16px 20px;
-            border-radius: 12px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            pointer-events: none;
+        /* ゲーム内UI群 */
+        #game-ui { display: none; }
+        
+        /* 上部ステータスバー */
+        #status-bar {
+            position: absolute; top: 15px; left: 15px; z-index: 10;
+            background: rgba(15, 23, 42, 0.8); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(4px);
         }
-        #game-ui h1 { margin: 0 0 8px 0; font-size: 1.2rem; color: #38bdf8; }
-        #game-ui p { margin: 4px 0; font-size: 0.9rem; }
-        .money-display {
-            font-size: 1.1rem;
-            color: #fbbf24;
-            font-weight: bold;
-            margin-top: 10px;
+        #status-bar h1 { margin: 0 0 10px 0; font-size: 1.2rem; color: #f8fafc; }
+        .money { font-size: 1.4rem; color: #fbbf24; font-weight: bold; }
+        .market-rate { font-size: 1.2rem; margin-top: 5px; color: #34d399; font-weight: bold; }
+
+        /* 下部アクションパネル（送金・ギャンブル） */
+        #action-panels {
+            position: absolute; bottom: 20px; left: 20px; z-index: 10;
+            display: flex; gap: 15px;
         }
+        .action-box {
+            background: rgba(15, 23, 42, 0.8); padding: 15px; border-radius: 12px; backdrop-filter: blur(4px);
+            width: 250px;
+        }
+        .action-box h3 { margin: 0 0 10px 0; font-size: 1rem; color: #e2e8f0; border-bottom: 1px solid #334155; padding-bottom: 5px; }
+        
+        /* 通知ポップアップコンテナ */
+        #notification-container {
+            position: absolute; top: 20px; right: 20px; z-index: 50;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            padding: 12px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 3.5s forwards;
+            opacity: 0; transform: translateX(100%);
+        }
+        .toast.success { background-color: rgba(16, 185, 129, 0.9); border-left: 4px solid #059669; }
+        .toast.error { background-color: rgba(244, 63, 94, 0.9); border-left: 4px solid #be123c; }
+        .toast.info { background-color: rgba(56, 189, 248, 0.9); border-left: 4px solid #0284c7; }
+
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
 
         #canvas-container { width: 100vw; height: 100vh; display: block; }
     </style>
-    <!-- Three.js & Socket.io CDNs -->
+    <!-- Three.js & Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -88,58 +73,60 @@
 
     <!-- 1. ログイン画面 -->
     <div id="login-screen">
-        <div class="login-box">
-            <h2>Metaverse Login</h2>
-            <div id="error-message" class="error-msg"></div>
+        <div class="panel">
+            <h2>3D Metaverse</h2>
+            <div id="auth-error" class="error-msg"></div>
             <input type="email" id="email" placeholder="Email Address" required>
             <input type="password" id="password" placeholder="Password" required>
-            <button onclick="attemptLogin()">ログイン</button>
-            <button onclick="attemptRegister()" style="background: #10b981;">新規登録</button>
+            <button class="btn-primary" onclick="attemptAuth('/api/login')">ログイン</button>
+            <button class="btn-success" onclick="attemptAuth('/api/register')">新規登録</button>
         </div>
     </div>
 
     <!-- 2. ゲームUI -->
     <div id="game-ui">
-        <h1>2.5D / 3D Metaverse</h1>
-        <p><strong>User:</strong> <span id="ui-email"></span></p>
-        <p><strong>移動:</strong> WASD または 矢印キー</p>
-        <div class="money-display">💰 Coins: <span id="ui-money">0</span></div>
+        <!-- 通知エリア -->
+        <div id="notification-container"></div>
+
+        <!-- 左上ステータス -->
+        <div id="status-bar">
+            <h1>User: <span id="ui-email">---</span></h1>
+            <div class="money">💰 <span id="ui-money">0</span> G</div>
+            <div class="market-rate">📈 経済倍率: <span id="ui-market">x1.00</span></div>
+        </div>
+
+        <!-- 左下アクション -->
+        <div id="action-panels">
+            <!-- 送金機能 -->
+            <div class="action-box">
+                <h3>💸 プレイヤーへ送金</h3>
+                <input type="email" id="send-target" placeholder="宛先のEmail">
+                <input type="number" id="send-amount" placeholder="金額 (G)">
+                <button class="btn-primary" onclick="sendMoney()">送金する</button>
+            </div>
+            
+            <!-- ギャンブル機能 -->
+            <div class="action-box">
+                <h3>🎲 ダイス・ギャンブル</h3>
+                <p style="font-size: 0.8rem; margin: 0 0 10px 0; color:#cbd5e1;">4, 5, 6が出れば勝ち。報酬に経済倍率が掛かります！</p>
+                <input type="number" id="gamble-amount" placeholder="賭け金 (G)">
+                <button class="btn-success" onclick="playGamble()">ダイスを振る</button>
+            </div>
+        </div>
     </div>
 
-    <!-- 3. ゲーム描画エリア -->
+    <!-- 3. 3Dキャンバス -->
     <div id="canvas-container"></div>
 
     <script>
-        // ==========================================
-        // 認証処理ロジック
-        // ==========================================
         let currentUserEmail = null;
-        let currentMoney = 0;
         let socket = null;
 
-        async function attemptRegister() {
+        // ログイン・登録共通処理
+        async function attemptAuth(endpoint) {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await res.json();
-            const errorDiv = document.getElementById('error-message');
-            if (data.success) {
-                errorDiv.style.color = '#10b981'; // 成功色は緑
-                errorDiv.innerText = data.message;
-            } else {
-                errorDiv.style.color = '#ef4444';
-                errorDiv.innerText = data.message;
-            }
-        }
-
-        async function attemptLogin() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const res = await fetch('/api/login', {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -147,143 +134,138 @@
             const data = await res.json();
             
             if (data.success) {
-                currentUserEmail = data.email;
-                currentMoney = data.money;
-                startGame(); // ログイン成功でゲーム開始
+                if(endpoint === '/api/login') {
+                    currentUserEmail = data.email;
+                    document.getElementById('ui-email').innerText = currentUserEmail;
+                    document.getElementById('ui-money').innerText = data.money;
+                    startGame(); // ログイン成功時のみゲーム開始
+                } else {
+                    document.getElementById('auth-error').style.color = '#10b981';
+                    document.getElementById('auth-error').innerText = data.message;
+                }
             } else {
-                document.getElementById('error-message').innerText = data.message;
+                document.getElementById('auth-error').style.color = '#f43f5e';
+                document.getElementById('auth-error').innerText = data.message;
             }
         }
 
-        // ==========================================
-        // ゲームメインロジック
-        // ==========================================
-        function startGame() {
-            // UIの切り替え
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('ui-email').innerText = currentUserEmail;
-            document.getElementById('ui-money').innerText = currentMoney;
-
-            // Socket.io 接続 (認証情報を付与)
-            socket = io({
-                auth: { email: currentUserEmail }
-            });
-
-            initThreeJS();
+        // 通知ポップアップ表示関数
+        function showNotification(type, text) {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = text;
+            container.appendChild(toast);
+            // 4秒後にDOMから削除
+            setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
-        // Three.js 関連のグローバル変数
         let scene, camera, renderer, clock;
-        const otherPlayers = {}; // 他プレイヤーのメッシュ管理
-        const coinsMap = {};     // コインのメッシュ管理
+        const MAP_SIZE = 80;
+        const otherPlayers = {}; 
+        const coinsMap = {};     
         let localPlayerMesh = null;
         const keysPressed = {};
-        const MAP_SIZE = 50;
+
+        function startGame() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+
+            // Socket.io 接続
+            socket = io({ auth: { email: currentUserEmail } });
+            
+            initThreeJS();
+            setupSocketEvents();
+        }
 
         function initThreeJS() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
-            scene.fog = new THREE.FogExp2(0x0f172a, 0.02);
+            scene.background = new THREE.Color(0x87CEEB); // 空の色
+            scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
 
-            // 2.5D風のクォータービュー（俯瞰）カメラ設定
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 20, 25);
-            camera.lookAt(0, 0, 0);
+            // カメラ設定 (あとでプレイヤーに追従させます)
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // ライティング
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // 照明
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
-
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, 20);
+            dirLight.position.set(20, 40, -20);
             dirLight.castShadow = true;
-            dirLight.shadow.camera.left = -30;
-            dirLight.shadow.camera.right = 30;
-            dirLight.shadow.camera.top = 30;
-            dirLight.shadow.camera.bottom = -30;
+            dirLight.shadow.camera.left = -40; dirLight.shadow.camera.right = 40;
+            dirLight.shadow.camera.top = 40; dirLight.shadow.camera.bottom = -40;
             scene.add(dirLight);
 
-            createMap(); // マップ（床と障害物）の生成
+            createMap();
 
             clock = new THREE.Clock();
 
-            // Socket.io イベント設定
-            setupSocketEvents();
-
             // キー入力検知
-            window.addEventListener('keydown', (e) => { keysPressed[e.key.toLowerCase()] = true; });
-            window.addEventListener('keyup', (e) => { keysPressed[e.key.toLowerCase()] = false; });
+            window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
+            window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
             window.addEventListener('resize', onWindowResize);
 
             animate();
         }
 
-        // 簡単なマップ生成（床と障害物）
         function createMap() {
-            // 床
-            const gridHelper = new THREE.GridHelper(MAP_SIZE, MAP_SIZE, 0x38bdf8, 0x334155);
-            gridHelper.position.y = 0;
-            scene.add(gridHelper);
-
+            // 地面
+            const grid = new THREE.GridHelper(MAP_SIZE, MAP_SIZE, 0x444444, 0x888888);
+            scene.add(grid);
             const planeGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
-            const planeMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+            const planeMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 1.0 }); // 緑色の草地風
             const plane = new THREE.Mesh(planeGeo, planeMat);
             plane.rotation.x = -Math.PI / 2;
             plane.receiveShadow = true;
             scene.add(plane);
 
-            // 障害物（ランダムに数個配置）
-            const boxGeo = new THREE.BoxGeometry(2, 2, 2);
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
-            for (let i = 0; i < 15; i++) {
+            // 障害物（ランダムなビル/箱）
+            const boxGeo = new THREE.BoxGeometry(2, 4, 2);
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+            for (let i = 0; i < 25; i++) {
                 const box = new THREE.Mesh(boxGeo, boxMat);
                 box.position.set(
                     (Math.random() - 0.5) * (MAP_SIZE - 10),
-                    1, // 高さの半分
+                    2, 
                     (Math.random() - 0.5) * (MAP_SIZE - 10)
                 );
-                box.castShadow = true;
-                box.receiveShadow = true;
+                // ランダムな高さにする
+                box.scale.y = Math.random() * 2 + 0.5;
+                box.position.y = (4 * box.scale.y) / 2;
+                box.castShadow = true; box.receiveShadow = true;
                 scene.add(box);
-                // ※当たり判定は今回は簡易化のため実装せず、すり抜けます
             }
         }
 
-        // アバターメッシュの生成
-        function createAvatarMesh(color) {
+        // 3Dアバターの作成（向きが分かるように顔を作る）
+        function createAvatarMesh(colorHex) {
             const group = new THREE.Group();
-
+            // 胴体
             const bodyGeo = new THREE.BoxGeometry(1, 1.2, 0.8);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.6;
-            body.castShadow = true;
+            body.position.y = 0.6; body.castShadow = true;
             group.add(body);
-
-            const headGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xffe0bd });
+            // 頭
+            const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
             const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.55;
-            head.castShadow = true;
+            head.position.y = 1.6; head.castShadow = true;
             group.add(head);
-
-            // 向きがわかる目
+            // 目（正面を表すZ軸マイナス方向に配置）
             const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.1);
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
             const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-0.18, 1.6, 0.35);
+            eyeL.position.set(-0.2, 1.7, -0.41); // Zをマイナスにして前方に
             const eyeR = eyeL.clone();
-            eyeR.position.x = 0.18;
-            group.add(eyeL);
-            group.add(eyeR);
+            eyeR.position.x = 0.2;
+            group.add(eyeL); group.add(eyeR);
 
             return group;
         }
@@ -291,42 +273,38 @@
         // コインメッシュの生成
         function createCoinMesh() {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8, roughness: 0.2 });
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
             const coin = new THREE.Mesh(geo, mat);
-            coin.rotation.x = Math.PI / 2; // 立てる
+            coin.rotation.x = Math.PI / 2;
             coin.castShadow = true;
             return coin;
         }
 
         function setupSocketEvents() {
-            // 初期データ（全プレイヤーとコイン）受信
             socket.on('initData', (data) => {
-                // プレイヤーの配置
-                Object.keys(data.players).forEach((id) => {
+                document.getElementById('ui-market').innerText = `x${data.multiplier}`;
+                
+                Object.keys(data.players).forEach(id => {
+                    const info = data.players[id];
                     if (id === socket.id) {
-                        localPlayerMesh = createAvatarMesh(data.players[id].color);
-                        localPlayerMesh.position.set(data.players[id].x, data.players[id].y, data.players[id].z);
-                        // 初期向きを反映
-                        if (data.players[id].rotation) localPlayerMesh.rotation.y = data.players[id].rotation;
+                        localPlayerMesh = createAvatarMesh(info.color);
+                        localPlayerMesh.position.set(info.x, info.y, info.z);
+                        localPlayerMesh.rotation.y = info.rotation;
                         scene.add(localPlayerMesh);
                     } else {
-                        addOtherPlayer(data.players[id]);
+                        addOtherPlayer(info);
                     }
                 });
-
-                // コインの配置
-                Object.keys(data.coins).forEach(id => {
-                    addCoin(data.coins[id]);
-                });
+                Object.keys(data.coins).forEach(id => addCoin(data.coins[id]));
             });
 
             socket.on('newPlayer', (info) => addOtherPlayer(info));
 
-            // 他プレイヤーの移動と「向き」の同期
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
                     otherPlayers[info.id].position.set(info.x, info.y, info.z);
-                    otherPlayers[info.id].rotation.y = info.rotation; // 向きを適用
+                    // 向きの同期を適用
+                    otherPlayers[info.id].rotation.y = info.rotation; 
                 }
             });
 
@@ -337,26 +315,32 @@
                 }
             });
 
-            // 経済システム関連
-            socket.on('newCoin', (coinInfo) => addCoin(coinInfo));
+            // 経済関連の同期
+            socket.on('marketUpdate', (multiplier) => {
+                document.getElementById('ui-market').innerText = `x${multiplier}`;
+                showNotification('info', `📈 市場変動！ 現在の倍率は x${multiplier} です`);
+            });
 
+            socket.on('moneyUpdated', (newMoney) => {
+                document.getElementById('ui-money').innerText = newMoney;
+            });
+
+            socket.on('notification', (msg) => showNotification(msg.type, msg.text));
+
+            // コインの同期
+            socket.on('newCoin', (coinInfo) => addCoin(coinInfo));
             socket.on('coinCollected', (coinId) => {
                 if (coinsMap[coinId]) {
                     scene.remove(coinsMap[coinId]);
                     delete coinsMap[coinId];
                 }
             });
-
-            socket.on('moneyUpdated', (newMoney) => {
-                currentMoney = newMoney;
-                document.getElementById('ui-money').innerText = currentMoney;
-            });
         }
 
         function addOtherPlayer(info) {
             const mesh = createAvatarMesh(info.color);
             mesh.position.set(info.x, info.y, info.z);
-            mesh.rotation.y = info.rotation || 0;
+            mesh.rotation.y = info.rotation;
             scene.add(mesh);
             otherPlayers[info.id] = mesh;
         }
@@ -368,42 +352,57 @@
             coinsMap[info.id] = mesh;
         }
 
-        // コインとの当たり判定（距離で判定）
+        // P2P 送金アクション
+        function sendMoney() {
+            const target = document.getElementById('send-target').value;
+            const amount = document.getElementById('send-amount').value;
+            if (!target || !amount) return showNotification('error', '宛先と金額を入力してください');
+            
+            socket.emit('sendMoney', { targetEmail: target, amount: amount });
+            
+            document.getElementById('send-target').value = '';
+            document.getElementById('send-amount').value = '';
+        }
+
+        // ギャンブル アクション
+        function playGamble() {
+            const amount = document.getElementById('gamble-amount').value;
+            if (!amount) return showNotification('error', '賭け金を入力してください');
+            
+            socket.emit('playGamble', { amount: amount });
+            document.getElementById('gamble-amount').value = '';
+        }
+
         function checkCoinCollisions() {
             if (!localPlayerMesh) return;
-            const threshold = 1.5; // 取得判定の距離
-
+            const threshold = 1.8;
             Object.keys(coinsMap).forEach(coinId => {
                 const coin = coinsMap[coinId];
-                const dist = localPlayerMesh.position.distanceTo(coin.position);
-                if (dist < threshold) {
-                    // クライアント側で即座に消す（重複送信防止）
+                if (localPlayerMesh.position.distanceTo(coin.position) < threshold) {
                     scene.remove(coin);
-                    delete coinsMap[coinId];
-                    // サーバーへ取得を通知
+                    delete coinsMap[coinId]; // クライアント側で即消す
                     socket.emit('collectCoin', coinId);
                 }
             });
         }
 
-        // アニメーション＆メインループ
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             const time = clock.getElapsedTime();
 
-            // コインのくるくる回転アニメーション
+            // コインのアニメーション
             Object.values(coinsMap).forEach(coin => {
-                coin.rotation.z += 2 * delta; // 回る
-                coin.position.y = 0.5 + Math.sin(time * 3 + coin.position.x) * 0.2; // 上下フワフワ
+                coin.rotation.z += 2 * delta;
+                coin.position.y = 0.5 + Math.sin(time * 3 + coin.position.x) * 0.2;
             });
 
             if (localPlayerMesh) {
                 let moved = false;
                 let newRotation = localPlayerMesh.rotation.y;
-                const speed = 8;
+                const speed = 10;
 
-                // 入力による移動と向きの計算
+                // 3D用の移動 (Zマイナスが前)
                 if (keysPressed['w'] || keysPressed['arrowup']) {
                     localPlayerMesh.position.z -= speed * delta;
                     newRotation = Math.PI; moved = true;
@@ -421,44 +420,52 @@
                     newRotation = Math.PI / 2; moved = true;
                 }
 
-                // 斜め移動時の向き調整
+                // 斜め向きの補間
                 if ((keysPressed['w'] || keysPressed['arrowup']) && (keysPressed['a'] || keysPressed['arrowleft'])) newRotation = -Math.PI * 0.75;
                 if ((keysPressed['w'] || keysPressed['arrowup']) && (keysPressed['d'] || keysPressed['arrowright'])) newRotation = Math.PI * 0.75;
                 if ((keysPressed['s'] || keysPressed['arrowdown']) && (keysPressed['a'] || keysPressed['arrowleft'])) newRotation = -Math.PI * 0.25;
                 if ((keysPressed['s'] || keysPressed['arrowdown']) && (keysPressed['d'] || keysPressed['arrowright'])) newRotation = Math.PI * 0.25;
 
-                // 向きを滑らかに補間する（オプション。今回は即時反映）
+                // 向きを即時反映（LERP等の補間を入れるとより滑らかになります）
                 localPlayerMesh.rotation.y = newRotation;
 
-                // 移動限界エリア制限
+                // 画面外に出ないように制限
                 const limit = MAP_SIZE / 2 - 1;
                 localPlayerMesh.position.x = Math.max(-limit, Math.min(limit, localPlayerMesh.position.x));
                 localPlayerMesh.position.z = Math.max(-limit, Math.min(limit, localPlayerMesh.position.z));
 
-                // カメラの追従
-                camera.position.x = localPlayerMesh.position.x;
-                camera.position.z = localPlayerMesh.position.z + 25;
-                camera.lookAt(localPlayerMesh.position.x, 0, localPlayerMesh.position.z);
+                // ★ 完全3D用カメラ（TPS視点風）
+                // プレイヤーの少し後ろ(Z+)で少し上(Y+)から見下ろす
+                const cameraOffsetX = 0;
+                const cameraOffsetY = 8;
+                const cameraOffsetZ = 12;
+                
+                // カメラ位置を滑らかに追従させる
+                camera.position.lerp(new THREE.Vector3(
+                    localPlayerMesh.position.x + cameraOffsetX,
+                    localPlayerMesh.position.y + cameraOffsetY,
+                    localPlayerMesh.position.z + cameraOffsetZ
+                ), 0.1);
+                
+                camera.lookAt(localPlayerMesh.position);
 
-                // コインとの接触判定
                 checkCoinCollisions();
 
-                // 位置または向きが変化した場合サーバーへ送信
+                // 移動・回転情報をサーバーへ送信
                 if (moved) {
                     socket.emit('playerMovement', {
                         x: localPlayerMesh.position.x,
                         y: localPlayerMesh.position.y,
                         z: localPlayerMesh.position.z,
-                        rotation: localPlayerMesh.rotation.y // 向きを送信データに追加
+                        rotation: localPlayerMesh.rotation.y
                     });
                 }
             }
-
             renderer.render(scene, camera);
         }
 
         function onWindowResize() {
-            if(camera && renderer) {
+            if (camera && renderer) {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
