@@ -1,7 +1,7 @@
 {
-"name": "render-metaverse-3d-mvp",
-"version": "1.0.0",
-"description": "Single-server 3D Metaverse MVP deployed on Render",
+"name": "render-metaverse-3d-auth-economy",
+"version": "1.1.0",
+"description": "3D Metaverse with Authentication, Economy, and Rotation sync",
 "main": "server.js",
 "scripts": {
 "start": "node server.js"
