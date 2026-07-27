@@ -2,196 +2,290 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>2.5D メタバース MVP</title>
-    <!-- Phaser3 (ゲームエンジン) と Socket.io (通信) を読み込む -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Metaverse - Render MVP</title>
     <style>
-        body { margin: 0; background-color: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
-        #game-container { box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        #ui-container { position: absolute; top: 20px; left: 20px; z-index: 10; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(15, 23, 42, 0.75);
+            padding: 16px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #38bdf8;
+        }
+
+        p {
+            margin: 4px 0;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0284c7;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-top: 6px;
+        }
     </style>
+    <!-- Three.js & Socket.io CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div id="ui-container">
-        <h2>所持金: <span id="money-display">0</span> G</h2>
-        <p>WASD または 矢印キー で移動してコインを集めよう！</p>
+    <div id="ui-layer">
+        <h1>2.5D / 3D Metaverse Space</h1>
+        <p><strong>移動:</strong> WASD キー または 矢印キー</p>
+        <p><strong>接続ID:</strong> <span id="socket-id">接続中...</span></p>
+        <div class="badge" id="online-count">オンライン: 1 人</div>
     </div>
-    <div id="game-container"></div>
 
-<script>
-// ==========================================
-// 1. 接続先サーバーURL（★Renderデプロイ後に変更する）
-// ==========================================
-const SERVER_URL = 'http://localhost:3000'; // 例: 'https://my-metaverse-backend.onrender.com'
+    <div id="canvas-container"></div>
 
-// ==========================================
-// 2. Phaser (フロントエンド) の設定
-// ==========================================
-class MainScene extends Phaser.Scene {
-    constructor() { super('MainScene'); }
+    <script>
+        // 1. Socket.io 接続（同一ホストに自動接続するため引数なしの io() を使用）
+        const socket = io();
 
-    create() {
-        this.socket = io(SERVER_URL);
-        this.otherPlayers = this.add.group();
-        this.coins = this.physics.add.group();
-        
-        // プレイヤーとコインの見た目をプログラムで生成（画像用意不要にするため）
-        this.generateTextures();
-
-        // サーバーから情報を受け取る処理
-        this.socket.on('currentPlayers', (players) => {
-            Object.keys(players).forEach((id) => {
-                if (players[id].playerId === this.socket.id) {
-                    this.addPlayer(this, players[id]);
-                } else {
-                    this.addOtherPlayer(this, players[id]);
-                }
-            });
+        // UI表示の更新
+        socket.on('connect', () => {
+            document.getElementById('socket-id').innerText = socket.id;
         });
 
-        this.socket.on('newPlayer', (playerInfo) => {
-            this.addOtherPlayer(this, playerInfo);
-        });
+        // 2. Three.js 基本セットアップ（シーン・カメラ・レンダラー）
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
+        scene.fog = new THREE.FogExp2(0x0f172a, 0.03);
 
-        this.socket.on('playerDisconnected', (playerId) => {
-            this.otherPlayers.getChildren().forEach((otherPlayer) => {
-                if (playerId === otherPlayer.playerId) {
-                    otherPlayer.destroy();
-                    otherPlayer.nameText.destroy();
-                }
-            });
-        });
+        // 2.5D風のクォータービュー（俯瞰）カメラ設定
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 20);
+        camera.lookAt(0, 0, 0);
 
-        this.socket.on('playerMoved', (playerInfo) => {
-            this.otherPlayers.getChildren().forEach((otherPlayer) => {
-                if (playerInfo.playerId === otherPlayer.playerId) {
-                    otherPlayer.setPosition(playerInfo.x, playerInfo.y);
-                    otherPlayer.nameText.setPosition(playerInfo.x, playerInfo.y - 25);
-                    // Y座標で重なり順を更新 (2.5D表現の肝)
-                    otherPlayer.setDepth(playerInfo.y);
-                    otherPlayer.nameText.setDepth(playerInfo.y + 1);
-                }
-            });
-        });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
 
-        // コイン（経済システム）の同期
-        this.socket.on('currentCoins', (coins) => {
-            Object.keys(coins).forEach((id) => this.addCoin(coins[id]));
-        });
+        // ライティング
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
 
-        this.socket.on('newCoin', (coinInfo) => {
-            this.addCoin(coinInfo);
-        });
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 40, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
 
-        this.socket.on('coinCollected', (coinId) => {
-            this.coins.getChildren().forEach((coin) => {
-                if(coin.coinId === coinId) coin.destroy();
-            });
-        });
+        // グリッド付き床面（ステージ）の作成
+        const gridHelper = new THREE.GridHelper(50, 50, 0x38bdf8, 0x334155);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
 
-        this.socket.on('economyUpdate', (info) => {
-            if(info.id === this.socket.id) {
-                document.getElementById('money-display').innerText = info.money;
-            }
-        });
+        const planeGeometry = new THREE.PlaneGeometry(50, 50);
+        const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.receiveShadow = true;
+        scene.add(plane);
 
-        // キーボード入力設定
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
-    }
+        // 3. プレイヤー（アバター）管理構造
+        const otherPlayers = {};
+        let localPlayerMesh = null;
+        const keysPressed = {};
 
-    update() {
-        if (this.player) {
-            const speed = 200;
-            this.player.body.setVelocity(0);
+        // アバターメッシュの生成関数（ドット/ローポリ風の立体キャラクター）
+        function createAvatarMesh(color) {
+            const group = new THREE.Group();
 
-            // 移動制御
-            if (this.cursors.left.isDown || this.wasd.left.isDown) this.player.body.setVelocityX(-speed);
-            else if (this.cursors.right.isDown || this.wasd.right.isDown) this.player.body.setVelocityX(speed);
-            
-            if (this.cursors.up.isDown || this.wasd.up.isDown) this.player.body.setVelocityY(-speed);
-            else if (this.cursors.down.isDown || this.wasd.down.isDown) this.player.body.setVelocityY(speed);
+            // 胴体
+            const bodyGeo = new THREE.BoxGeometry(1, 1.2, 0.8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            group.add(body);
 
-            // 自分のY座標を更新して2.5Dの重なりを表現
-            this.player.setDepth(this.player.y);
-            this.playerNameText.setPosition(this.player.x, this.player.y - 25);
-            this.playerNameText.setDepth(this.player.y + 1);
+            // 頭部
+            const headGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffe0bd });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.55;
+            head.castShadow = true;
+            group.add(head);
 
-            // 動いたらサーバーへ送信
-            const x = this.player.x;
-            const y = this.player.y;
-            if (this.player.oldPosition && (x !== this.player.oldPosition.x || y !== this.player.oldPosition.y)) {
-                this.socket.emit('playerMovement', { x: x, y: y });
-            }
-            this.player.oldPosition = { x: x, y: y };
+            // 向きがわかる「目」
+            const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.1);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-0.18, 1.6, 0.35);
+            const eyeR = eyeL.clone();
+            eyeR.position.x = 0.18;
+            group.add(eyeL);
+            group.add(eyeR);
+
+            return group;
         }
-    }
 
-    // 自分のキャラを画面に追加
-    addPlayer(scene, playerInfo) {
-        scene.player = scene.physics.add.sprite(playerInfo.x, playerInfo.y, 'player').setTint(playerInfo.color);
-        scene.player.setCollideWorldBounds(true);
-        scene.playerNameText = scene.add.text(playerInfo.x, playerInfo.y - 25, 'You', { fontSize: '14px', fill: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 0.5);
-        
-        // コインとの当たり判定
-        scene.physics.add.overlap(scene.player, scene.coins, (player, coin) => {
-            this.socket.emit('collectCoin', coin.coinId);
-            coin.destroy(); // クライアント側でも一旦消す
+        // 4. Socket.io 通信イベント受託
+
+        // 接続時：初期全プレイヤーの生成
+        socket.on('currentPlayers', (players) => {
+            Object.keys(players).forEach((id) => {
+                if (id === socket.id) {
+                    addLocalPlayer(players[id]);
+                } else {
+                    addOtherPlayer(players[id]);
+                }
+            });
+            updateOnlineCount();
         });
-    }
 
-    // 他のプレイヤーを画面に追加
-    addOtherPlayer(scene, playerInfo) {
-        const otherPlayer = scene.add.sprite(playerInfo.x, playerInfo.y, 'player').setTint(playerInfo.color);
-        otherPlayer.playerId = playerInfo.playerId;
-        otherPlayer.nameText = scene.add.text(playerInfo.x, playerInfo.y - 25, 'Player', { fontSize: '12px', fill: '#aaaaaa', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
-        scene.otherPlayers.add(otherPlayer);
-    }
+        // 他の新規プレイヤー接続時
+        socket.on('newPlayer', (playerInfo) => {
+            addOtherPlayer(playerInfo);
+            updateOnlineCount();
+        });
 
-    // コインを画面に追加
-    addCoin(coinInfo) {
-        const coin = this.coins.create(coinInfo.x, coinInfo.y, 'coin');
-        coin.coinId = coinInfo.id;
-        coin.setDepth(coinInfo.y); // コインもYソート
-        // アニメーション風の動き
-        this.tweens.add({ targets: coin, y: coin.y - 10, duration: 1000, yoyo: true, repeat: -1 });
-    }
+        // 他プレイヤー移動時
+        socket.on('playerMoved', (playerInfo) => {
+            if (otherPlayers[playerInfo.id]) {
+                otherPlayers[playerInfo.id].position.set(playerInfo.x, playerInfo.y, playerInfo.z);
+            }
+        });
 
-    // ドット絵風のテクスチャを自動生成する
-    generateTextures() {
-        const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-        
-        // キャラクター (ちょっとした箱型でドット絵感を出す)
-        graphics.fillStyle(0xffffff, 1);
-        graphics.fillRect(0, 0, 32, 32);
-        graphics.fillStyle(0x000000, 0.3); // 影
-        graphics.fillRect(0, 24, 32, 8);
-        graphics.generateTexture('player', 32, 32);
-        graphics.clear();
+        // プレイヤー切断時
+        socket.on('playerDisconnected', (id) => {
+            if (otherPlayers[id]) {
+                scene.remove(otherPlayers[id]);
+                delete otherPlayers[id];
+                updateOnlineCount();
+            }
+        });
 
-        // コイン (黄色いダイヤ型)
-        graphics.fillStyle(0xffcc00, 1);
-        graphics.fillCircle(10, 10, 10);
-        graphics.fillStyle(0xffaa00, 1); // 立体感
-        graphics.fillCircle(10, 10, 6);
-        graphics.generateTexture('coin', 20, 20);
-    }
-}
+        function addLocalPlayer(info) {
+            localPlayerMesh = createAvatarMesh(info.color);
+            localPlayerMesh.position.set(info.x, info.y, info.z);
+            scene.add(localPlayerMesh);
+        }
 
-const config = {
-    type: Phaser.AUTO,
-    parent: 'game-container',
-    width: 800,
-    height: 600,
-    pixelArt: true, // ドット絵をくっきり表示
-    physics: {
-        default: 'arcade',
-        arcade: { debug: false }
-    },
-    scene: [MainScene]
-};
-const game = new Phaser.Game(config);
-</script>
+        function addOtherPlayer(info) {
+            const mesh = createAvatarMesh(info.color);
+            mesh.position.set(info.x, info.y, info.z);
+            scene.add(mesh);
+            otherPlayers[info.id] = mesh;
+        }
+
+        function updateOnlineCount() {
+            const count = Object.keys(otherPlayers).length + (localPlayerMesh ? 1 : 0);
+            document.getElementById('online-count').innerText = `オンライン: ${count} 人`;
+        }
+
+        // 5. 操作処理（キー入力検知）
+        window.addEventListener('keydown', (e) => { keysPressed[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { keysPressed[e.key.toLowerCase()] = false; });
+
+        // 6. アニメーション＆メインループ
+        const clock = new THREE.Clock();
+        const speed = 8; // 移動速度
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (localPlayerMesh) {
+                let moved = false;
+                const oldPos = localPlayerMesh.position.clone();
+
+                // 移動計算（XZ平面）
+                if (keysPressed['w'] || keysPressed['arrowup']) {
+                    localPlayerMesh.position.z -= speed * delta;
+                    localPlayerMesh.rotation.y = Math.PI;
+                    moved = true;
+                }
+                if (keysPressed['s'] || keysPressed['arrowdown']) {
+                    localPlayerMesh.position.z += speed * delta;
+                    localPlayerMesh.rotation.y = 0;
+                    moved = true;
+                }
+                if (keysPressed['a'] || keysPressed['arrowleft']) {
+                    localPlayerMesh.position.x -= speed * delta;
+                    localPlayerMesh.rotation.y = -Math.PI / 2;
+                    moved = true;
+                }
+                if (keysPressed['d'] || keysPressed['arrowright']) {
+                    localPlayerMesh.position.x += speed * delta;
+                    localPlayerMesh.rotation.y = Math.PI / 2;
+                    moved = true;
+                }
+
+                // 斜め移動時の向き調整
+                if ((keysPressed['w'] || keysPressed['arrowup']) && (keysPressed['a'] || keysPressed['arrowleft'])) localPlayerMesh.rotation.y = -Math.PI * 0.75;
+                if ((keysPressed['w'] || keysPressed['arrowup']) && (keysPressed['d'] || keysPressed['arrowright'])) localPlayerMesh.rotation.y = Math.PI * 0.75;
+                if ((keysPressed['s'] || keysPressed['arrowdown']) && (keysPressed['a'] || keysPressed['arrowleft'])) localPlayerMesh.rotation.y = -Math.PI * 0.25;
+                if ((keysPressed['s'] || keysPressed['arrowdown']) && (keysPressed['d'] || keysPressed['arrowright'])) localPlayerMesh.rotation.y = Math.PI * 0.25;
+
+                // 移動限界エリア（ステージ枠内）制限
+                localPlayerMesh.position.x = Math.max(-24, Math.min(24, localPlayerMesh.position.x));
+                localPlayerMesh.position.z = Math.max(-24, Math.min(24, localPlayerMesh.position.z));
+
+                // カメラの追従（クォータービュー視点の維持）
+                camera.position.x = localPlayerMesh.position.x;
+                camera.position.z = localPlayerMesh.position.z + 20;
+                camera.lookAt(localPlayerMesh.position.x, 0, localPlayerMesh.position.z);
+
+                // 位置が変化した場合のみサーバーへ位置を送信
+                if (moved) {
+                    socket.emit('playerMovement', {
+                        x: localPlayerMesh.position.x,
+                        y: localPlayerMesh.position.y,
+                        z: localPlayerMesh.position.z
+                    });
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // ウインドウリサイズ対応
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
