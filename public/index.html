@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Metaverse - Economy & Gambling</title>
+    <title>Kanazawa 3D Metaverse</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
         
@@ -13,7 +13,7 @@
             background: rgba(15, 23, 42, 0.95);
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px;}
         .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; }
         .panel input { width: 100%; box-sizing: border-box; padding: 10px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; }
         .panel button { width: 100%; padding: 10px; margin: 8px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -21,32 +21,44 @@
         .btn-primary:hover { background: #0284c7; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
+        .btn-danger { background: #f43f5e; color: white; }
+        .btn-danger:hover { background: #e11d48; }
         .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
-        /* ゲーム内UI群 */
-        #game-ui { display: none; }
-        
-        /* 上部ステータスバー */
-        #status-bar {
-            position: absolute; top: 15px; left: 15px; z-index: 10;
-            background: rgba(15, 23, 42, 0.8); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(4px);
+        /* 左側固定サイドバーUI */
+        #sidebar {
+            display: none;
+            position: absolute; top: 0; left: 0; width: 280px; height: 100vh;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+            border-right: 1px solid #334155; z-index: 10;
+            padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; gap: 20px;
         }
-        #status-bar h1 { margin: 0 0 10px 0; font-size: 1.2rem; color: #f8fafc; }
-        .money { font-size: 1.4rem; color: #fbbf24; font-weight: bold; }
-        .market-rate { font-size: 1.2rem; margin-top: 5px; color: #34d399; font-weight: bold; }
+        .sidebar-section { border-bottom: 1px solid #334155; padding-bottom: 15px; }
+        .sidebar-section h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #94a3b8; text-transform: uppercase;}
+        
+        .user-email { font-size: 1.1rem; font-weight: bold; color: #f8fafc; word-break: break-all;}
+        .money { font-size: 1.8rem; color: #fbbf24; font-weight: bold; margin-top: 5px; }
+        .market-rate { font-size: 1.4rem; color: #34d399; font-weight: bold; }
+        .area-name { font-size: 1.1rem; color: #c084fc; font-weight: bold; display: flex; align-items: center; gap: 8px;}
 
-        /* 下部アクションパネル（送金・ギャンブル） */
-        #action-panels {
-            position: absolute; bottom: 20px; left: 20px; z-index: 10;
-            display: flex; gap: 15px;
+        /* エリア限定ギャンブルパネル（右下） */
+        #gamble-panel {
+            position: absolute; bottom: 20px; right: 20px; z-index: 10;
+            background: rgba(15, 23, 42, 0.9); padding: 20px; border-radius: 12px;
+            border: 2px solid #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
+            width: 250px; display: none; /* 初期非表示。駅前でのみ表示 */
         }
-        .action-box {
-            background: rgba(15, 23, 42, 0.8); padding: 15px; border-radius: 12px; backdrop-filter: blur(4px);
-            width: 250px;
+        #gamble-panel h3 { margin: 0 0 10px 0; color: #facc15; }
+
+        /* 送金モーダル */
+        #transfer-modal {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            display: none; justify-content: center; align-items: center;
         }
-        .action-box h3 { margin: 0 0 10px 0; font-size: 1rem; color: #e2e8f0; border-bottom: 1px solid #334155; padding-bottom: 5px; }
-        
-        /* 通知ポップアップコンテナ */
+
+        /* 通知 */
         #notification-container {
             position: absolute; top: 20px; right: 20px; z-index: 50;
             display: flex; flex-direction: column; gap: 10px; pointer-events: none;
@@ -63,9 +75,8 @@
         @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
 
-        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1;}
     </style>
-    <!-- Three.js & Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -74,7 +85,7 @@
     <!-- 1. ログイン画面 -->
     <div id="login-screen">
         <div class="panel">
-            <h2>3D Metaverse</h2>
+            <h2>Kanazawa Metaverse</h2>
             <div id="auth-error" class="error-msg"></div>
             <input type="email" id="email" placeholder="Email Address" required>
             <input type="password" id="password" placeholder="Password" required>
@@ -83,46 +94,58 @@
         </div>
     </div>
 
-    <!-- 2. ゲームUI -->
-    <div id="game-ui">
-        <!-- 通知エリア -->
-        <div id="notification-container"></div>
-
-        <!-- 左上ステータス -->
-        <div id="status-bar">
-            <h1>User: <span id="ui-email">---</span></h1>
+    <!-- 2. 左側サイドバー UI -->
+    <div id="sidebar" style="display: none;">
+        <div class="sidebar-section">
+            <h3>Player Info</h3>
+            <div class="user-email" id="ui-email">---</div>
             <div class="money">💰 <span id="ui-money">0</span> G</div>
-            <div class="market-rate">📈 経済倍率: <span id="ui-market">x1.00</span></div>
         </div>
-
-        <!-- 左下アクション -->
-        <div id="action-panels">
-            <!-- 送金機能 -->
-            <div class="action-box">
-                <h3>💸 プレイヤーへ送金</h3>
-                <input type="email" id="send-target" placeholder="宛先のEmail">
-                <input type="number" id="send-amount" placeholder="金額 (G)">
-                <button class="btn-primary" onclick="sendMoney()">送金する</button>
-            </div>
-            
-            <!-- ギャンブル機能 -->
-            <div class="action-box">
-                <h3>🎲 ダイス・ギャンブル</h3>
-                <p style="font-size: 0.8rem; margin: 0 0 10px 0; color:#cbd5e1;">4, 5, 6が出れば勝ち。報酬に経済倍率が掛かります！</p>
-                <input type="number" id="gamble-amount" placeholder="賭け金 (G)">
-                <button class="btn-success" onclick="playGamble()">ダイスを振る</button>
-            </div>
+        <div class="sidebar-section">
+            <h3>Current Location</h3>
+            <div class="area-name" id="ui-area">📍 ローディング中...</div>
+            <p style="font-size: 0.8rem; color:#94a3b8; margin-top:5px;">WASDキーで移動</p>
+        </div>
+        <div class="sidebar-section">
+            <h3>Economy Market</h3>
+            <div class="market-rate">📈 <span id="ui-market">x1.00</span></div>
+        </div>
+        <div class="sidebar-section" style="border: none;">
+            <h3>Actions</h3>
+            <button class="btn-primary" onclick="document.getElementById('transfer-modal').style.display='flex'">💸 他プレイヤーへ送金</button>
         </div>
     </div>
 
-    <!-- 3. 3Dキャンバス -->
+    <!-- 3. エリア限定 ギャンブルパネル -->
+    <div id="gamble-panel">
+        <h3>🎰 駅前カジノ</h3>
+        <p style="font-size: 0.8rem; margin: 0 0 10px 0; color:#cbd5e1;">4, 5, 6が出れば勝利。<br>配当 = 賭け金 × 経済倍率！</p>
+        <input type="number" id="gamble-amount" placeholder="賭け金 (G)">
+        <button class="btn-success" onclick="playGamble()">ダイスを振る</button>
+    </div>
+
+    <!-- 4. 送金モーダル -->
+    <div id="transfer-modal">
+        <div class="panel">
+            <h2>💸 送金する</h2>
+            <input type="email" id="send-target" placeholder="宛先のEmail">
+            <input type="number" id="send-amount" placeholder="金額 (G)">
+            <button class="btn-primary" onclick="sendMoney()">送金実行</button>
+            <button class="btn-danger" onclick="document.getElementById('transfer-modal').style.display='none'">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- 通知エリア -->
+    <div id="notification-container"></div>
+
+    <!-- 3Dキャンバス -->
     <div id="canvas-container"></div>
 
     <script>
         let currentUserEmail = null;
         let socket = null;
+        let currentZone = ''; // 現在のエリアを追跡
 
-        // ログイン・登録共通処理
         async function attemptAuth(endpoint) {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -138,7 +161,7 @@
                     currentUserEmail = data.email;
                     document.getElementById('ui-email').innerText = currentUserEmail;
                     document.getElementById('ui-money').innerText = data.money;
-                    startGame(); // ログイン成功時のみゲーム開始
+                    startGame(); 
                 } else {
                     document.getElementById('auth-error').style.color = '#10b981';
                     document.getElementById('auth-error').innerText = data.message;
@@ -149,19 +172,17 @@
             }
         }
 
-        // 通知ポップアップ表示関数
         function showNotification(type, text) {
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerText = text;
             container.appendChild(toast);
-            // 4秒後にDOMから削除
             setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
         let scene, camera, renderer, clock;
-        const MAP_SIZE = 80;
+        const MAP_SIZE = 200; // マップサイズ拡大
         const otherPlayers = {}; 
         const coinsMap = {};     
         let localPlayerMesh = null;
@@ -169,9 +190,8 @@
 
         function startGame() {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('sidebar').style.display = 'flex';
 
-            // Socket.io 接続
             socket = io({ auth: { email: currentUserEmail } });
             
             initThreeJS();
@@ -181,10 +201,9 @@
         function initThreeJS() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB); // 空の色
-            scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
+            scene.background = new THREE.Color(0xa0d8ef); // 空の色
+            scene.fog = new THREE.FogExp2(0xa0d8ef, 0.005);
 
-            // カメラ設定 (あとでプレイヤーに追従させます)
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -192,21 +211,19 @@
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
-            // 照明
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, -20);
+            dirLight.position.set(50, 100, -50);
             dirLight.castShadow = true;
-            dirLight.shadow.camera.left = -40; dirLight.shadow.camera.right = 40;
-            dirLight.shadow.camera.top = 40; dirLight.shadow.camera.bottom = -40;
+            dirLight.shadow.camera.left = -100; dirLight.shadow.camera.right = 100;
+            dirLight.shadow.camera.top = 100; dirLight.shadow.camera.bottom = -100;
             scene.add(dirLight);
 
-            createMap();
+            createKanazawaMap();
 
             clock = new THREE.Clock();
 
-            // キー入力検知
             window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
             window.addEventListener('resize', onWindowResize);
@@ -214,55 +231,108 @@
             animate();
         }
 
-        function createMap() {
-            // 地面
-            const grid = new THREE.GridHelper(MAP_SIZE, MAP_SIZE, 0x444444, 0x888888);
+        function createKanazawaMap() {
+            // 基本の地面
+            const grid = new THREE.GridHelper(MAP_SIZE, MAP_SIZE/5, 0x444444, 0x888888);
             scene.add(grid);
-            const planeGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
-            const planeMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 1.0 }); // 緑色の草地風
-            const plane = new THREE.Mesh(planeGeo, planeMat);
+            const planeMat = new THREE.MeshStandardMaterial({ color: 0x8c9c8a, roughness: 1.0 }); 
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE), planeMat);
             plane.rotation.x = -Math.PI / 2;
             plane.receiveShadow = true;
             scene.add(plane);
 
-            // 障害物（ランダムなビル/箱）
-            const boxGeo = new THREE.BoxGeometry(2, 4, 2);
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
-            for (let i = 0; i < 25; i++) {
-                const box = new THREE.Mesh(boxGeo, boxMat);
-                box.position.set(
-                    (Math.random() - 0.5) * (MAP_SIZE - 10),
-                    2, 
-                    (Math.random() - 0.5) * (MAP_SIZE - 10)
-                );
-                // ランダムな高さにする
-                box.scale.y = Math.random() * 2 + 0.5;
-                box.position.y = (4 * box.scale.y) / 2;
-                box.castShadow = true; box.receiveShadow = true;
-                scene.add(box);
+            // ==========================================
+            // ① 金沢駅エリア (Z: -70付近)
+            // ==========================================
+            const gateMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.8 }); // 鼓門の茶色
+            // 柱
+            const pillarL = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 15), gateMat);
+            pillarL.position.set(-10, 7.5, -70);
+            pillarL.castShadow = true;
+            const pillarR = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 15), gateMat);
+            pillarR.position.set(10, 7.5, -70);
+            pillarR.castShadow = true;
+            // 屋根
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(30, 2, 6), gateMat);
+            roof.position.set(0, 16, -70);
+            roof.castShadow = true;
+            scene.add(pillarL, pillarR, roof);
+
+            // もてなしドーム風（ガラスの半球）
+            const domeMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+            dome.position.set(0, 0, -75);
+            scene.add(dome);
+
+            // ==========================================
+            // ② 兼六園エリア (X: 55, Z: 55付近)
+            // ==========================================
+            // 池
+            const pondMat = new THREE.MeshStandardMaterial({ color: 0x4682b4, roughness: 0.1, metalness: 0.8 });
+            const pond = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), pondMat);
+            pond.rotation.x = -Math.PI / 2;
+            pond.position.set(55, 0.1, 55); // 地面よりわずかに上
+            scene.add(pond);
+
+            // 徽軫灯籠（ことじとうろう）風
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+            const leg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 4), stoneMat);
+            leg1.position.set(40, 2, 45);
+            leg1.rotation.z = Math.PI / 8;
+            const leg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 4), stoneMat);
+            leg2.position.set(43, 2, 45);
+            leg2.rotation.z = -Math.PI / 8;
+            const base = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 3), stoneMat);
+            base.position.set(41.5, 4.5, 45);
+            const top = new THREE.Mesh(new THREE.ConeGeometry(3.5, 2, 4), stoneMat);
+            top.position.set(41.5, 6, 45);
+            scene.add(leg1, leg2, base, top);
+
+            // 木をいくつか配置
+            const treeMat = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+            for(let i=0; i<8; i++){
+                const x = 30 + Math.random()*50;
+                const z = 30 + Math.random()*50;
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4), trunkMat);
+                trunk.position.set(x, 2, z);
+                const leaves = new THREE.Mesh(new THREE.SphereGeometry(3), treeMat);
+                leaves.position.set(x, 5, z);
+                scene.add(trunk, leaves);
+            }
+
+            // ==========================================
+            // ③ 武家屋敷エリア (X: -55, Z: 55付近)
+            // ==========================================
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c }); // 土壁色
+            const roofTileMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            
+            // 通りを作るように壁を配置
+            for(let i=0; i<3; i++) {
+                const zOffset = 30 + i * 20;
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(40, 4, 1), wallMat);
+                wall.position.set(-55, 2, zOffset);
+                const wallRoof = new THREE.Mesh(new THREE.BoxGeometry(41, 0.5, 2), roofTileMat);
+                wallRoof.position.set(-55, 4.25, zOffset);
+                scene.add(wall, wallRoof);
             }
         }
 
-        // 3Dアバターの作成（向きが分かるように顔を作る）
         function createAvatarMesh(colorHex) {
             const group = new THREE.Group();
-            // 胴体
-            const bodyGeo = new THREE.BoxGeometry(1, 1.2, 0.8);
             const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.8), bodyMat);
             body.position.y = 0.6; body.castShadow = true;
             group.add(body);
-            // 頭
-            const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            
             const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
-            const head = new THREE.Mesh(headGeo, headMat);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), headMat);
             head.position.y = 1.6; head.castShadow = true;
             group.add(head);
-            // 目（正面を表すZ軸マイナス方向に配置）
-            const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.1);
+            
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-0.2, 1.7, -0.41); // Zをマイナスにして前方に
+            const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), eyeMat);
+            eyeL.position.set(-0.2, 1.7, -0.41);
             const eyeR = eyeL.clone();
             eyeR.position.x = 0.2;
             group.add(eyeL); group.add(eyeR);
@@ -270,9 +340,8 @@
             return group;
         }
 
-        // コインメッシュの生成
         function createCoinMesh() {
-            const geo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16);
+            const geo = new THREE.CylinderGeometry(0.6, 0.6, 0.2, 16);
             const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
             const coin = new THREE.Mesh(geo, mat);
             coin.rotation.x = Math.PI / 2;
@@ -303,7 +372,6 @@
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
                     otherPlayers[info.id].position.set(info.x, info.y, info.z);
-                    // 向きの同期を適用
                     otherPlayers[info.id].rotation.y = info.rotation; 
                 }
             });
@@ -315,10 +383,9 @@
                 }
             });
 
-            // 経済関連の同期
             socket.on('marketUpdate', (multiplier) => {
                 document.getElementById('ui-market').innerText = `x${multiplier}`;
-                showNotification('info', `📈 市場変動！ 現在の倍率は x${multiplier} です`);
+                showNotification('info', `📈 市場変動: 倍率 x${multiplier}`);
             });
 
             socket.on('moneyUpdated', (newMoney) => {
@@ -327,7 +394,6 @@
 
             socket.on('notification', (msg) => showNotification(msg.type, msg.text));
 
-            // コインの同期
             socket.on('newCoin', (coinInfo) => addCoin(coinInfo));
             socket.on('coinCollected', (coinId) => {
                 if (coinsMap[coinId]) {
@@ -352,7 +418,6 @@
             coinsMap[info.id] = mesh;
         }
 
-        // P2P 送金アクション
         function sendMoney() {
             const target = document.getElementById('send-target').value;
             const amount = document.getElementById('send-amount').value;
@@ -362,28 +427,55 @@
             
             document.getElementById('send-target').value = '';
             document.getElementById('send-amount').value = '';
+            document.getElementById('transfer-modal').style.display = 'none';
         }
 
-        // ギャンブル アクション
         function playGamble() {
             const amount = document.getElementById('gamble-amount').value;
             if (!amount) return showNotification('error', '賭け金を入力してください');
-            
             socket.emit('playGamble', { amount: amount });
             document.getElementById('gamble-amount').value = '';
         }
 
         function checkCoinCollisions() {
             if (!localPlayerMesh) return;
-            const threshold = 1.8;
+            const threshold = 2.0;
             Object.keys(coinsMap).forEach(coinId => {
                 const coin = coinsMap[coinId];
                 if (localPlayerMesh.position.distanceTo(coin.position) < threshold) {
                     scene.remove(coin);
-                    delete coinsMap[coinId]; // クライアント側で即消す
+                    delete coinsMap[coinId]; 
                     socket.emit('collectCoin', coinId);
                 }
             });
+        }
+
+        // プレイヤーの座標からエリアを判定しUIを更新する関数
+        function updateZoneUI(x, z) {
+            let newZone = 'none';
+            if (x >= -40 && x <= 40 && z >= -90 && z <= -50) newZone = 'station';
+            else if (x >= 20 && x <= 90 && z >= 20 && z <= 90) newZone = 'kenrokuen';
+            else if (x >= -90 && x <= -20 && z >= 20 && z <= 90) newZone = 'samurai';
+
+            if (currentZone !== newZone) {
+                currentZone = newZone;
+                const areaEl = document.getElementById('ui-area');
+                const gamblePanel = document.getElementById('gamble-panel');
+                
+                if (newZone === 'station') {
+                    areaEl.innerHTML = '📍 金沢駅前<br><span style="font-size:0.8rem;color:#facc15;">(ギャンブル可能)</span>';
+                    gamblePanel.style.display = 'block';
+                } else if (newZone === 'kenrokuen') {
+                    areaEl.innerHTML = '📍 兼六園<br><span style="font-size:0.8rem;color:#34d399;">(コイン収集エリア)</span>';
+                    gamblePanel.style.display = 'none';
+                } else if (newZone === 'samurai') {
+                    areaEl.innerHTML = '📍 武家屋敷跡<br><span style="font-size:0.8rem;color:#94a3b8;">(観光エリア)</span>';
+                    gamblePanel.style.display = 'none';
+                } else {
+                    areaEl.innerHTML = '📍 郊外<br><span style="font-size:0.8rem;color:#64748b;">(フリーエリア)</span>';
+                    gamblePanel.style.display = 'none';
+                }
+            }
         }
 
         function animate() {
@@ -391,18 +483,16 @@
             const delta = clock.getDelta();
             const time = clock.getElapsedTime();
 
-            // コインのアニメーション
             Object.values(coinsMap).forEach(coin => {
                 coin.rotation.z += 2 * delta;
-                coin.position.y = 0.5 + Math.sin(time * 3 + coin.position.x) * 0.2;
+                coin.position.y = 0.5 + Math.sin(time * 3 + coin.position.x) * 0.3;
             });
 
             if (localPlayerMesh) {
                 let moved = false;
                 let newRotation = localPlayerMesh.rotation.y;
-                const speed = 10;
+                const speed = 15; // マップが広いので少し速く設定
 
-                // 3D用の移動 (Zマイナスが前)
                 if (keysPressed['w'] || keysPressed['arrowup']) {
                     localPlayerMesh.position.z -= speed * delta;
                     newRotation = Math.PI; moved = true;
@@ -420,27 +510,22 @@
                     newRotation = Math.PI / 2; moved = true;
                 }
 
-                // 斜め向きの補間
                 if ((keysPressed['w'] || keysPressed['arrowup']) && (keysPressed['a'] || keysPressed['arrowleft'])) newRotation = -Math.PI * 0.75;
                 if ((keysPressed['w'] || keysPressed['arrowup']) && (keysPressed['d'] || keysPressed['arrowright'])) newRotation = Math.PI * 0.75;
                 if ((keysPressed['s'] || keysPressed['arrowdown']) && (keysPressed['a'] || keysPressed['arrowleft'])) newRotation = -Math.PI * 0.25;
                 if ((keysPressed['s'] || keysPressed['arrowdown']) && (keysPressed['d'] || keysPressed['arrowright'])) newRotation = Math.PI * 0.25;
 
-                // 向きを即時反映（LERP等の補間を入れるとより滑らかになります）
                 localPlayerMesh.rotation.y = newRotation;
 
-                // 画面外に出ないように制限
-                const limit = MAP_SIZE / 2 - 1;
+                const limit = MAP_SIZE / 2 - 2;
                 localPlayerMesh.position.x = Math.max(-limit, Math.min(limit, localPlayerMesh.position.x));
                 localPlayerMesh.position.z = Math.max(-limit, Math.min(limit, localPlayerMesh.position.z));
 
-                // ★ 完全3D用カメラ（TPS視点風）
-                // プレイヤーの少し後ろ(Z+)で少し上(Y+)から見下ろす
-                const cameraOffsetX = 0;
-                const cameraOffsetY = 8;
-                const cameraOffsetZ = 12;
+                // カメラの追従（サイドバーがあるので少し中心を右にずらす）
+                const cameraOffsetX = 10;
+                const cameraOffsetY = 12;
+                const cameraOffsetZ = 16;
                 
-                // カメラ位置を滑らかに追従させる
                 camera.position.lerp(new THREE.Vector3(
                     localPlayerMesh.position.x + cameraOffsetX,
                     localPlayerMesh.position.y + cameraOffsetY,
@@ -449,9 +534,14 @@
                 
                 camera.lookAt(localPlayerMesh.position);
 
-                checkCoinCollisions();
+                // エリア判定とUI更新
+                updateZoneUI(localPlayerMesh.position.x, localPlayerMesh.position.z);
 
-                // 移動・回転情報をサーバーへ送信
+                // 兼六園エリアにいる時のみコイン当たり判定を実施
+                if(currentZone === 'kenrokuen') {
+                    checkCoinCollisions();
+                }
+
                 if (moved) {
                     socket.emit('playerMovement', {
                         x: localPlayerMesh.position.x,

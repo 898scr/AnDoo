@@ -1,7 +1,7 @@
 {
-"name": "3d-metaverse-economy",
-"version": "2.0.0",
-"description": "3D Metaverse with Economy, Gambling, and P2P Transfers",
+"name": "3d-metaverse-kanazawa",
+"version": "3.0.0",
+"description": "3D Metaverse in Kanazawa with Economy and Zones",
 "main": "server.js",
 "scripts": {
 "start": "node server.js"
