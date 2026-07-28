@@ -216,8 +216,8 @@
         // プレイヤー＆カメラ制御変数
         const keysPressed = { w: false, a: false, s: false, d: false, shift: false };
         let cameraMode = 'tps'; // 'tps' or 'fps'
-        let cameraYaw = 0;   // プレイヤー（カメラ）の横の向き
-        let cameraPitch = 0; // カメラの上下の向き
+        let cameraYaw = 0;   
+        let cameraPitch = 0; 
         let isDragging = false;
 
         const ISLAND_RADIUS = 1000;
@@ -225,6 +225,30 @@
         const monorailCars = [];
         let monorailProgress = [0, 0.01, 0.02]; 
         
+        // --- 空間分割コリジョン（当たり判定）用のシステム ---
+        const GRID_BOX_SIZE = 100;
+        const collisionMap = new Map();
+
+        function addCollisionBox(x, z, width, depth) {
+            const box = {
+                minX: x - width / 2, maxX: x + width / 2,
+                minZ: z - depth / 2, maxZ: z + depth / 2
+            };
+            const gXMin = Math.floor(box.minX / GRID_BOX_SIZE);
+            const gXMax = Math.floor(box.maxX / GRID_BOX_SIZE);
+            const gZMin = Math.floor(box.minZ / GRID_BOX_SIZE);
+            const gZMax = Math.floor(box.maxZ / GRID_BOX_SIZE);
+            
+            for (let gx = gXMin; gx <= gXMax; gx++) {
+                for (let gz = gZMin; gz <= gZMax; gz++) {
+                    const key = `${gx},${gz}`;
+                    if (!collisionMap.has(key)) collisionMap.set(key, []);
+                    collisionMap.get(key).push(box);
+                }
+            }
+        }
+
+        // 高速化（インスタンシング）用データストア
         const instanceData = {
             mat1: [], mat2: [], mat3: [], matSky: [],
             bases: [], entrances: [], antennas: [],
@@ -464,6 +488,9 @@
             base.castShadow = true; base.receiveShadow = true;
             lmGroup.add(base);
 
+            // 当たり判定：タワーの土台
+            addCollisionBox(0, 0, 130, 130); 
+
             const mainTowerGeo = new THREE.BoxGeometry(50, 600, 50);
             const mainTower = new THREE.Mesh(mainTowerGeo, matSky); 
             mainTower.position.set(0, 350, 0); 
@@ -535,6 +562,10 @@
             const mallGroup = new THREE.Group();
             const mallX = -260; 
             const mallZ = -260; 
+            
+            // 当たり判定：モール本体とエントランス
+            addCollisionBox(mallX, mallZ, 180, 180);
+            addCollisionBox(mallX, mallZ + 90, 40, 20);
 
             const mallMat1 = new THREE.MeshStandardMaterial({ color: 0xb5b4a0, roughness: 0.9 });
             const mall1 = new THREE.Mesh(new THREE.BoxGeometry(180, 20, 180), mallMat1);
@@ -686,7 +717,8 @@
 
                     if (dist > ISLAND_RADIUS - 40) continue; 
                     
-                    if (Math.abs(bx) < 60 && Math.abs(bz) < 60) continue; 
+                    // 干渉チェックの拡大（タワー周辺のめり込みを防止）
+                    if (Math.abs(bx) < 110 && Math.abs(bz) < 110) continue; 
                     if (bx > -370 && bx < -150 && bz > -370 && bz < -150) continue; 
                     if (bz > -190 && bz < -70) continue; 
                     if (bx > -185 && bx < -85) continue;
@@ -708,6 +740,8 @@
                         const bHeight = 40 + Math.random() * 80;
                         const matKey = `mat${Math.floor(Math.random() * 3) + 1}`;
                         instanceData[matKey].push({x: bx, y: bHeight / 2 + 1, z: bz, sx: blockSize, sy: bHeight, sz: blockSize});
+                        // 当たり判定登録（遠景）
+                        addCollisionBox(bx, bz, blockSize, blockSize);
                     } else {
                         // 【近景の詳細化・路地の確保】
                         instanceData.bases.push({x: bx, y: 0.1, z: bz, sx: blockSize - 6, sy: 0.2, sz: blockSize - 6});
@@ -739,8 +773,12 @@
 
                             const matKey = isSkyscraper ? 'matSky' : `mat${Math.floor(Math.random() * 3) + 1}`;
                             instanceData[matKey].push({x: finalX, y: bHeight / 2 + 1, z: finalZ, sx: subSize - 4, sy: bHeight, sz: subSize - 4});
+                            // 当たり判定登録（近景）
+                            addCollisionBox(finalX, finalZ, subSize - 4, subSize - 4);
 
-                            if (!split) instanceData.entrances.push({x: finalX + (subSize/2) - 1, y: 3, z: finalZ, sx: 6, sy: 4, sz: subSize - 8});
+                            if (!split) {
+                                instanceData.entrances.push({x: finalX + (subSize/2) - 1, y: 3, z: finalZ, sx: 6, sy: 4, sz: subSize - 8});
+                            }
 
                             if (bHeight > 80) {
                                 instanceData[matKey].push({x: finalX, y: bHeight + 6, z: finalZ, sx: subSize - 10, sy: 10, sz: subSize - 10});
@@ -824,7 +862,7 @@
             
             const visorMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, metalness: 0.8, transparent: true, opacity: 0.8 });
             const visor = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.2), visorMat);
-            visor.position.set(0, 4.5, -0.75); // 前方を向く(Zマイナス方向)
+            visor.position.set(0, 4.5, -0.75); // 前方を向く
             group.add(visor);
 
             return group;
@@ -937,7 +975,7 @@
 
         function checkCoinCollisions() {
             if (!localPlayerMesh) return;
-            const threshold = 5.0; // 少し広めに判定
+            const threshold = 5.0; 
             Object.keys(coinsMap).forEach(coinId => {
                 const coin = coinsMap[coinId];
                 if (localPlayerMesh.position.distanceTo(coin.position) < threshold) {
@@ -945,6 +983,38 @@
                     socket.emit('collectCoin', coinId);
                 }
             });
+        }
+
+        // --- プレイヤーの当たり判定チェック ---
+        function checkCollisions(nextX, nextZ, currentX, currentZ, radius) {
+            const gX = Math.floor(currentX / GRID_BOX_SIZE);
+            const gZ = Math.floor(currentZ / GRID_BOX_SIZE);
+            
+            let canMoveX = true;
+            let canMoveZ = true;
+
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dz = -1; dz <= 1; dz++) {
+                    const key = `${gX + dx},${gZ + dz}`;
+                    if (collisionMap.has(key)) {
+                        const boxes = collisionMap.get(key);
+                        for (let i = 0; i < boxes.length; i++) {
+                            const box = boxes[i];
+                            // X方向移動の壁判定
+                            if (nextX + radius > box.minX && nextX - radius < box.maxX &&
+                                currentZ + radius > box.minZ && currentZ - radius < box.maxZ) {
+                                canMoveX = false;
+                            }
+                            // Z方向移動の壁判定
+                            if (currentX + radius > box.minX && currentX - radius < box.maxX &&
+                                nextZ + radius > box.minZ && nextZ - radius < box.maxZ) {
+                                canMoveZ = false;
+                            }
+                        }
+                    }
+                }
+            }
+            return { canMoveX, canMoveZ };
         }
 
         function updateZoneUI(x, z) {
@@ -1003,9 +1073,20 @@
                     // カメラの向いている方向（yaw）に合わせて移動方向を補正
                     vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
                     
-                    localPlayerMesh.position.x += vec.x * speed * delta;
-                    localPlayerMesh.position.z += vec.z * speed * delta;
-                    moved = true;
+                    const nextX = localPlayerMesh.position.x + vec.x * speed * delta;
+                    const nextZ = localPlayerMesh.position.z + vec.z * speed * delta;
+                    
+                    // 当たり判定チェック
+                    const collision = checkCollisions(nextX, nextZ, localPlayerMesh.position.x, localPlayerMesh.position.z, 2.0);
+
+                    if (collision.canMoveX) {
+                        localPlayerMesh.position.x = nextX;
+                        moved = true;
+                    }
+                    if (collision.canMoveZ) {
+                        localPlayerMesh.position.z = nextZ;
+                        moved = true;
+                    }
                 }
                 
                 // アバターは常にカメラが向いている方向を向く
@@ -1042,7 +1123,7 @@
                 } else {
                     // FPS: アバターの頭の位置
                     camera.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y + 4.5, localPlayerMesh.position.z);
-                    camera.rotation.set(0, 0, 0, 'YXZ'); // 回転順序を指定
+                    camera.rotation.set(0, 0, 0, 'YXZ'); 
                     camera.rotation.y = cameraYaw;
                     camera.rotation.x = cameraPitch;
                 }

@@ -11,7 +11,7 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 【変更】ルートへのアクセス時に、新しい本番用ファイル (main.html) を返すように変更
+// ルートへのアクセス時に、新しい本番用ファイル (main.html) を返すように変更
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'main.html'));
 });
@@ -22,23 +22,14 @@ const players = {};
 let coins = {};     
 
 let economyMultiplier = 1.0; 
-const MAP_SIZE = 200; // マップを拡張
 const MAX_COINS = 30;
 const COIN_BASE_VALUE = 10;
-
-// エリア判定ロジック（サーバー側での不正防止用）
-function getZone(x, z) {
-    if (x >= -40 && x <= 40 && z >= -90 && z <= -50) return 'station';    // 金沢駅前
-    if (x >= 20 && x <= 90 && z >= 20 && z <= 90) return 'kenrokuen';     // 兼六園
-    if (x >= -90 && x <= -20 && z >= 20 && z <= 90) return 'samurai';     // 武家屋敷
-    return 'none';
-}
 
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// 兼六園エリア内にのみコインを生成する
+// 街全体にコインを生成する
 function spawnCoin() {
     const id = crypto.randomUUID();
     // 64bit版のスケールに合わせて、コインの出現範囲を街全体（半径800m以内）に広げる
@@ -89,13 +80,13 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-    // ログイン時はランドマーク周辺にスポーン
+    // 【修正】スポーン位置をタワーの南側（土台から出た広場）に設定
     players[socket.id] = {
         id: socket.id,
         email: socket.email,
-        x: (Math.random() - 0.5) * 50, 
+        x: (Math.random() - 0.5) * 40, 
         y: 2, 
-        z: 80 + (Math.random() - 0.5) * 50,
+        z: 150 + (Math.random() - 0.5) * 40, 
         rotation: 0,
         color: '#' + Math.floor(Math.random()*16777215).toString(16) // 初期アバターカラー
     };
@@ -118,7 +109,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 【追加】アバターの色変更の同期
+    // 2. アバターの色変更の同期
     socket.on('changeAvatar', (colorHex) => {
         if (players[socket.id]) {
             players[socket.id].color = colorHex;
@@ -126,11 +117,10 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 2. コイン回収
+    // 3. コイン回収
     socket.on('collectCoin', (coinId) => {
         const p = players[socket.id];
         if (coins[coinId] && p) {
-            // 本番環境ではエリア制限なしでどこでもコインが拾えるように変更
             delete coins[coinId]; 
             
             const reward = Math.round(COIN_BASE_VALUE * parseFloat(economyMultiplier));
@@ -144,7 +134,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 3. P2P送金機能
+    // 4. P2P送金機能
     socket.on('sendMoney', (data) => {
         const { targetEmail, amount } = data;
         const parsedAmount = parseInt(amount, 10);
@@ -167,9 +157,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ギャンブル機能は今回は削除済みのため、関連コードをコメントアウトまたは無視
-    /* socket.on('playGamble', (data) => { ... }); */
-
     socket.on('disconnect', () => {
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
@@ -178,5 +165,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Kanazawa 3D Metaverse running on port ${PORT}`);
+    console.log(`64bit Metaverse running on port ${PORT}`);
 });
