@@ -11,8 +11,9 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 【変更】ルートへのアクセス時に、新しい本番用ファイル (main.html) を返すように変更
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'main.html'));
 });
 
 // メモリDB
@@ -40,12 +41,14 @@ function hashPassword(password) {
 // 兼六園エリア内にのみコインを生成する
 function spawnCoin() {
     const id = crypto.randomUUID();
-    // 兼六園エリア (X: 20〜90, Z: 20〜90) の中にランダム配置
+    // 64bit版のスケールに合わせて、コインの出現範囲を街全体（半径800m以内）に広げる
+    const r = Math.random() * 800;
+    const theta = Math.random() * 2 * Math.PI;
     coins[id] = {
         id: id,
-        x: 20 + Math.random() * 70, 
+        x: r * Math.cos(theta), 
         y: 0.5, 
-        z: 20 + Math.random() * 70
+        z: r * Math.sin(theta)
     };
     return coins[id];
 }
@@ -86,21 +89,21 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-    // ログイン時は金沢駅周辺にスポーン
+    // ログイン時はランドマーク周辺にスポーン
     players[socket.id] = {
         id: socket.id,
         email: socket.email,
-        x: (Math.random() - 0.5) * 20, 
-        y: 1, 
-        z: -60 + (Math.random() - 0.5) * 10,
+        x: (Math.random() - 0.5) * 50, 
+        y: 2, 
+        z: 80 + (Math.random() - 0.5) * 50,
         rotation: 0,
-        color: Math.floor(Math.random() * 0xffffff)
+        color: '#' + Math.floor(Math.random()*16777215).toString(16) // 初期アバターカラー
     };
 
     socket.emit('initData', { 
         players: players, 
         coins: coins,
-        multiplier: economyMultiplier 
+        multiplier: economyMultiplier
     });
     socket.broadcast.emit('newPlayer', players[socket.id]);
 
@@ -115,15 +118,19 @@ io.on('connection', (socket) => {
         }
     });
 
+    // 【追加】アバターの色変更の同期
+    socket.on('changeAvatar', (colorHex) => {
+        if (players[socket.id]) {
+            players[socket.id].color = colorHex;
+            io.emit('avatarChanged', { id: socket.id, color: colorHex });
+        }
+    });
+
     // 2. コイン回収
     socket.on('collectCoin', (coinId) => {
         const p = players[socket.id];
         if (coins[coinId] && p) {
-            // エリア検証（兼六園エリアにいるか）
-            if(getZone(p.x, p.z) !== 'kenrokuen') {
-                return socket.emit('notification', { type: 'error', text: '不正なコイン獲得です' });
-            }
-
+            // 本番環境ではエリア制限なしでどこでもコインが拾えるように変更
             delete coins[coinId]; 
             
             const reward = Math.round(COIN_BASE_VALUE * parseFloat(economyMultiplier));
@@ -160,40 +167,8 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 4. ギャンブル機能（エリア制限付き）
-    socket.on('playGamble', (data) => {
-        const p = players[socket.id];
-        if(!p) return;
-        
-        // エリア検証（金沢駅エリアにいるか）
-        if(getZone(p.x, p.z) !== 'station') {
-            return socket.emit('notification', { type: 'error', text: 'ギャンブルは金沢駅エリアでのみ可能です' });
-        }
-
-        const betAmount = parseInt(data.amount, 10);
-        if (isNaN(betAmount) || betAmount <= 0) return socket.emit('notification', { type: 'error', text: '正しい賭け金を入力してください' });
-        if (usersDb[socket.email].money < betAmount) return socket.emit('notification', { type: 'error', text: '残高が不足しています' });
-
-        usersDb[socket.email].money -= betAmount;
-        
-        const diceRoll = Math.floor(Math.random() * 6) + 1;
-        let isWin = false;
-        let reward = 0;
-
-        if (diceRoll >= 4) {
-            isWin = true;
-            const mult = Math.max(parseFloat(economyMultiplier), 1.1); 
-            reward = Math.round(betAmount * mult);
-            usersDb[socket.email].money += reward;
-        }
-
-        socket.emit('moneyUpdated', usersDb[socket.email].money);
-        if (isWin) {
-            socket.emit('notification', { type: 'success', text: `🎲 ${diceRoll}！ 大当たり！ ${reward}G 獲得！` });
-        } else {
-            socket.emit('notification', { type: 'error', text: `🎲 ${diceRoll}... ハズレ。 ${betAmount}G 没収。` });
-        }
-    });
+    // ギャンブル機能は今回は削除済みのため、関連コードをコメントアウトまたは無視
+    /* socket.on('playGamble', (data) => { ... }); */
 
     socket.on('disconnect', () => {
         delete players[socket.id];
