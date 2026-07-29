@@ -333,8 +333,9 @@
         function initThreeJS() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB); 
-            scene.fog = new THREE.Fog(0x87CEEB, 200, 3000); 
+            // 空の色を少し明るめに調整
+            scene.background = new THREE.Color(0x99ccff); 
+            scene.fog = new THREE.Fog(0x99ccff, 200, 3000); 
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 6000);
             
@@ -344,9 +345,17 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // 環境光を強めに設定して全体を明るく
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
             scene.add(ambientLight);
-            const sunLight = new THREE.DirectionalLight(0xffffee, 1.2);
+            
+            // 空と地面の反射光を追加（自然な明るさの表現）
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+            hemiLight.position.set(0, 500, 0);
+            scene.add(hemiLight);
+
+            // 太陽光も少し強めに
+            const sunLight = new THREE.DirectionalLight(0xffffee, 1.5);
             sunLight.position.set(800, 1500, 500);
             sunLight.castShadow = true;
             sunLight.shadow.camera.left = -1200; sunLight.shadow.camera.right = 1200;
@@ -674,10 +683,14 @@
             mallIntGroup.add(monitor);
             scene.add(mallIntGroup);
 
-            // モールの位置変更に合わせたワープパッド調整 (ループ回避で少しずらす)
             const mallX = -280; const mallZ = -280;
             addTeleporter(mallX, 2, mallZ + 110, 0xa855f7, 2000, 2, 1980, "モール内へ");
             addTeleporter(2000, 2, 1970, 0xff0000, mallX - 5, 2, mallZ + 110, "外へ");
+        }
+
+        // 欠落していた大通りの生成と、街路樹・白線のロジックを復旧
+        function createTree(x, y, z) {
+            instanceData.trees.push({x, y, z});
         }
 
         function createRoadSegment(x, z, width, length, isEW) {
@@ -685,6 +698,113 @@
             const road = new THREE.Mesh(new THREE.PlaneGeometry(isEW ? length : width, isEW ? width : length), roadMat);
             road.rotation.x = -Math.PI / 2; road.position.set(x, 0.4, z);
             road.matrixAutoUpdate = false; road.updateMatrix(); scene.add(road);
+
+            const medianWidth = 8;
+            const medianMat = new THREE.MeshLambertMaterial({ color: 0x2d4c1e });
+            
+            // 交差点を貫通しないように中央分離帯を分割して配置
+            if (isEW) {
+                const len1 = (-135 - 35) - (-length/2);
+                if (len1 > 0) {
+                    const med1 = new THREE.Mesh(new THREE.PlaneGeometry(len1, medianWidth), medianMat);
+                    med1.rotation.x = -Math.PI / 2; med1.position.set(-length/2 + len1/2, 0.5, z);
+                    med1.matrixAutoUpdate = false; med1.updateMatrix(); scene.add(med1);
+                }
+                const len2 = (length/2) - (-135 + 35);
+                if (len2 > 0) {
+                    const med2 = new THREE.Mesh(new THREE.PlaneGeometry(len2, medianWidth), medianMat);
+                    med2.rotation.x = -Math.PI / 2; med2.position.set((-135 + 35) + len2/2, 0.5, z);
+                    med2.matrixAutoUpdate = false; med2.updateMatrix(); scene.add(med2);
+                }
+            } else {
+                const len1 = (-130 - 35) - (-length/2);
+                if (len1 > 0) {
+                    const med1 = new THREE.Mesh(new THREE.PlaneGeometry(medianWidth, len1), medianMat);
+                    med1.rotation.x = -Math.PI / 2; med1.position.set(x, 0.5, -length/2 + len1/2);
+                    med1.matrixAutoUpdate = false; med1.updateMatrix(); scene.add(med1);
+                }
+                const len2 = (length/2) - (-130 + 35);
+                if (len2 > 0) {
+                    const med2 = new THREE.Mesh(new THREE.PlaneGeometry(medianWidth, len2), medianMat);
+                    med2.rotation.x = -Math.PI / 2; med2.position.set(x, 0.5, (-130 + 35) + len2/2);
+                    med2.matrixAutoUpdate = false; med2.updateMatrix(); scene.add(med2);
+                }
+            }
+
+            const ixSize = 45; 
+            const treeCount = Math.floor(length / 20);
+            for(let i = 0; i < treeCount; i++) {
+                const offset = (i - treeCount/2) * 20;
+                if (Math.abs(offset) > length / 2 - 70) continue; 
+
+                const tx = isEW ? x + offset : x;
+                const tz = isEW ? z : z + offset;
+                
+                if (isEW && Math.abs(tx - (-135)) < ixSize) continue;
+                if (!isEW && Math.abs(tz - (-130)) < ixSize) continue;
+                
+                if (Math.hypot(tx, tz) < ISLAND_RADIUS - 10) {
+                    createTree(tx, 0.5, tz);
+                }
+            }
+
+            const laneOffsets = [-18, -10, 10, 18];
+            laneOffsets.forEach(offset => {
+                const dashLen = 4; const gapLen = 5;
+                const dashCount = Math.floor(length / (dashLen + gapLen));
+                for(let i=0; i<dashCount; i++) {
+                    const dOffset = (i - dashCount/2) * (dashLen + gapLen);
+                    if (Math.abs(dOffset) > length / 2 - 70) continue; 
+
+                    const lx = isEW ? x + dOffset : x + offset;
+                    const lz = isEW ? z + offset : z + dOffset;
+                    
+                    if (isEW && Math.abs(lx - (-135)) < ixSize) continue;
+                    if (!isEW && Math.abs(lz - (-130)) < ixSize) continue;
+                    
+                    if (Math.hypot(lx, lz) < ISLAND_RADIUS - 5) {
+                        instanceData.lines.push({
+                            x: lx, y: 0.45, z: lz, sx: isEW ? dashLen : 0.5, sy: isEW ? 0.5 : dashLen
+                        });
+                    }
+                }
+            });
+        }
+
+        function createAvenues() {
+            // 東西の大通り
+            createRoadSegment(0, -130, 60, 1600, true);
+            // 南北の大通り
+            createRoadSegment(-135, 0, 60, 1600, false);
+            
+            // ロータリー
+            const rotPoints = [
+                {x: -800, z: -130}, {x: 800, z: -130}, 
+                {x: -135, z: -800}, {x: -135, z: 800}
+            ];
+            rotPoints.forEach(p => {
+                const rBaseGeo = new THREE.CircleGeometry(45, 32);
+                const rBaseMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+                const rBase = new THREE.Mesh(rBaseGeo, rBaseMat);
+                rBase.rotation.x = -Math.PI/2;
+                rBase.position.set(p.x, 0.5, p.z);
+                rBase.matrixAutoUpdate = false; rBase.updateMatrix();
+                scene.add(rBase);
+        
+                const rCenterGeo = new THREE.CylinderGeometry(15, 15, 2, 32);
+                const rCenterMat = new THREE.MeshLambertMaterial({ color: 0x2d4c1e });
+                const rCenter = new THREE.Mesh(rCenterGeo, rCenterMat);
+                rCenter.position.set(p.x, 1, p.z);
+                rCenter.matrixAutoUpdate = false; rCenter.updateMatrix();
+                scene.add(rCenter);
+                
+                const monuGeo = new THREE.BoxGeometry(4, 20, 4);
+                const monuMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8 });
+                const monu = new THREE.Mesh(monuGeo, monuMat);
+                monu.position.set(p.x, 11, p.z);
+                monu.matrixAutoUpdate = false; monu.updateMatrix();
+                scene.add(monu);
+            });
         }
 
         function generateCity() {
@@ -741,6 +861,38 @@
             }
             buildIMesh(boxGeo, mat1, instanceData.mat1); buildIMesh(boxGeo, mat2, instanceData.mat2);
             buildIMesh(boxGeo, mat3, instanceData.mat3); buildIMesh(boxGeo, matSky, instanceData.matSky);
+
+            // 街路樹のインスタンシング描画
+            if(instanceData.trees.length > 0) {
+                const tMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
+                const lMat = new THREE.MeshLambertMaterial({ color: 0x228b22 });
+                const tMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 6, 5), tMat, instanceData.trees.length);
+                const lMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(4, 5, 5), lMat, instanceData.trees.length);
+                tMesh.castShadow = true; lMesh.castShadow = true;
+                for(let i=0; i<instanceData.trees.length; i++) {
+                    const p = instanceData.trees[i];
+                    dummy.scale.set(1,1,1); dummy.rotation.set(0,0,0);
+                    dummy.position.set(p.x, p.y + 3, p.z); dummy.updateMatrix(); tMesh.setMatrixAt(i, dummy.matrix);
+                    dummy.position.set(p.x, p.y + 7, p.z); dummy.updateMatrix(); lMesh.setMatrixAt(i, dummy.matrix);
+                }
+                scene.add(tMesh); scene.add(lMesh);
+            }
+
+            // 道路の白線のインスタンシング描画
+            if(instanceData.lines.length > 0) {
+                const lineGeo = new THREE.PlaneGeometry(1, 1);
+                const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const lineMesh = new THREE.InstancedMesh(lineGeo, lineMat, instanceData.lines.length);
+                for(let i=0; i<instanceData.lines.length; i++) {
+                    const d = instanceData.lines[i];
+                    dummy.position.set(d.x, d.y, d.z);
+                    dummy.scale.set(d.sx, d.sy, 1);
+                    dummy.rotation.set(-Math.PI/2, 0, 0);
+                    dummy.updateMatrix();
+                    lineMesh.setMatrixAt(i, dummy.matrix);
+                }
+                scene.add(lineMesh);
+            }
         }
 
         // --- アバター（詳細カスタマイズ対応） ---
