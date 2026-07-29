@@ -7,116 +7,56 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
         
-        /* ログイン画面 */
-        #login-screen {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(15, 23, 42, 0.95);
-            display: flex; justify-content: center; align-items: center; z-index: 100;
-        }
+        #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
         .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px;}
         .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; }
         .panel input, .panel select { width: 100%; box-sizing: border-box; padding: 10px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; }
         .panel button { width: 100%; padding: 10px; margin: 8px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-primary { background: #0ea5e9; color: white; }
-        .btn-primary:hover { background: #0284c7; }
-        .btn-success { background: #10b981; color: white; }
-        .btn-success:hover { background: #059669; }
+        .btn-primary { background: #0ea5e9; color: white; } .btn-primary:hover { background: #0284c7; }
+        .btn-success { background: #10b981; color: white; } .btn-success:hover { background: #059669; }
         .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
-        /* 左側固定サイドバーUI */
-        #sidebar {
-            display: none;
-            position: absolute; top: 0; left: 0; width: 280px; height: 100vh;
-            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
-            border-right: 1px solid #334155; z-index: 10;
-            padding: 20px; box-sizing: border-box;
-            display: flex; flex-direction: column; gap: 15px;
-            overflow-y: auto;
-        }
+        #sidebar { display: none; position: absolute; top: 0; left: 0; width: 280px; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border-right: 1px solid #334155; z-index: 10; padding: 20px; box-sizing: border-box; flex-direction: column; gap: 15px; overflow-y: auto; }
         .sidebar-section { border-bottom: 1px solid #334155; padding-bottom: 15px; }
         .sidebar-section h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #94a3b8; text-transform: uppercase;}
         .user-email { font-size: 1.1rem; font-weight: bold; color: #f8fafc; word-break: break-all;}
         .money { font-size: 1.5rem; color: #fbbf24; font-weight: bold; margin-top: 5px; }
-        
         .camera-btn { background: #4f46e5; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px;}
         .camera-btn:hover { background: #4338ca; }
 
-        /* チャットUI */
-        #chat-container {
-            position: absolute; bottom: 20px; left: 300px; z-index: 10;
-            width: 350px; background: rgba(15, 23, 42, 0.8); border-radius: 8px;
-            border: 1px solid #334155; display: none; flex-direction: column;
-        }
-        #chat-header {
-            background: rgba(30, 41, 59, 0.9); padding: 8px 12px; border-radius: 8px 8px 0 0;
-            cursor: pointer; font-weight: bold; color: #cbd5e1; font-size: 0.9rem;
-            display: flex; justify-content: space-between;
-        }
-        #chat-messages {
-            height: 150px; overflow-y: auto; padding: 10px; font-size: 0.9rem;
-            display: flex; flex-direction: column; gap: 5px;
-        }
+        #chat-container { position: absolute; bottom: 20px; left: 300px; z-index: 10; width: 350px; background: rgba(15, 23, 42, 0.8); border-radius: 8px; border: 1px solid #334155; display: none; flex-direction: column; }
+        #chat-header { background: rgba(30, 41, 59, 0.9); padding: 8px 12px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold; color: #cbd5e1; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        #chat-messages { height: 150px; overflow-y: auto; padding: 10px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px; }
         .chat-msg { background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 4px; word-wrap: break-word;}
         .chat-msg .name { font-weight: bold; color: #38bdf8; margin-right: 5px;}
         .chat-msg.admin .name { color: #f43f5e; }
         #chat-input-area { display: flex; padding: 10px; border-top: 1px solid #334155; }
         #chat-input { flex-grow: 1; padding: 8px; border-radius: 4px; border: none; background: #0f172a; color: white; }
         
-        .chat-bubble {
-            position: absolute; background: white; color: black; padding: 6px 12px;
-            border-radius: 12px; font-size: 14px; font-weight: bold; white-space: nowrap;
-            pointer-events: none; transform: translate(-50%, -100%); z-index: 20;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.2s;
-        }
-        .chat-bubble::after {
-            content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
-            border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent;
-        }
+        .chat-bubble { position: absolute; background: white; color: black; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: bold; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); z-index: 20; box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.2s; }
+        .chat-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent; }
 
-        /* モール内装用：ブティック（カスタマイズ）パネル */
-        #boutique-panel {
-            position: absolute; right: 20px; top: 20px; z-index: 10;
-            background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px;
-            border: 2px solid #c084fc; box-shadow: 0 0 20px rgba(192, 132, 252, 0.3);
-            width: 250px; display: none;
-        }
+        #boutique-panel { position: absolute; right: 20px; top: 20px; z-index: 10; background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px; border: 2px solid #c084fc; box-shadow: 0 0 20px rgba(192, 132, 252, 0.3); width: 250px; display: none; }
         #boutique-panel h3 { margin: 0 0 15px 0; color: #c084fc; }
         .color-picker-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;}
         .color-picker-group input[type="color"] { background: none; border: none; cursor: pointer; height: 25px; width: 40px; padding: 0;}
 
-        /* 証券取引所内装用：株取引パネル */
-        #stock-panel {
-            position: absolute; right: 20px; top: 20px; z-index: 10;
-            background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px;
-            border: 2px solid #34d399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
-            width: 250px; display: none;
-        }
+        #stock-panel { position: absolute; right: 20px; top: 20px; z-index: 10; background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px; border: 2px solid #34d399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.3); width: 250px; display: none; }
         #stock-panel h3 { margin: 0 0 10px 0; color: #34d399; }
         #stock-panel input { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: none; background: #0f172a; color: white;}
         #stock-panel .btn-group { display: flex; gap: 10px; }
         #stock-panel button { flex-grow: 1; padding: 10px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white;}
 
-        #notification-container {
-            position: absolute; top: 20px; right: 20px; z-index: 50;
-            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
-        }
-        .toast {
-            padding: 12px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 3.5s forwards;
-            opacity: 0; transform: translateX(100%);
-        }
+        #notification-container { position: absolute; top: 20px; right: 20px; z-index: 50; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { padding: 12px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 3.5s forwards; opacity: 0; transform: translateX(100%); }
         .toast.success { background-color: rgba(16, 185, 129, 0.9); border-left: 4px solid #059669; }
         .toast.error { background-color: rgba(244, 63, 94, 0.9); border-left: 4px solid #be123c; }
         .toast.info { background-color: rgba(56, 189, 248, 0.9); border-left: 4px solid #0284c7; }
-
         @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
 
         #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1;}
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: rgba(255,255,255,0.7); font-size: 24px; pointer-events: none; z-index: 10; display: none;
-        }
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 24px; pointer-events: none; z-index: 10; display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -163,7 +103,7 @@
 
     <!-- モール専用：アバターカスタマイズ -->
     <div id="boutique-panel">
-        <h3>👗 モール・ブティック</h3>
+        <h3>👗 アバターショップ</h3>
         <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">ここでアバターの外観を変更できます。</p>
         <div class="color-picker-group"><label>服(ボディ)</label><input type="color" id="color-body" value="#38bdf8" onchange="updateAvatarConfig()"></div>
         <div class="color-picker-group"><label>肌(スキン)</label><input type="color" id="color-skin" value="#ffcc99" onchange="updateAvatarConfig()"></div>
@@ -274,11 +214,11 @@
         }
         function updateBubbles() {
             if (localPlayerMesh && chatBubbles[socket.id] && chatBubbles[socket.id].element.style.opacity === '1') {
-                updateBubblePosition(chatBubbles[socket.id].element, localPlayerMesh.position, 3);
+                updateBubblePosition(chatBubbles[socket.id].element, localPlayerMesh.position, 4);
             }
             for (let id in otherPlayers) {
                 if (chatBubbles[id] && chatBubbles[id].element.style.opacity === '1') {
-                    updateBubblePosition(chatBubbles[id].element, otherPlayers[id].position, 3);
+                    updateBubblePosition(chatBubbles[id].element, otherPlayers[id].position, 4);
                 }
             }
         }
@@ -536,8 +476,8 @@
         }
 
         function createAvenues() {
-            createRoadSegment(0, -130, 60, 1900, true);
-            createRoadSegment(-135, 0, 60, 1900, false);
+            createRoadSegment(0, -130, 60, 1900, true); // 東西の大通り
+            createRoadSegment(-135, 0, 60, 1900, false); // 南北の大通り
             
             const rotPoints = [{x: -800, z: -130}, {x: 800, z: -130}, {x: -135, z: -800}, {x: -135, z: 800}];
             rotPoints.forEach(p => {
@@ -565,14 +505,13 @@
         }
 
         function createMonorailSystem() {
-            const w = 700; const h = 600; const r = 250; const y = 90;  
+            const y = 90;  
+            // 軌道を大通りに沿うように配置
             const points = [
-                new THREE.Vector3(0, y, -h), new THREE.Vector3(w-r, y, -h),
-                new THREE.Vector3(w, y, -h+r), new THREE.Vector3(w, y, 0),
-                new THREE.Vector3(w, y, h-r), new THREE.Vector3(w-r, y, h),
-                new THREE.Vector3(0, y, h), new THREE.Vector3(-w+r, y, h),
-                new THREE.Vector3(-w, y, h-r), new THREE.Vector3(-w, y, 0),
-                new THREE.Vector3(-w, y, -h+r), new THREE.Vector3(-w+r, y, -h),
+                new THREE.Vector3(-135, y, -700), // 北
+                new THREE.Vector3(400, y, -130),  // 東
+                new THREE.Vector3(-135, y, 500),  // 南
+                new THREE.Vector3(-600, y, -130)  // 西
             ];
             trackSpline = new THREE.CatmullRomCurve3(points, true);
             trackSpline.curveType = 'centripetal'; trackSpline.tension = 0.5;
@@ -582,6 +521,7 @@
             const track = new THREE.Mesh(tubeGeo, tubeMat);
             scene.add(track);
 
+            // 4つの駅を配置
             for (let i = 0; i < 4; i++) {
                 let t = (i * 3) / 12;
                 const pt = trackSpline.getPoint(t);
@@ -594,7 +534,18 @@
                 const platMat = new THREE.MeshLambertMaterial({ color: 0xdddddd });
                 const platform = new THREE.Mesh(platGeo, platMat);
                 platform.position.set(0, -3, 0);
-                stGroup.add(platform);
+                
+                // ホーム端からの落下防止用の透明な壁
+                const wallMat = new THREE.MeshBasicMaterial({visible: false});
+                const wall1 = new THREE.Mesh(new THREE.BoxGeometry(1, 10, pLen), wallMat); wall1.position.set(pWid/2, 2, 0);
+                const wall2 = new THREE.Mesh(new THREE.BoxGeometry(1, 10, pLen), wallMat); wall2.position.set(-pWid/2, 2, 0);
+                const wall3 = new THREE.Mesh(new THREE.BoxGeometry(pWid, 10, 1), wallMat); wall3.position.set(0, 2, pLen/2);
+                const wall4 = new THREE.Mesh(new THREE.BoxGeometry(pWid, 10, 1), wallMat); wall4.position.set(0, 2, -pLen/2);
+                
+                stGroup.add(platform, wall1, wall2, wall3, wall4);
+                
+                // 透明壁を当たり判定に登録
+                addCollisionBox(pt.x + normal.x*pWid/2, pt.z + normal.z*pWid/2, pWid, pLen);
 
                 const roofGeo = new THREE.BoxGeometry(pWid, 2, pLen);
                 const roofMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.5, roughness: 0.2 });
@@ -606,36 +557,53 @@
                 stGroup.rotation.y = Math.atan2(tangent.x, tangent.z);
                 scene.add(stGroup);
 
-                // ワープのループ（詰み）防止：地上のワープは駅の中心、ホーム到着は端にずらす
-                let groundX = pt.x; let groundZ = pt.z;
-                if (i === 0) { groundX = -135; groundZ = -550; } 
-                if (i === 1) { groundX = 650; groundZ = -130; }  
-                if (i === 2) { groundX = -135; groundZ = 550; }  
-                if (i === 3) { groundX = -650; groundZ = -130; } 
+                // 駅ごとの地上の歩道位置 (大通りの歩道へ)
+                let groundX, groundZ;
+                if (i === 0) { groundX = -100; groundZ = -700; } // 北駅
+                if (i === 1) { groundX = 400; groundZ = -100; }  // 東駅
+                if (i === 2) { groundX = -100; groundZ = 500; }  // 南駅
+                if (i === 3) { groundX = -600; groundZ = -100; } // 西駅
 
-                // 地上 => ホーム中央へ
-                addTeleporter(groundX, 2, groundZ, 0x10b981, pt.x, pt.y - 2, pt.z, "駅ホームへ");
-                // ホーム端 => 地上へ（到着地点と出発地点を10m離してループ防止）
-                const exitX = pt.x + normal.x * 10;
-                const exitZ = pt.z + normal.z * 10;
-                addTeleporter(exitX, pt.y - 2, exitZ, 0xff0000, groundX + 10, 2, groundZ + 10, "地上へ");
+                // 地上 => ホームへ (ホームのプラットフォーム端にワープ)
+                addTeleporter(groundX, 2, groundZ, 0x10b981, pt.x - normal.x * 8, pt.y - 2, pt.z, "駅ホームへ");
+                
+                // ホーム端 => 地上へ (着地点をずらしてループ防止)
+                addTeleporter(pt.x + normal.x * 8, pt.y - 2, pt.z, 0xff0000, groundX + 10, 2, groundZ + 10, "地上へ");
             }
 
+            // SFホバーモノレール車両
             for(let i=0; i<4; i++) {
                 const carGroup = new THREE.Group();
-                const floor = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 26), new THREE.MeshLambertMaterial({color: 0x444444}));
-                floor.position.y = -4.5;
-                const roof = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 26), new THREE.MeshLambertMaterial({color: 0xff3333}));
-                roof.position.y = 5.5;
-                const front = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 1), new THREE.MeshLambertMaterial({color: 0x222222}));
-                front.position.set(0, 0.5, 12.5);
-                const back = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 1), new THREE.MeshLambertMaterial({color: 0x222222}));
-                back.position.set(0, 0.5, -12.5);
-                const p1 = new THREE.Mesh(new THREE.BoxGeometry(1, 10, 1), new THREE.MeshLambertMaterial({color: 0x888888})); p1.position.set(4.5, 0.5, 0);
-                const p2 = new THREE.Mesh(new THREE.BoxGeometry(1, 10, 1), new THREE.MeshLambertMaterial({color: 0x888888})); p2.position.set(-4.5, 0.5, 0);
                 
-                carGroup.add(floor, roof, front, back, p1, p2);
+                const bodyGeo = new THREE.BoxGeometry(10, 8, 26);
+                const bodyMat = new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.8, roughness: 0.2});
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 1;
+                
+                // ノーズ（先端と後端）
+                const noseGeo = new THREE.ConeGeometry(5, 6, 4);
+                noseGeo.rotateX(Math.PI/2); noseGeo.rotateZ(Math.PI/4);
+                const frontNose = new THREE.Mesh(noseGeo, bodyMat); frontNose.position.set(0, 1, 16);
+                const backNose = new THREE.Mesh(noseGeo, bodyMat); backNose.position.set(0, 1, -16); backNose.rotation.y = Math.PI;
+                
+                // キャノピー（窓）
+                const glassMat = new THREE.MeshStandardMaterial({color: 0x00ffff, transparent: true, opacity: 0.4});
+                const glass = new THREE.Mesh(new THREE.BoxGeometry(9.8, 4, 25), glassMat);
+                glass.position.y = 2;
+                
+                // ネオンライン
+                const neonMat = new THREE.MeshBasicMaterial({color: 0x00aaff});
+                const neonL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 30), neonMat); neonL.position.set(5.1, 0, 0);
+                const neonR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 30), neonMat); neonR.position.set(-5.1, 0, 0);
+                
+                // 乗れるように床を作成
+                const floorGeo = new THREE.BoxGeometry(9.8, 0.5, 25);
+                const floor = new THREE.Mesh(floorGeo, new THREE.MeshLambertMaterial({color: 0x444444}));
+                floor.position.y = -3;
+                
+                carGroup.add(body, frontNose, backNose, glass, neonL, neonR, floor);
                 scene.add(carGroup);
+                
                 monorailCars.push({ mesh: carGroup, progress: i * 0.25, state: 'moving', stopTimer: 0, prevPos: null });
             }
         }
@@ -643,20 +611,20 @@
         function createLandmarks() {
             const lmGroup = new THREE.Group();
             
-            // 垂直な円柱ベース (当たり判定修正)
-            const baseGeo = new THREE.CylinderGeometry(50, 50, 50, 16); 
+            // 垂直な円柱ベース (当たり判定修正: 中心部とワープを分離)
+            const baseGeo = new THREE.CylinderGeometry(40, 40, 50, 16); 
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.3, roughness: 0.4 });
             const base = new THREE.Mesh(baseGeo, baseMat); base.position.set(0, 25, 0);
             lmGroup.add(base);
-            addCollisionBox(0, 0, 100, 100); 
+            addCollisionBox(0, 0, 70, 70); 
 
-            // 北側(Z:-50)にエントランスを設置
+            // 北側(Z:-40)にエントランスを設置
             const towerEntGeo = new THREE.BoxGeometry(20, 15, 20);
             const towerEntMat = new THREE.MeshStandardMaterial({color: 0x111111});
             const towerEnt = new THREE.Mesh(towerEntGeo, towerEntMat);
-            towerEnt.position.set(0, 7.5, -50); 
+            towerEnt.position.set(0, 7.5, -45); 
             lmGroup.add(towerEnt);
-            addCollisionBox(0, -50, 20, 20);
+            // 入口前には当たり判定を入れず、ワープに触れられるようにする
 
             // タワー下部 (Y: 25 ~ 450)
             const mainTowerGeo = new THREE.CylinderGeometry(35, 35, 425, 8);
@@ -676,6 +644,19 @@
             const topTower = new THREE.Mesh(topTowerGeo, matSky); topTower.position.set(0, 560, 0);
             lmGroup.add(topTower);
 
+            // 頂上のエネルギーコア復活
+            const coreGeo = new THREE.SphereGeometry(25, 32, 32); 
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            core.position.set(0, 670, 0);
+            lmGroup.add(core);
+
+            const wireCoreGeo = new THREE.SphereGeometry(27, 16, 16);
+            const wireCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3 });
+            const wireCore = new THREE.Mesh(wireCoreGeo, wireCoreMat);
+            wireCore.position.set(0, 670, 0);
+            lmGroup.add(wireCore);
+
             const exoMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
             const pillarGeo = new THREE.BoxGeometry(8, 620, 8);
             const p1 = new THREE.Mesh(pillarGeo, exoMat); p1.position.set(30, 350, 30);
@@ -684,41 +665,20 @@
             const p4 = new THREE.Mesh(pillarGeo, exoMat); p4.position.set(-30, 350, -30);
             lmGroup.add(p1, p2, p3, p4);
 
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 });
-            const wireRingMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.1 });
-            for (let i = 1; i <= 6; i++) {
-                const radius = i * 200;              
-                const yDrop = Math.pow(i, 1.5) * 15; 
-                const yPos = 670 - yDrop;
-                const rGeo = new THREE.TorusGeometry(radius, 1.5 + i*0.5, 8, 64);
-                rGeo.rotateX(Math.PI / 2);
-                const rMesh = new THREE.Mesh(rGeo, ringMat);
-                rMesh.position.set(0, yPos, 0);
-                scene.add(rMesh);
-                if (i < 6) {
-                    const nextRadius = (i + 1) * 200;
-                    const nextDrop = Math.pow(i + 1, 1.5) * 15;
-                    const nextYPos = 670 - nextDrop;
-                    const height = yPos - nextYPos;
-                    const coneY = (yPos + nextYPos) / 2;
-                    const cGeo = new THREE.CylinderGeometry(radius, nextRadius, height, 64, 1, true);
-                    const cMesh = new THREE.Mesh(cGeo, wireRingMat);
-                    cMesh.position.set(0, coneY, 0);
-                    scene.add(cMesh);
-                }
-            }
             scene.add(lmGroup);
 
-            // モール (西側へさらに後退させて干渉防止)
+            // モール (大通り西側へ配置)
             const mallGroup = new THREE.Group();
             const mallX = -320; 
-            const mallZ = -220; 
+            const mallZ = -130; // 東西の大通り(Z:-130)に面する
             
             const mallMat1 = new THREE.MeshStandardMaterial({ color: 0xb5b4a0, roughness: 0.9 });
             const m1 = new THREE.Mesh(new THREE.BoxGeometry(180, 20, 180), mallMat1); m1.position.set(0, 10, 0);
             const m2 = new THREE.Mesh(new THREE.BoxGeometry(160, 20, 160), mallMat1); m2.position.set(0, 30, 0);
             const m3 = new THREE.Mesh(new THREE.BoxGeometry(140, 15, 140), mallMat1); m3.position.set(0, 47.5, 0);
             mallGroup.add(m1, m2, m3);
+            
+            // モール全体に当たり判定
             addCollisionBox(mallX, mallZ, 180, 180);
 
             const mallNeonCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff });
@@ -728,15 +688,15 @@
             mallGroup.add(line1, line2);
 
             const entMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 });
-            const frameL = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), entMat); frameL.position.set(-30, 20, 80); 
-            const frameR = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), entMat); frameR.position.set(30, 20, 80);
-            const frameT = new THREE.Mesh(new THREE.BoxGeometry(64, 4, 20), entMat); frameT.position.set(0, 42, 80);
-            const glassEnt = new THREE.Mesh(new THREE.BoxGeometry(56, 40, 2), glassMat); glassEnt.position.set(0, 20, 85);
+            const frameL = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), entMat); frameL.position.set(-30, 20, 90); 
+            const frameR = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), entMat); frameR.position.set(30, 20, 90);
+            const frameT = new THREE.Mesh(new THREE.BoxGeometry(64, 4, 20), entMat); frameT.position.set(0, 42, 90);
+            const glassEnt = new THREE.Mesh(new THREE.BoxGeometry(56, 40, 2), glassMat); glassEnt.position.set(0, 20, 95);
             mallGroup.add(frameL, frameR, frameT, glassEnt);
 
             const domeGeo = new THREE.SphereGeometry(60, 32, 16, 0, Math.PI*2, 0, Math.PI/2);
             const dome = new THREE.Mesh(domeGeo, glassMat); dome.position.set(0, 55, 0);
-            const wireDome = new THREE.Mesh(domeGeo, wireRingMat); wireDome.position.set(0, 55.1, 0); 
+            const wireDome = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.1 })); wireDome.position.set(0, 55.1, 0); 
             mallGroup.add(dome, wireDome);
 
             mallGroup.position.set(mallX, 0, mallZ);
@@ -744,8 +704,8 @@
         }
 
         function createExchangeAndPlaza() {
-            // 取引所（1階建てで重厚なデザイン）
-            const exX = 300; const exZ = -220;
+            // 証券取引所 (東側大通り沿い)
+            const exX = 300; const exZ = -130;
             const exGroup = new THREE.Group();
             
             const exGeo = new THREE.BoxGeometry(100, 25, 80);
@@ -753,11 +713,13 @@
             const exMesh = new THREE.Mesh(exGeo, exMat);
             exMesh.position.set(0, 12.5, 0);
             exGroup.add(exMesh);
+            
+            // 証券所に当たり判定
             addCollisionBox(exX, exZ, 100, 80);
 
-            // 取引所入口
+            // 取引所入口 (南側の大通りへ向ける)
             const exEnt = new THREE.Mesh(new THREE.BoxGeometry(30, 15, 10), new THREE.MeshStandardMaterial({color: 0x111111}));
-            exEnt.position.set(0, 7.5, -45);
+            exEnt.position.set(0, 7.5, 45);
             exGroup.add(exEnt);
             
             exGroup.position.set(exX, 0, exZ);
@@ -768,66 +730,92 @@
             const plazaMat = new THREE.MeshStandardMaterial({color: 0x228b22});
             const plaza = new THREE.Mesh(plazaGeo, plazaMat);
             plaza.rotation.x = -Math.PI/2;
-            plaza.position.set(exX, 0.3, -150);
+            plaza.position.set(exX, 0.3, -50);
             scene.add(plaza);
 
             const fountainBase = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 2, 16), new THREE.MeshStandardMaterial({color: 0xaaaaaa}));
-            fountainBase.position.set(exX, 1, -150);
+            fountainBase.position.set(exX, 1, -50);
             scene.add(fountainBase);
             const fountainWater = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 2.5, 16), new THREE.MeshStandardMaterial({color: 0x00aaff, transparent: true, opacity: 0.8}));
-            fountainWater.position.set(exX, 1.25, -150);
+            fountainWater.position.set(exX, 1.25, -50);
             scene.add(fountainWater);
 
-            // 入口ワープ (取引所内へ)
-            addTeleporter(exX, 2, -260, 0xfacc15, 4000, 2, 4000, "証券取引所へ");
+            // 入口ワープ (取引所内へ) 
+            addTeleporter(exX, 2, -80, 0xfacc15, 4000, 2, 4000, "証券取引所へ");
         }
 
         function createInteriors() {
-            // 展望台 (入口内に設置)
-            addTeleporter(0, 2, -50, 0x00ffff, 0, 460, 5, "展望台へ"); 
-            addTeleporter(0, 460, 0, 0xff0000, 0, 2, -65, "地上へ"); // 詰み防止で少しずらす
+            // タワー展望台 (入口内に設置) エントランスはZ:-45
+            addTeleporter(0, 2, -55, 0x00ffff, 0, 451, 20, "展望台へ"); 
+            addTeleporter(0, 451, 30, 0xff0000, 0, 2, -65, "地上へ"); // 詰み防止で少しずらす
+            
+            // 展望台の床
+            const obsFloor = new THREE.Mesh(new THREE.RingGeometry(5, 35, 32), new THREE.MeshStandardMaterial({color: 0x555555}));
+            obsFloor.rotation.x = -Math.PI/2;
+            obsFloor.position.set(0, 450, 0);
+            scene.add(obsFloor);
 
-            // モール内装 (300x300の巨大空間)
+            // モール内装 (300x300の巨大空間、1階建て仕様)
             const mallIntGroup = new THREE.Group();
             const mFloor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({color: 0x111111}));
             mFloor.rotation.x = -Math.PI / 2; mFloor.position.set(2000, 0, 2000);
-            const mWall = new THREE.Mesh(new THREE.BoxGeometry(300, 60, 300), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.BackSide}));
-            mWall.position.set(2000, 30, 2000);
+            const mWall = new THREE.Mesh(new THREE.BoxGeometry(300, 30, 300), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.BackSide}));
+            mWall.position.set(2000, 15, 2000);
             mallIntGroup.add(mFloor, mWall);
+            
+            // モール内の店舗区画（ガラス張りのショーウィンドウ）
+            const shopGlassMat = new THREE.MeshStandardMaterial({color: 0x88ccff, transparent: true, opacity: 0.3});
+            for(let i=0; i<4; i++) {
+                const shop = new THREE.Mesh(new THREE.BoxGeometry(40, 15, 40), shopGlassMat);
+                shop.position.set(1930 + (i%2)*140, 7.5, 1930 + Math.floor(i/2)*140);
+                mallIntGroup.add(shop);
+            }
+
+            // アバターショップ区画の床 (青く光る)
+            const boutiqueFloor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshBasicMaterial({color: 0x1e3a8a}));
+            boutiqueFloor.rotation.x = -Math.PI/2; boutiqueFloor.position.set(2000, 0.1, 2050);
+            mallIntGroup.add(boutiqueFloor);
+            
+            // 案内看板
+            const bLabel = createNameLabel("👗 AVATAR SHOP (アバター変更エリア)", "#c084fc");
+            bLabel.position.set(2000, 15, 2050); bLabel.scale.set(40, 10, 1);
+            mallIntGroup.add(bLabel);
+
             scene.add(mallIntGroup);
 
             // モール入口
-            const mallX = -320; const mallZ = -140;
-            addTeleporter(mallX, 2, -150, 0xa855f7, 2000, 2, 1980, "モール内へ");
-            addTeleporter(2000, 2, 1970, 0xff0000, mallX + 15, 2, -135, "外へ");
+            const mallX = -320; const mallZ = -130;
+            addTeleporter(mallX, 2, -40, 0xa855f7, 2000, 2, 1980, "モール内へ");
+            addTeleporter(2000, 2, 1960, 0xff0000, mallX + 15, 2, -30, "外へ");
 
-            // 取引所内装 ＆ 株価グラフスクリーン
+            // 取引所内装 (1階建て仕様)
             const exIntGroup = new THREE.Group();
-            const exFloor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({color: 0x223344}));
+            const exFloor = new THREE.Mesh(new THREE.PlaneGeometry(150, 100), new THREE.MeshStandardMaterial({color: 0x223344}));
             exFloor.rotation.x = -Math.PI / 2; exFloor.position.set(4000, 0, 4000);
-            const exWall = new THREE.Mesh(new THREE.BoxGeometry(200, 40, 200), new THREE.MeshStandardMaterial({color: 0x112233, side: THREE.BackSide}));
-            exWall.position.set(4000, 20, 4000);
+            const exWall = new THREE.Mesh(new THREE.BoxGeometry(150, 20, 100), new THREE.MeshStandardMaterial({color: 0x112233, side: THREE.BackSide}));
+            exWall.position.set(4000, 10, 4000);
             
-            // 豪華な柱を追加
-            const pillarMat = new THREE.MeshStandardMaterial({color: 0xaaaaaa});
-            for(let i=0; i<4; i++) {
-                const p = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 40), pillarMat);
-                p.position.set(3950 + (i%2)*100, 20, 3950 + Math.floor(i/2)*100);
-                exIntGroup.add(p);
-            }
+            // 受付と観葉植物
+            const desk = new THREE.Mesh(new THREE.BoxGeometry(40, 5, 10), new THREE.MeshStandardMaterial({color: 0x554433}));
+            desk.position.set(4000, 2.5, 3970);
+            const plantGeo = new THREE.ConeGeometry(3, 8); const plantMat = new THREE.MeshStandardMaterial({color: 0x228b22});
+            const p1 = new THREE.Mesh(plantGeo, plantMat); p1.position.set(3970, 4, 3970);
+            const p2 = new THREE.Mesh(plantGeo, plantMat); p2.position.set(4030, 4, 3970);
+            exIntGroup.add(desk, p1, p2);
 
             exIntGroup.add(exFloor, exWall);
             
+            // 株価チャートボード
             stockChartCanvas = document.createElement('canvas');
             stockChartCanvas.width = 512; stockChartCanvas.height = 256;
             stockChartCtx = stockChartCanvas.getContext('2d');
             stockChartTex = new THREE.CanvasTexture(stockChartCanvas);
-            const graphBoard = new THREE.Mesh(new THREE.PlaneGeometry(100, 50), new THREE.MeshBasicMaterial({map: stockChartTex}));
-            graphBoard.position.set(4000, 20, 3901); 
+            const graphBoard = new THREE.Mesh(new THREE.PlaneGeometry(80, 40), new THREE.MeshBasicMaterial({map: stockChartTex}));
+            graphBoard.position.set(4000, 10, 3951); 
             exIntGroup.add(graphBoard);
             scene.add(exIntGroup);
 
-            addTeleporter(4000, 2, 3990, 0xff0000, 300, 2, -140, "地上へ");
+            addTeleporter(4000, 2, 4040, 0xff0000, 300, 2, -70, "地上へ");
         }
 
         function updateStockChart(price) {
@@ -871,8 +859,8 @@
 
                     if (dist > ISLAND_RADIUS - 40) continue; 
                     if (Math.abs(bx) < 80 && Math.abs(bz) < 80) continue; 
-                    if (bx > -420 && bx < -220 && bz > -330 && bz < -130) continue; // モール
-                    if (bx > 250 && bx < 350 && bz > -260 && bz < -120) continue; // 取引所
+                    if (bx > -420 && bx < -220 && bz > -230 && bz < -30) continue; // モール
+                    if (bx > 250 && bx < 350 && bz > -180 && bz < -80) continue; // 取引所
                     if (bz > -170 && bz < -90) continue; 
                     if (bx > -165 && bx < -105) continue; 
                     
@@ -1000,7 +988,6 @@
             for(let color in neonMats) { buildIMesh(neonGeo, neonMats[color], instanceData.neons[color], false); }
         }
 
-        // --- アバターとアクセサリー生成 ---
         function createAvatarMesh(config) {
             const group = new THREE.Group();
             group.avatarConfig = config;
@@ -1020,7 +1007,6 @@
             visor.position.set(0, 2.7, 0.55);
             group.add(visor);
 
-            // アクセサリーの付与
             if (config.accessory === 'hat') {
                 const hatMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
                 const brim = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 16), hatMat);
@@ -1219,7 +1205,6 @@
             }
         }
 
-        // --- 完全な空間分割当たり判定 ---
         function checkCollisions(nextX, nextZ, currentY) {
             // 内装・特殊エリア
             if (nextX > 1000) {
@@ -1229,7 +1214,7 @@
                 }
                 if (nextX > 3800 && nextX < 4200 && nextZ > 3800 && nextZ < 4200) { // 証券所
                     const distSqX = (nextX - 4000)*(nextX - 4000); const distSqZ = (nextZ - 4000)*(nextZ - 4000);
-                    return { canMoveX: distSqX < 95*95, canMoveZ: distSqZ < 95*95 };
+                    return { canMoveX: distSqX < 70*70, canMoveZ: distSqZ < 45*45 };
                 }
                 return { canMoveX: false, canMoveZ: false };
             }
@@ -1241,14 +1226,15 @@
                 for (let car of monorailCars) {
                     if (Math.hypot(nextX - car.mesh.position.x, nextZ - car.mesh.position.z) < 13) return { canMoveX: true, canMoveZ: true };
                 }
-                const stations = [ {x:0, z:-550, w:80, l:25}, {x:650, z:-130, w:25, l:80}, {x:-135, z:550, w:80, l:25}, {x:-650, z:-130, w:25, l:80} ];
+                // 各駅のホーム上
+                const stations = [ {x:-135, z:-700, w:80, l:25}, {x:400, z:-130, w:25, l:80}, {x:-135, z:500, w:80, l:25}, {x:-600, z:-130, w:25, l:80} ];
                 for(let s of stations) {
                     if (nextX > s.x - s.w/2 && nextX < s.x + s.w/2 && nextZ > s.z - s.l/2 && nextZ < s.z + s.l/2) return { canMoveX: true, canMoveZ: true };
                 }
                 return { canMoveX: false, canMoveZ: false };
             }
             
-            // 地上の完全グリッド判定（周辺をスキャン）
+            // 地上の完全グリッド判定（周囲2x2マスをスキャン）
             let canMoveX = true; let canMoveZ = true;
             const radius = 1.5;
             const minGx = Math.floor((nextX - radius) / 100); const maxGx = Math.floor((nextX + radius) / 100);
@@ -1338,9 +1324,9 @@
                 let moved = false;
                 const speed = (keysPressed.shift ? 45 : 15) * adminSpeedMult; 
                 
-                // 直感的な移動のためのベクトル計算 (A/Dの逆転修正)
+                // 【修正済】AとDの直感的な移動ベクトル計算
                 const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
-                const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                const right = new THREE.Vector3(-Math.cos(cameraYaw), 0, Math.sin(cameraYaw));
 
                 let nextX = localPlayerMesh.position.x;
                 let nextZ = localPlayerMesh.position.z;
@@ -1359,11 +1345,11 @@
                 checkWarpPads();
                 updateBubbles();
 
-                // UIパネル判定 (モール/取引所)
+                // UIパネル判定 (モール内ショップ/証券所)
                 if (localPlayerMesh.position.x > 3800 && localPlayerMesh.position.x < 4200) {
                     document.getElementById('stock-panel').style.display = 'block';
                     document.getElementById('boutique-panel').style.display = 'none';
-                } else if (localPlayerMesh.position.x > 1800 && localPlayerMesh.position.x < 2200) {
+                } else if (localPlayerMesh.position.x > 1950 && localPlayerMesh.position.x < 2050 && localPlayerMesh.position.z > 2000 && localPlayerMesh.position.z < 2100) {
                     document.getElementById('stock-panel').style.display = 'none';
                     document.getElementById('boutique-panel').style.display = 'block';
                 } else {
@@ -1385,7 +1371,6 @@
                 }
 
                 if(cameraMode === 'TPS') {
-                    // カメラを背後(forwardの逆)に置く
                     const cameraOffset = new THREE.Vector3(-forward.x * 15, 10, -forward.z * 15);
                     camera.position.lerp(localPlayerMesh.position.clone().add(cameraOffset), 0.2);
                     const lookTarget = localPlayerMesh.position.clone();
@@ -1404,12 +1389,12 @@
             renderer.render(scene, camera);
         }
 
-        function onWindowResize() {
+        window.addEventListener('resize', () => {
             if (camera && renderer) {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
             }
-        }
+        });
     </script>
 </body>
 </html>
