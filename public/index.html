@@ -290,9 +290,9 @@
         const instanceData = { mat1: [], mat2: [], mat3: [], matSky: [], bases: [], trees: [], lines: [] };
         
         let trackSpline;
+        // モノレール車両を配列からオブジェクト配列に変更（状態管理のため）
         const monorailCars = [];
-        const monorailSpeed = 0.0003; 
-        let monorailProgress = [0, 0.01, 0.02]; 
+        const monorailSpeed = 0.03; // 1秒あたりの進行度
         
         function createBuildingTexture(type) {
             const canvas = document.createElement('canvas');
@@ -496,45 +496,60 @@
                 stGroup.rotation.y = Math.atan2(tangent.x, tangent.z);
                 scene.add(stGroup);
 
-                // 駅へのワープを追加
-                let wx = pt.x + (isTerminal ? 40 : 30);
-                let wz = pt.z;
-                addTeleporter(wx, 2, wz, 0x10b981, pt.x, pt.y - 1, pt.z, "駅ホームへ");
-                addTeleporter(pt.x, pt.y - 1, pt.z, 0xff0000, wx, 2, wz, "地上へ");
+                // 地上のワープパッドを大通り沿いに配置し、ループ(詰み)を回避するために着地地点をずらす
+                let groundX = pt.x;
+                let groundZ = pt.z;
+                if (i === 0) { groundX = -135; groundZ = -550; } // 北駅 -> 南北通り
+                if (i === 1) { groundX = 550; groundZ = -130; }  // 東駅 -> 東西通り
+                if (i === 2) { groundX = -135; groundZ = 550; }  // 南駅 -> 南北通り
+                if (i === 3) { groundX = -550; groundZ = -130; } // 西駅 -> 東西通り
+
+                // ワープパッドの中心からZ軸またはX軸に5mずらして着地させる
+                addTeleporter(groundX, 2, groundZ, 0x10b981, pt.x, pt.y - 1, pt.z + 5, "駅ホームへ");
+                addTeleporter(pt.x, pt.y - 1, pt.z, 0xff0000, groundX + 5, 2, groundZ, "地上へ");
             }
 
             const carGeo = new THREE.BoxGeometry(8, 10, 25);
             const carMat = new THREE.MeshLambertMaterial({ color: 0xff3333 });
-            for(let i=0; i<3; i++) {
+            // 4両編成に変更し、等間隔に配置
+            for(let i=0; i<4; i++) {
                 const car = new THREE.Mesh(carGeo, carMat);
                 car.castShadow = true;
                 scene.add(car);
-                monorailCars.push(car);
+                monorailCars.push({
+                    mesh: car,
+                    progress: i * 0.25, // 0, 0.25, 0.5, 0.75
+                    state: 'moving',
+                    stopTimer: 0
+                });
             }
         }
 
         function createLandmarks() {
             const lmGroup = new THREE.Group();
             
-            // タワーベース (半径60、対角約85。幅120で登録)
-            const baseGeo = new THREE.CylinderGeometry(60, 90, 50, 4); baseGeo.rotateY(Math.PI / 4);
+            // タワーベース (八角柱)
+            const baseGeo = new THREE.CylinderGeometry(70, 100, 50, 8); 
+            baseGeo.rotateY(Math.PI / 8);
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.3, roughness: 0.4 });
             const base = new THREE.Mesh(baseGeo, baseMat); base.position.set(0, 25, 0);
             lmGroup.add(base);
-            addCollisionBox(0, 0, 100, 100); 
+            addCollisionBox(0, 0, 120, 120); 
 
-            // メインタワー
-            const mainTower = new THREE.Mesh(new THREE.BoxGeometry(50, 450, 50), matSky); 
+            // メインタワー (八角柱)
+            const mainTowerGeo = new THREE.CylinderGeometry(45, 60, 450, 8);
+            mainTowerGeo.rotateY(Math.PI / 8);
+            const mainTower = new THREE.Mesh(mainTowerGeo, matSky); 
             mainTower.position.set(0, 275, 0); 
             lmGroup.add(mainTower);
 
             // 外骨格フレーム
             const exoMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
             const pillarGeo = new THREE.BoxGeometry(6, 460, 6);
-            const p1 = new THREE.Mesh(pillarGeo, exoMat); p1.position.set(28, 270, 28);
-            const p2 = new THREE.Mesh(pillarGeo, exoMat); p2.position.set(-28, 270, 28);
-            const p3 = new THREE.Mesh(pillarGeo, exoMat); p3.position.set(28, 270, -28);
-            const p4 = new THREE.Mesh(pillarGeo, exoMat); p4.position.set(-28, 270, -28);
+            const p1 = new THREE.Mesh(pillarGeo, exoMat); p1.position.set(45, 270, 0);
+            const p2 = new THREE.Mesh(pillarGeo, exoMat); p2.position.set(-45, 270, 0);
+            const p3 = new THREE.Mesh(pillarGeo, exoMat); p3.position.set(0, 270, 45);
+            const p4 = new THREE.Mesh(pillarGeo, exoMat); p4.position.set(0, 270, -45);
             lmGroup.add(p1, p2, p3, p4);
 
             // ネオンリング
@@ -580,12 +595,12 @@
                     scene.add(cMesh);
                 }
             }
-
             scene.add(lmGroup);
 
-            // 巨大商業施設（モール）
             const mallGroup = new THREE.Group();
-            const mallX = -220; const mallZ = -260; 
+            // 道路から完全に離すためさらに北西へ
+            const mallX = -280; 
+            const mallZ = -280; 
             
             // ピラミッド型階層
             const mallMat1 = new THREE.MeshLambertMaterial({ color: 0xddccaa });
@@ -622,40 +637,47 @@
         }
 
         function createInteriors() {
-            // 1. タワー展望台
             const obsY = 480;
             const obsGroup = new THREE.Group();
             const fMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
-            const floor = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 2, 32), fMat);
+            // 八角形の展望台床
+            const floor = new THREE.Mesh(new THREE.CylinderGeometry(55, 55, 2, 8), fMat);
+            floor.rotation.y = Math.PI / 8;
             floor.position.set(0, obsY-1, 0);
-            const wall = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 15, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.2, side: THREE.DoubleSide }));
-            wall.position.set(0, obsY+7.5, 0);
+            // 高いガラス壁
+            const wall = new THREE.Mesh(new THREE.CylinderGeometry(55, 55, 25, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.2, side: THREE.DoubleSide }));
+            wall.rotation.y = Math.PI / 8;
+            wall.position.set(0, obsY+12.5, 0);
             obsGroup.add(floor, wall);
             scene.add(obsGroup);
             
-            addTeleporter(70, 2, 0, 0x00ffff, 0, obsY, 0, "展望台へ");
-            addTeleporter(20, obsY, 0, 0xff0000, 75, 2, 0, "地上へ");
+            // ワープループ対策 (着地点を +5m ずらす)
+            addTeleporter(80, 2, 0, 0x00ffff, 0, obsY, 5, "展望台へ");
+            addTeleporter(0, obsY, 0, 0xff0000, 85, 2, 0, "地上へ");
 
-            // 2. モール内装
             const mallIntGroup = new THREE.Group();
-            const inFloor = new THREE.Mesh(new THREE.BoxGeometry(100, 2, 100), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2 }));
+            // 床を 300x300 に拡大
+            const inFloor = new THREE.Mesh(new THREE.BoxGeometry(300, 2, 300), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2 }));
             inFloor.position.set(2000, 1, 2000);
             const wMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-            const w1 = new THREE.Mesh(new THREE.BoxGeometry(100, 30, 2), wMat); w1.position.set(2000, 16, 1950);
-            const w2 = new THREE.Mesh(new THREE.BoxGeometry(100, 30, 2), wMat); w2.position.set(2000, 16, 2050);
-            const w3 = new THREE.Mesh(new THREE.BoxGeometry(2, 30, 100), wMat); w3.position.set(1950, 16, 2000);
-            const w4 = new THREE.Mesh(new THREE.BoxGeometry(2, 30, 100), wMat); w4.position.set(2050, 16, 2000);
+            const w1 = new THREE.Mesh(new THREE.BoxGeometry(300, 40, 2), wMat); w1.position.set(2000, 21, 1850);
+            const w2 = new THREE.Mesh(new THREE.BoxGeometry(300, 40, 2), wMat); w2.position.set(2000, 21, 2150);
+            const w3 = new THREE.Mesh(new THREE.BoxGeometry(2, 40, 300), wMat); w3.position.set(1850, 21, 2000);
+            const w4 = new THREE.Mesh(new THREE.BoxGeometry(2, 40, 300), wMat); w4.position.set(2150, 21, 2000);
             mallIntGroup.add(inFloor, w1, w2, w3, w4);
-            addCollisionBox(2000, 1950, 100, 4); addCollisionBox(2000, 2050, 100, 4); addCollisionBox(1950, 2000, 4, 100); addCollisionBox(2050, 2000, 4, 100);
             
-            const monitor = new THREE.Mesh(new THREE.BoxGeometry(15, 15, 15), new THREE.MeshBasicMaterial({ color: 0xa855f7, wireframe: true }));
-            monitor.position.set(2000, 10, 2020);
+            // 拡大に伴うコリジョンの更新
+            addCollisionBox(2000, 1850, 300, 4); addCollisionBox(2000, 2150, 300, 4); addCollisionBox(1850, 2000, 4, 300); addCollisionBox(2150, 2000, 4, 300);
+            
+            const monitor = new THREE.Mesh(new THREE.BoxGeometry(40, 25, 5), new THREE.MeshBasicMaterial({ color: 0xa855f7, wireframe: true }));
+            monitor.position.set(2000, 15, 2050);
             mallIntGroup.add(monitor);
             scene.add(mallIntGroup);
 
-            // ワープ配置をコリジョン外 (-170) に調整
-            addTeleporter(-220, 2, -170, 0xa855f7, 2000, 2, 2000, "モール内へ");
-            addTeleporter(2000, 2, 1980, 0xff0000, -220, 2, -165, "外へ");
+            // モールの位置変更に合わせたワープパッド調整 (ループ回避で少しずらす)
+            const mallX = -280; const mallZ = -280;
+            addTeleporter(mallX, 2, mallZ + 110, 0xa855f7, 2000, 2, 1980, "モール内へ");
+            addTeleporter(2000, 2, 1970, 0xff0000, mallX - 5, 2, mallZ + 110, "外へ");
         }
 
         function createRoadSegment(x, z, width, length, isEW) {
@@ -666,17 +688,18 @@
         }
 
         function generateCity() {
-            createRoadSegment(0, -130, 60, 1600, true);
-            createRoadSegment(-135, 0, 60, 1600, false);
+            createAvenues(); 
             const blockSize = 40;
             for (let x = -960; x < 960; x += blockSize) {
                 for (let z = -960; z < 960; z += blockSize) {
                     const bx = x + blockSize / 2; const bz = z + blockSize / 2; const dist = Math.hypot(bx, bz);
                     if (dist > ISLAND_RADIUS - 40) continue; 
+                    
                     if (Math.abs(bx) < 80 && Math.abs(bz) < 80) continue; 
-                    if (bx > -360 && bx < -160 && bz > -360 && bz < -160) continue; 
+                    // モール (x:-280, z:-280) を中心とした 160x160 以上の安全圏
+                    if (bx > -370 && bx < -190 && bz > -370 && bz < -190) continue; 
                     if (bz > -170 && bz < -90) continue; 
-                    if (bx > -175 && bx < -95) continue;
+                    if (bx > -165 && bx < -105) continue;
 
                     const split = Math.random() > 0.5; 
                     const buildings = split ? 4 : 1;
@@ -960,13 +983,40 @@
             Object.values(coinsMap).forEach(coin => { coin.rotation.z += 2 * delta; coin.position.y = 2 + Math.sin(time * 3 + coin.position.x) * 0.5; });
 
             if (trackSpline) {
-                for(let i = 0; i < 3; i++) {
-                    monorailProgress[i] += monorailSpeed;
-                    if (monorailProgress[i] > 1) monorailProgress[i] -= 1;
-                    const pt = trackSpline.getPoint(monorailProgress[i]);
-                    const tangent = trackSpline.getTangent(monorailProgress[i]);
-                    monorailCars[i].position.copy(pt);
-                    monorailCars[i].rotation.y = Math.atan2(tangent.x, tangent.z);
+                const stationStops = [0, 0.25, 0.5, 0.75, 1.0];
+                const stopDuration = 5.0; // 駅での停車時間(秒)
+
+                for(let i = 0; i < 4; i++) {
+                    let car = monorailCars[i];
+                    
+                    if (car.state === 'moving') {
+                        const prevProgress = car.progress;
+                        car.progress += monorailSpeed * delta;
+                        
+                        // 駅に到達したかチェック
+                        for (let s of stationStops) {
+                            if (prevProgress < s && car.progress >= s) {
+                                car.progress = s; // 駅の位置にピタッと合わせる
+                                car.state = 'stopped';
+                                car.stopTimer = stopDuration;
+                                break;
+                            }
+                        }
+                        if (car.progress > 1) car.progress -= 1;
+                        
+                    } else if (car.state === 'stopped') {
+                        car.stopTimer -= delta;
+                        if (car.stopTimer <= 0) {
+                            car.state = 'moving';
+                            car.progress += 0.001; // 再停止を防ぐために少し進める
+                        }
+                    }
+
+                    // 座標と角度の更新
+                    const pt = trackSpline.getPoint(car.progress % 1);
+                    const tangent = trackSpline.getTangent(car.progress % 1);
+                    car.mesh.position.copy(pt);
+                    car.mesh.rotation.y = Math.atan2(tangent.x, tangent.z);
                 }
             }
 
