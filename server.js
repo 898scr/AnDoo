@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'main.html'));
 });
 
-// ユーザーデータ
+// ユーザーデータストア
 const usersDb = {}; 
 const players = {}; 
 let coins = {};     
@@ -37,14 +37,14 @@ function spawnCoin() {
 }
 for (let i = 0; i < MAX_COINS; i++) spawnCoin();
 
-// 経済（株価）の変動ループ（30秒ごと）
+// 株価の変動ループ（30秒ごと）
 setInterval(() => {
     const changeRate = 1 + (Math.random() - 0.5) * 0.4;
     stockPrice = Math.floor(Math.max(10, stockPrice * changeRate));
     io.emit('marketUpdate', stockPrice);
 }, 30000);
 
-// API: 新規登録
+// API: 新規登録 (Username制)
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false, message: '入力が不完全です' });
@@ -78,25 +78,27 @@ io.use((socket, next) => {
     if (!username || !usersDb[username] || usersDb[username].isBanned) return next(new Error('Auth failed'));
     socket.username = username;
     socket.isAdmin = false;
+    socket.speedMultiplier = 1; // 移動速度倍率（デフォ1）
     next();
 });
 
 io.on('connection', (socket) => {
     const user = usersDb[socket.username];
     
-    // スポーン位置：ランドマークのコリジョンを確実に避けた北西の歩道 (x:-90, z:-90)
+    // スポーン位置：大通り沿い（安全地帯）
     players[socket.id] = {
         id: socket.id,
         username: socket.username,
-        x: -90 + (Math.random() - 0.5) * 10, 
+        x: -50 + (Math.random() - 0.5) * 10, 
         y: 2, 
-        z: -90 + (Math.random() - 0.5) * 10, 
+        z: -50 + (Math.random() - 0.5) * 10, 
         rotation: 0,
         avatar: {
             body: '#38bdf8',
             skin: '#ffcc99',
             visor: '#00ffff',
-            nameColor: '#ffffff'
+            nameColor: '#ffffff',
+            accessory: 'none' // アクセサリー機能追加
         }
     };
 
@@ -120,11 +122,11 @@ io.on('connection', (socket) => {
         }
     });
 
-    // アバター詳細変更
+    // アバター詳細変更（モールでのみ利用）
     socket.on('changeAvatarConfig', (newConfig) => {
         if (players[socket.id]) {
             players[socket.id].avatar = newConfig;
-            io.emit('avatarChanged', { id: socket.id, avatar: newConfig });
+            io.emit('avatarChanged', { id: socket.id, avatar: newConfig, username: socket.username });
         }
     });
 
@@ -140,7 +142,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 株取引
+    // 株取引 (証券所でのみ利用)
     socket.on('buyStock', (amountStr) => {
         const amount = parseInt(amountStr, 10);
         if (isNaN(amount) || amount <= 0) return;
@@ -171,7 +173,6 @@ io.on('connection', (socket) => {
 
     // チャット＆Adminコマンド処理
     socket.on('chatMessage', (text) => {
-        // コマンドの場合はここで処理し、一般チャットには流さない (returnする)
         if (text.startsWith('/')) {
             if (text.startsWith('/admin ')) {
                 const pass = text.split(' ')[1];
@@ -207,12 +208,21 @@ io.on('connection', (socket) => {
                     }
                     return;
                 }
+                // 【新規追加】移動速度変更コマンド
+                if (text.startsWith('/speed ')) {
+                    const parts = text.split(' ');
+                    const mult = parseFloat(parts[1]);
+                    if (!isNaN(mult)) {
+                        socket.speedMultiplier = mult;
+                        socket.emit('speedUpdated', mult);
+                        socket.emit('notification', { type: 'success', text: `移動速度が ${mult}倍 になりました` });
+                    }
+                    return;
+                }
             }
-            // 未知のコマンド、または権限がない場合もチャットには流さない
-            return; 
+            return; // コマンドはチャットに流さない
         }
 
-        // 通常のチャットブロードキャスト
         io.emit('chatMessage', { id: socket.id, username: socket.username, text: text, isAdmin: socket.isAdmin });
     });
 
