@@ -344,7 +344,7 @@
             lmGroup.add(new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x4a4a4a })).setPos(0, 25, 0));
             addCollisionBox(0, 0, 60, 60); 
             
-            // Entrance facing the avenue (北側大通り)
+            // Entrance facing the avenue
             lmGroup.add(new THREE.Mesh(new THREE.BoxGeometry(15, 15, 15), new THREE.MeshStandardMaterial({color: 0x111111})).setPos(0, 7.5, -35)); 
             
             const towerMat = mats.matSky;
@@ -357,30 +357,32 @@
             lmGroup.add(new THREE.Mesh(new THREE.SphereGeometry(27, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3 })).setPos(0, 560, 0));
             scene.add(lmGroup);
 
-            // Tower Warp (Entrance inside -> Observatory)
+            // Tower Warp & Observatory Floor/Ceiling
             addTeleporter(0, 2, -40, 0x00ffff, 0, 401, 20, "展望台へ"); addTeleporter(0, 401, 25, 0xff0000, 0, 2, -50, "地上へ");
-            const obsFloor = new THREE.Mesh(new THREE.RingGeometry(5, 27, 32), new THREE.MeshStandardMaterial({color: 0x555555})); obsFloor.rotation.x = -Math.PI/2; obsFloor.position.set(0, 400, 0); scene.add(obsFloor);
+            const obsFloor = new THREE.Mesh(new THREE.RingGeometry(5, 27, 32), new THREE.MeshStandardMaterial({color: 0x555555})); obsFloor.rotation.x = -Math.PI/2; obsFloor.position.set(0, 400.1, 0); scene.add(obsFloor);
+            const obsCeil = new THREE.Mesh(new THREE.RingGeometry(5, 27, 32), new THREE.MeshStandardMaterial({color: 0x333333})); obsCeil.rotation.x = Math.PI/2; obsCeil.position.set(0, 429.9, 0); scene.add(obsCeil);
 
-            // 2. Mall (Pyramid Cyberpunk Style, facing avenue)
+            // 2. Mall (Pyramid Cyberpunk Style)
             const mallGroup = new THREE.Group(); const mallX = -320, mallZ = -220;
             const mallMat = new THREE.MeshStandardMaterial({ color: 0xb5b4a0 });
             mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(180, 20, 180), mallMat).setPos(0, 10, 0));
             mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(160, 20, 160), mallMat).setPos(0, 30, 0));
             mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(140, 15, 140), mallMat).setPos(0, 47.5, 0));
-            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(181, 1, 181), new THREE.MeshBasicMaterial({ color: 0x00ffff })).setPos(0, 20.5, 0));
-            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(161, 1, 161), new THREE.MeshBasicMaterial({ color: 0xff00ff })).setPos(0, 40.5, 0));
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(181, 1, 181), new THREE.MeshBasicMaterial({ color: 0x00ffff })).setPos(0, 20.05, 0));
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(161, 1, 161), new THREE.MeshBasicMaterial({ color: 0xff00ff })).setPos(0, 40.05, 0));
             
-            // Mall Entrance facing South avenue (Z=-130)
+            // Mall Entrance
             mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(40, 30, 10), new THREE.MeshStandardMaterial({ color: 0x111111 })).setPos(0, 15, 90));
             mallGroup.position.set(mallX, 0, mallZ); scene.add(mallGroup);
             addCollisionBox(mallX, mallZ, 180, 180);
 
-            // Mall Warp & Interior
+            // Mall Warp & Interior (Added Walls and Ceiling)
             addTeleporter(mallX, 2, mallZ + 105, 0xa855f7, 2000, 2, 1980, "モール内へ"); addTeleporter(2000, 2, 1960, 0xff0000, mallX + 20, 2, mallZ + 105, "外へ");
             const mFloor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({color: 0x111111})); mFloor.rotation.x = -Math.PI/2; mFloor.position.set(2000, 0, 2000); scene.add(mFloor);
+            const mRoom = new THREE.Mesh(new THREE.BoxGeometry(300, 100, 300), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.BackSide})); mRoom.position.set(2000, 50, 2000); scene.add(mRoom);
             const boutiqueFloor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshBasicMaterial({color: 0x1e3a8a})); boutiqueFloor.rotation.x = -Math.PI/2; boutiqueFloor.position.set(2000, 0.1, 2060); scene.add(boutiqueFloor);
             const bLabel = createNameLabel("👗 AVATAR SHOP", "#c084fc"); bLabel.position.set(2000, 15, 2060); bLabel.scale.set(40, 10, 1); scene.add(bLabel);
-            for(let i=0; i<6; i++) { scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 20, 40), new THREE.MeshStandardMaterial({color: 0x88ccff, transparent: true, opacity: 0.3})).setPos(1910 + (i%2)*180, 10, 1910 + Math.floor(i/2)*90)); } // Shops
+            for(let i=0; i<6; i++) { scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 20, 40), new THREE.MeshStandardMaterial({color: 0x88ccff, transparent: true, opacity: 0.3})).setPos(1910 + (i%2)*180, 10, 1910 + Math.floor(i/2)*90)); } 
 
             // 3. Exchange & Plaza (East Avenue)
             const exX = 350, exZ = -130;
@@ -390,12 +392,13 @@
             exGroup.position.set(exX, 0, exZ); scene.add(exGroup);
             addCollisionBox(exX, exZ, 100, 80);
             
-            // Plaza (緑地)
+            // Plaza
             const plaza = new THREE.Mesh(new THREE.PlaneGeometry(100, 60), new THREE.MeshStandardMaterial({color: 0x228b22})); plaza.rotation.x = -Math.PI/2; plaza.position.set(exX, 0.3, -50); scene.add(plaza);
 
-            // Exchange Warp & Interior
+            // Exchange Warp & Interior (Added Walls and Ceiling)
             addTeleporter(exX, 2, -80, 0xfacc15, 4000, 2, 4000, "証券取引所へ"); addTeleporter(4000, 2, 4040, 0xff0000, exX + 20, 2, -80, "地上へ");
             const exFloor = new THREE.Mesh(new THREE.PlaneGeometry(150, 100), new THREE.MeshStandardMaterial({color: 0x223344})); exFloor.rotation.x = -Math.PI/2; exFloor.position.set(4000, 0, 4000); scene.add(exFloor);
+            const exRoom = new THREE.Mesh(new THREE.BoxGeometry(150, 50, 100), new THREE.MeshStandardMaterial({color: 0x112233, side: THREE.BackSide})); exRoom.position.set(4000, 25, 4000); scene.add(exRoom);
             scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 5, 10), new THREE.MeshStandardMaterial({color: 0x554433})).setPos(4000, 2.5, 3970)); // Desk
             
             // Stock Chart Canvas
@@ -611,10 +614,15 @@
                 for(let i = 0; i < 4; i++) {
                     let car = monorailCars[i];
                     if (car.state === 'moving') {
-                        car.progress += 0.02 * delta; if (car.progress > 1) car.progress -= 1;
-                        for(let stop of [0, 0.25, 0.5, 0.75]) { if (Math.abs(car.progress - stop) < 0.005) { car.progress = stop; car.state = 'stopped'; car.stopTimer = 5.0; break; } }
+                        car.progress += 0.05 * delta; if (car.progress > 1) car.progress -= 1;
+                        // 停車位置 (1/12, 4/12, 7/12, 10/12)
+                        for(let stop of [1/12, 4/12, 7/12, 10/12]) { 
+                            if (Math.abs(car.progress - stop) < 0.002) { 
+                                car.progress = stop; car.state = 'stopped'; car.stopTimer = 5.0; break; 
+                            } 
+                        }
                     } else if (car.state === 'stopped') {
-                        car.stopTimer -= delta; if (car.stopTimer <= 0) { car.state = 'moving'; car.progress += 0.01; }
+                        car.stopTimer -= delta; if (car.stopTimer <= 0) { car.state = 'moving'; car.progress += 0.005; }
                     }
                     const pt = trackSpline.getPoint(car.progress % 1), tangent = trackSpline.getTangent(car.progress % 1);
                     car.mesh.position.copy(pt); car.mesh.rotation.y = Math.atan2(tangent.x, tangent.z);
@@ -631,22 +639,31 @@
             if (localPlayerMesh && !isWarping) {
                 let moved = false; const speed = (keysPressed.shift ? 45 : 15) * adminSpeedMult; 
                 
-                // 【重要修正】 A/Dキーの反転を解消。-Z軸をカメラの前方基準として正確に計算
                 const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                 const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)); 
 
                 let nextX = localPlayerMesh.position.x, nextZ = localPlayerMesh.position.z;
-                if (keysPressed['w'] || keysPressed['arrowup']) { nextX += forward.x * speed * delta; nextZ += forward.z * speed * delta; }
-                if (keysPressed['s'] || keysPressed['arrowdown']) { nextX -= forward.x * speed * delta; nextZ -= forward.z * speed * delta; }
-                if (keysPressed['a'] || keysPressed['arrowleft']) { nextX -= right.x * speed * delta; nextZ -= right.z * speed * delta; } 
-                if (keysPressed['d'] || keysPressed['arrowright']) { nextX += right.x * speed * delta; nextZ += right.z * speed * delta; } 
+                let moveDirX = 0, moveDirZ = 0;
+
+                if (keysPressed['w'] || keysPressed['arrowup']) { moveDirX += forward.x; moveDirZ += forward.z; }
+                if (keysPressed['s'] || keysPressed['arrowdown']) { moveDirX -= forward.x; moveDirZ -= forward.z; }
+                if (keysPressed['a'] || keysPressed['arrowleft']) { moveDirX -= right.x; moveDirZ -= right.z; } 
+                if (keysPressed['d'] || keysPressed['arrowright']) { moveDirX += right.x; moveDirZ += right.z; } 
+
+                if (moveDirX !== 0 || moveDirZ !== 0) {
+                    const dir = new THREE.Vector3(moveDirX, 0, moveDirZ).normalize();
+                    nextX += dir.x * speed * delta;
+                    nextZ += dir.z * speed * delta;
+                    
+                    // キャラクターを進行方向に向ける（モデルの-Zが正面のため Math.PI を足す）
+                    localPlayerMesh.rotation.y = Math.atan2(dir.x, dir.z) + Math.PI;
+                }
 
                 const col = checkCollisions(nextX, nextZ, localPlayerMesh.position.y);
-                if (col.canMoveX) { localPlayerMesh.position.x = nextX; moved = true; }
-                if (col.canMoveZ) { localPlayerMesh.position.z = nextZ; moved = true; }
+                if (col.canMoveX && moveDirX !== 0) { localPlayerMesh.position.x = nextX; moved = true; }
+                if (col.canMoveZ && moveDirZ !== 0) { localPlayerMesh.position.z = nextZ; moved = true; }
                 if (riding) moved = true;
 
-                localPlayerMesh.rotation.y = cameraYaw;
                 checkWarpPads(); updateBubbles();
 
                 // Zone UI toggles
