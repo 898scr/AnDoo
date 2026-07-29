@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kanazawa 3D Metaverse</title>
-    
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; color: #fff; }
         
         #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
         .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px;}
@@ -17,13 +16,12 @@
         .btn-success { background: #10b981; color: white; } .btn-success:hover { background: #059669; }
         .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
-        #sidebar { display: none; position: absolute; top: 0; left: 0; width: 280px; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border-right: 1px solid #334155; z-index: 10; padding: 20px; box-sizing: border-box; flex-direction: column; gap: 15px; overflow-y: auto; }
+        #sidebar { display: none; position: absolute; top: 0; left: 0; width: 280px; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border-right: 1px solid #334155; z-index: 10; padding: 20px; box-sizing: border-box; flex-direction: column; gap: 15px; }
         .sidebar-section { border-bottom: 1px solid #334155; padding-bottom: 15px; }
         .sidebar-section h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #94a3b8; text-transform: uppercase;}
         .user-email { font-size: 1.1rem; font-weight: bold; color: #f8fafc; word-break: break-all;}
         .money { font-size: 1.5rem; color: #fbbf24; font-weight: bold; margin-top: 5px; }
         .camera-btn { background: #4f46e5; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px;}
-        .camera-btn:hover { background: #4338ca; }
 
         #chat-container { position: absolute; bottom: 20px; left: 300px; z-index: 10; width: 350px; background: rgba(15, 23, 42, 0.8); border-radius: 8px; border: 1px solid #334155; display: none; flex-direction: column; }
         #chat-header { background: rgba(30, 41, 59, 0.9); padding: 8px 12px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold; color: #cbd5e1; font-size: 0.9rem; display: flex; justify-content: space-between; }
@@ -34,37 +32,28 @@
         #chat-input-area { display: flex; padding: 10px; border-top: 1px solid #334155; }
         #chat-input { flex-grow: 1; padding: 8px; border-radius: 4px; border: none; background: #0f172a; color: white; }
         
-        .chat-bubble { position: absolute; background: white; color: black; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: bold; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); z-index: 20; box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.2s; }
+        .chat-bubble { position: absolute; background: white; color: black; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: bold; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); z-index: 20; opacity: 0; transition: opacity 0.2s; }
         .chat-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent; }
 
-        #boutique-panel { position: absolute; right: 20px; top: 20px; z-index: 10; background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px; border: 2px solid #c084fc; box-shadow: 0 0 20px rgba(192, 132, 252, 0.3); width: 250px; display: none; }
-        #boutique-panel h3 { margin: 0 0 15px 0; color: #c084fc; }
+        #boutique-panel, #stock-panel { position: absolute; right: 20px; top: 20px; z-index: 10; background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px; width: 250px; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #boutique-panel { border: 2px solid #c084fc; } #stock-panel { border: 2px solid #34d399; }
         .color-picker-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;}
         .color-picker-group input[type="color"] { background: none; border: none; cursor: pointer; height: 25px; width: 40px; padding: 0;}
-
-        #stock-panel { position: absolute; right: 20px; top: 20px; z-index: 10; background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px; border: 2px solid #34d399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.3); width: 250px; display: none; }
-        #stock-panel h3 { margin: 0 0 10px 0; color: #34d399; }
         #stock-panel input { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: none; background: #0f172a; color: white;}
-        #stock-panel .btn-group { display: flex; gap: 10px; }
         #stock-panel button { flex-grow: 1; padding: 10px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white;}
 
         #notification-container { position: absolute; top: 20px; right: 20px; z-index: 50; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
         .toast { padding: 12px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 3.5s forwards; opacity: 0; transform: translateX(100%); }
-        .toast.success { background-color: rgba(16, 185, 129, 0.9); border-left: 4px solid #059669; }
-        .toast.error { background-color: rgba(244, 63, 94, 0.9); border-left: 4px solid #be123c; }
-        .toast.info { background-color: rgba(56, 189, 248, 0.9); border-left: 4px solid #0284c7; }
-        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+        .toast.success { background-color: rgba(16, 185, 129, 0.9); } .toast.error { background-color: rgba(244, 63, 94, 0.9); } .toast.info { background-color: rgba(56, 189, 248, 0.9); }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } } @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
 
         #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1;}
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 24px; pointer-events: none; z-index: 10; display: none; }
     </style>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-
     <div id="login-screen">
         <div class="panel">
             <h2>Kanazawa Metaverse</h2>
@@ -86,25 +75,18 @@
         <div class="sidebar-section" style="border: none;">
             <h3>Camera</h3>
             <button class="camera-btn" id="btn-camera" onclick="toggleCameraMode()">FPS視点に切り替え</button>
-            <p style="font-size: 0.75rem; color:#94a3b8; margin-top:10px;">
-                WASD: 移動 (Shiftでダッシュ)<br>左クリック+ドラッグ: 視点移動
-            </p>
+            <p style="font-size: 0.75rem; color:#94a3b8; margin-top:10px;">WASD: 移動 (Shiftでダッシュ)<br>左クリック+ドラッグ: 視点移動</p>
         </div>
     </div>
 
     <div id="chat-container">
-        <div id="chat-header" onclick="toggleChat()">
-            <span>💬 サーバーチャット</span>
-            <span id="chat-toggle-icon">▼</span>
-        </div>
+        <div id="chat-header" onclick="toggleChat()"><span>💬 サーバーチャット</span><span id="chat-toggle-icon">▼</span></div>
         <div id="chat-messages"></div>
-        <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="メッセージを入力... (/admin)">
-        </div>
+        <div id="chat-input-area"><input type="text" id="chat-input" placeholder="メッセージを入力... (/admin)"></div>
     </div>
 
     <div id="boutique-panel">
-        <h3>👗 アバターショップ</h3>
+        <h3 style="color: #c084fc;">👗 アバターショップ</h3>
         <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">ここでアバターの外観を変更できます。</p>
         <div class="color-picker-group"><label>服(ボディ)</label><input type="color" id="color-body" value="#38bdf8" onchange="updateAvatarConfig()"></div>
         <div class="color-picker-group"><label>肌(スキン)</label><input type="color" id="color-skin" value="#ffcc99" onchange="updateAvatarConfig()"></div>
@@ -112,19 +94,17 @@
         <div class="color-picker-group"><label>名前の色</label><input type="color" id="color-name" value="#ffffff" onchange="updateAvatarConfig()"></div>
         <div style="margin-top: 10px;">
             <label style="font-size:0.9rem;">アクセサリー</label>
-            <select id="select-accessory" class="panel" style="padding: 5px; margin-top: 5px; width:100%;" onchange="updateAvatarConfig()">
-                <option value="none">なし</option>
-                <option value="hat">シルクハット</option>
-                <option value="catEars">ネコ耳</option>
+            <select id="select-accessory" style="padding: 5px; margin-top: 5px; width:100%; background:#0f172a; color:white; border:1px solid #475569;" onchange="updateAvatarConfig()">
+                <option value="none">なし</option><option value="hat">シルクハット</option><option value="catEars">ネコ耳</option>
             </select>
         </div>
     </div>
 
     <div id="stock-panel">
-        <h3>🏢 証券取引所</h3>
-        <p style="font-size: 0.8rem; margin: 0 0 10px 0; color:#cbd5e1;">現在の株価: <span id="stock-price-display" style="color:white; font-size:1.2rem; font-weight:bold;">100</span> G</p>
+        <h3 style="color: #34d399;">🏢 証券取引所</h3>
+        <p style="font-size: 0.8rem; color:#cbd5e1;">現在の株価: <span id="stock-price-display" style="color:white; font-size:1.2rem; font-weight:bold;">100</span> G</p>
         <input type="number" id="trade-amount" placeholder="数量">
-        <div class="btn-group">
+        <div style="display: flex; gap: 10px;">
             <button style="background: #ef4444;" onclick="tradeStock('buy')">買う</button>
             <button style="background: #3b82f6;" onclick="tradeStock('sell')">売る</button>
         </div>
@@ -135,20 +115,22 @@
     <div id="canvas-container"></div>
 
     <script>
-        let currentUsername = null;
-        let socket = null;
-        let adminSpeedMult = 1.0;
-        
+        let currentUsername = null, socket = null, adminSpeedMult = 1.0;
+        let scene, camera, renderer, clock, trackSpline;
+        const MAP_SIZE = 2000, ISLAND_RADIUS = 1000;
+        const otherPlayers = {}, otherLabels = {}, coinsMap = {}, chatBubbles = {};
+        let localPlayerMesh = null, isWarping = false;
+        const keysPressed = {};
+        let cameraMode = 'TPS', cameraYaw = 0, cameraPitch = 0, isDragging = false, previousMousePosition = { x: 0, y: 0 };
+        const gridCollisions = {}, warpPads = [], monorailCars = [];
+        let stockChartCanvas, stockChartCtx, stockChartTex, stockHistory = [];
+
+        // Auth
         async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+            const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
             const data = await res.json();
-            
             if (data.success) {
                 if(endpoint === '/api/login') {
                     currentUsername = data.username;
@@ -157,1120 +139,461 @@
                     document.getElementById('ui-stocks').innerText = data.stocks;
                     startGame(); 
                 } else {
-                    document.getElementById('auth-error').style.color = '#10b981';
-                    document.getElementById('auth-error').innerText = data.message;
+                    document.getElementById('auth-error').style.color = '#10b981'; document.getElementById('auth-error').innerText = data.message;
                 }
             } else {
-                document.getElementById('auth-error').style.color = '#f43f5e';
-                document.getElementById('auth-error').innerText = data.message;
+                document.getElementById('auth-error').style.color = '#f43f5e'; document.getElementById('auth-error').innerText = data.message;
             }
         }
 
+        // Notifications & Chat
         function showNotification(type, text) {
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerText = text;
+            toast.className = `toast ${type}`; toast.innerText = text;
             container.appendChild(toast);
             setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
         let chatVisible = true;
         function toggleChat() {
-            const msgs = document.getElementById('chat-messages');
-            const input = document.getElementById('chat-input-area');
-            const icon = document.getElementById('chat-toggle-icon');
-            if (chatVisible) {
-                msgs.style.display = 'none'; input.style.display = 'none';
-                icon.innerText = '▲'; chatVisible = false;
-            } else {
-                msgs.style.display = 'flex'; input.style.display = 'flex';
-                icon.innerText = '▼'; chatVisible = true;
-            }
+            const msgs = document.getElementById('chat-messages'), input = document.getElementById('chat-input-area'), icon = document.getElementById('chat-toggle-icon');
+            chatVisible = !chatVisible;
+            msgs.style.display = chatVisible ? 'flex' : 'none'; input.style.display = chatVisible ? 'flex' : 'none';
+            icon.innerText = chatVisible ? '▼' : '▲';
         }
-        
+
         document.getElementById('chat-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const text = e.target.value.trim();
-                if (text) {
-                    socket.emit('chatMessage', text);
-                    e.target.value = '';
-                }
+                if (text) { socket.emit('chatMessage', text); e.target.value = ''; }
             }
         });
 
-        const chatBubbles = {};
         function showBubble(playerId, text) {
             if (!chatBubbles[playerId]) {
-                const b = document.createElement('div');
-                b.className = 'chat-bubble';
-                document.body.appendChild(b);
-                chatBubbles[playerId] = { element: b, timer: null };
+                const b = document.createElement('div'); b.className = 'chat-bubble';
+                document.body.appendChild(b); chatBubbles[playerId] = { element: b, timer: null };
             }
             const bubble = chatBubbles[playerId];
-            bubble.element.innerText = text;
-            bubble.element.style.opacity = '1';
+            bubble.element.innerText = text; bubble.element.style.opacity = '1';
             if (bubble.timer) clearTimeout(bubble.timer);
             bubble.timer = setTimeout(() => { bubble.element.style.opacity = '0'; }, 5000);
         }
-        
         function updateBubbles() {
-            if (localPlayerMesh && chatBubbles[socket.id] && chatBubbles[socket.id].element.style.opacity === '1') {
-                updateBubblePosition(chatBubbles[socket.id].element, localPlayerMesh.position, 4);
-            }
-            for (let id in otherPlayers) {
+            const updatePos = (id, pos, yOffset) => {
                 if (chatBubbles[id] && chatBubbles[id].element.style.opacity === '1') {
-                    updateBubblePosition(chatBubbles[id].element, otherPlayers[id].position, 4);
+                    const v = new THREE.Vector3(pos.x, pos.y + yOffset, pos.z); v.project(camera);
+                    if (v.z > 1) { chatBubbles[id].element.style.display = 'none'; return; }
+                    chatBubbles[id].element.style.display = 'block';
+                    chatBubbles[id].element.style.left = `${(v.x * .5 + .5) * window.innerWidth}px`;
+                    chatBubbles[id].element.style.top = `${(v.y * -.5 + .5) * window.innerHeight - 20}px`;
                 }
-            }
-        }
-        function updateBubblePosition(element, pos, yOffset) {
-            const v = new THREE.Vector3(pos.x, pos.y + yOffset, pos.z);
-            v.project(camera);
-            const x = (v.x * .5 + .5) * window.innerWidth;
-            const y = (v.y * -.5 + .5) * window.innerHeight;
-            if (v.z > 1) { element.style.display = 'none'; return; }
-            element.style.display = 'block';
-            element.style.left = `${x}px`;
-            element.style.top = `${y - 15}px`;
+            };
+            if (localPlayerMesh) updatePos(socket.id, localPlayerMesh.position, 4);
+            for (let id in otherPlayers) updatePos(id, otherPlayers[id].position, 4);
         }
 
-        let scene, camera, renderer, clock;
-        const MAP_SIZE = 2000;
-        const ISLAND_RADIUS = 1000;
-        
-        const otherPlayers = {}; 
-        const otherLabels = {};
-        const coinsMap = {};     
-        let localPlayerMesh = null;
-        let isWarping = false;
-        
-        const keysPressed = {};
-        let cameraMode = 'TPS'; 
-        let cameraYaw = 0;
-        let cameraPitch = 0;
-        let isDragging = false;
-        let previousMousePosition = { x: 0, y: 0 };
-
-        const gridCollisions = {};
         function addCollisionBox(x, z, width, depth) {
-            const minX = x - width/2; const maxX = x + width/2;
-            const minZ = z - depth/2; const maxZ = z + depth/2;
-            const keys = [
-                `${Math.floor(minX/100)},${Math.floor(minZ/100)}`,
-                `${Math.floor(maxX/100)},${Math.floor(minZ/100)}`,
-                `${Math.floor(minX/100)},${Math.floor(maxZ/100)}`,
-                `${Math.floor(maxX/100)},${Math.floor(maxZ/100)}`
-            ];
-            const uniqueKeys = [...new Set(keys)];
-            uniqueKeys.forEach(k => {
-                if (!gridCollisions[k]) gridCollisions[k] = [];
-                gridCollisions[k].push({ minX, maxX, minZ, maxZ });
-            });
-        }
-
-        const instanceData = {
-            mat1: [], mat2: [], mat3: [], matSky: [], bases: [], trees: [], lines: [],
-            entrances: [], antennas: [], neons: { red: [], green: [], blue: [], yellow: [] }
-        };
-        
-        let trackSpline;
-        const monorailCars = [];
-        const warpPads = [];
-        let stockChartCanvas, stockChartCtx, stockChartTex;
-        let stockHistory = [];
-
-        function createBuildingTexture(type) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = (type === 1) ? '#cccccc' : (type === 2) ? '#a0a0a0' : '#8899aa';
-            ctx.fillRect(0, 0, 128, 128);
-            ctx.fillStyle = '#445566'; 
-            if (type === 1) { 
-                for(let i=8; i<128; i+=24) {
-                    for(let j=8; j<128; j+=32) {
-                        if(Math.random() > 0.2) ctx.fillRect(i, j, 12, 20);
-                    }
-                }
-            } else if (type === 2) { 
-                for(let j=8; j<128; j+=32) { ctx.fillRect(0, j, 128, 16); }
-            } else { 
-                ctx.strokeStyle = '#223344'; ctx.lineWidth = 4;
-                for(let i=0; i<=128; i+=32) {
-                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 128); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(128, i); ctx.stroke();
+            const minX = x - width/2, maxX = x + width/2, minZ = z - depth/2, maxZ = z + depth/2;
+            for(let gx = Math.floor(minX/100); gx <= Math.floor(maxX/100); gx++) {
+                for(let gz = Math.floor(minZ/100); gz <= Math.floor(maxZ/100); gz++) {
+                    const key = `${gx},${gz}`;
+                    if (!gridCollisions[key]) gridCollisions[key] = [];
+                    gridCollisions[key].push({ minX, maxX, minZ, maxZ });
                 }
             }
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
-            return tex;
         }
 
-        function createSkyscraperTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#113355'; ctx.fillRect(0, 0, 256, 256);
-            ctx.fillStyle = '#66aadd'; 
-            for(let i=0; i<256; i+=16) {
-                for(let j=0; j<256; j+=32) { if(Math.random() > 0.1) ctx.fillRect(i+2, j+4, 12, 24); }
-            }
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
-            return tex;
+        const instanceData = { mat1: [], mat2: [], mat3: [], matSky: [], bases: [], trees: [], lines: [], entrances: [], neons: { red: [], green: [], blue: [], yellow: [] } };
+
+        function createTexture(type) {
+            const cvs = document.createElement('canvas'); cvs.width = 128; cvs.height = 128; const ctx = cvs.getContext('2d');
+            ctx.fillStyle = type === 'sky' ? '#113355' : (type === 1 ? '#cccccc' : (type === 2 ? '#a0a0a0' : '#8899aa')); ctx.fillRect(0, 0, 128, 128);
+            ctx.fillStyle = type === 'sky' ? '#66aadd' : '#445566';
+            if (type === 'sky') { for(let i=0; i<128; i+=16) for(let j=0; j<128; j+=32) if(Math.random()>0.1) ctx.fillRect(i+2, j+4, 12, 24); }
+            else if (type === 1) { for(let i=8; i<128; i+=24) for(let j=8; j<128; j+=32) if(Math.random()>0.2) ctx.fillRect(i, j, 12, 20); }
+            else if (type === 2) { for(let j=8; j<128; j+=32) ctx.fillRect(0, j, 128, 16); }
+            const tex = new THREE.CanvasTexture(cvs); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; return tex;
         }
 
-        const mat1 = new THREE.MeshLambertMaterial({ map: createBuildingTexture(1), color: 0xffffff });
-        const mat2 = new THREE.MeshLambertMaterial({ map: createBuildingTexture(2), color: 0xdddddd });
-        const mat3 = new THREE.MeshLambertMaterial({ map: createBuildingTexture(3), color: 0xbbccdd });
-        const matSky = new THREE.MeshLambertMaterial({ map: createSkyscraperTexture(), color: 0x88bbff });
+        const mats = { mat1: new THREE.MeshLambertMaterial({map: createTexture(1)}), mat2: new THREE.MeshLambertMaterial({map: createTexture(2)}), mat3: new THREE.MeshLambertMaterial({map: createTexture(3)}), matSky: new THREE.MeshLambertMaterial({map: createTexture('sky')}) };
 
         function startGame() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('sidebar').style.display = 'flex';
             document.getElementById('chat-container').style.display = 'flex';
-
             socket = io({ auth: { username: currentUsername } });
-            initThreeJS();
-            setupSocketEvents();
+            initThreeJS(); setupSocketEvents();
         }
 
         function initThreeJS() {
-            const container = document.getElementById('canvas-container');
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 300, 2000);
-
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 300, 2000);
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
-
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
+            renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
-            hemiLight.position.set(0, 500, 0);
-            scene.add(hemiLight);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const sunLight = new THREE.DirectionalLight(0xffffee, 1.2);
-            sunLight.position.set(800, 1500, 500);
-            sunLight.castShadow = true;
-            sunLight.shadow.camera.left = -1000; sunLight.shadow.camera.right = 1000;
-            sunLight.shadow.camera.top = 1000; sunLight.shadow.camera.bottom = -1000;
-            sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048;
-            scene.add(sunLight);
+            sunLight.position.set(800, 1500, 500); sunLight.castShadow = true;
+            sunLight.shadow.camera.left = -1000; sunLight.shadow.camera.right = 1000; sunLight.shadow.camera.top = 1000; sunLight.shadow.camera.bottom = -1000;
+            sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048; scene.add(sunLight);
 
-            createIsland();
-            createAvenues();
-            createMonorailSystem();
-            createLandmarks();
-            createExchangeAndPlaza();
-            generateCity();
-            createInteriors();
-            renderInstances();
+            // Ground
+            const ground = new THREE.Mesh(new THREE.CircleGeometry(ISLAND_RADIUS, 64), new THREE.MeshLambertMaterial({ color: 0x444444 }));
+            ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+            buildCity();
 
             clock = new THREE.Clock();
-            
             window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
-            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 
             renderer.domElement.addEventListener('mousedown', () => isDragging = true);
             renderer.domElement.addEventListener('mouseup', () => isDragging = false);
             renderer.domElement.addEventListener('mousemove', (e) => {
                 if (isDragging) {
-                    const deltaX = e.clientX - previousMousePosition.x;
-                    const deltaY = e.clientY - previousMousePosition.y;
-                    cameraYaw -= deltaX * 0.005;
-                    cameraPitch -= deltaY * 0.005;
+                    cameraYaw -= (e.clientX - previousMousePosition.x) * 0.005;
+                    cameraPitch -= (e.clientY - previousMousePosition.y) * 0.005;
                     cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
                 }
                 previousMousePosition = { x: e.clientX, y: e.clientY };
             });
-
             animate();
         }
 
-        function createIsland() {
-            const groundGeo = new THREE.CircleGeometry(ISLAND_RADIUS, 64);
-            const groundMat = new THREE.MeshLambertMaterial({ color: 0x444444 });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
-        }
-
-        function createRoadSegment(x, z, width, length, isEW) {
-            const roadGeo = new THREE.PlaneGeometry(isEW ? length : width, isEW ? width : length);
-            const roadMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
-            const road = new THREE.Mesh(roadGeo, roadMat);
-            road.rotation.x = -Math.PI / 2;
-            road.position.set(x, 0.2, z);
-            road.receiveShadow = true;
-            road.matrixAutoUpdate = false; road.updateMatrix();
-            scene.add(road);
-
-            const medianWidth = 8;
-            const medianMat = new THREE.MeshLambertMaterial({ color: 0x2d4c1e });
-            
-            if (isEW) {
-                const len1 = (-135 - 35) - (-length/2);
-                if (len1 > 0) {
-                    const med1 = new THREE.Mesh(new THREE.PlaneGeometry(len1, medianWidth), medianMat);
-                    med1.rotation.x = -Math.PI / 2; med1.position.set(-length/2 + len1/2, 0.3, z); med1.receiveShadow = true;
-                    med1.matrixAutoUpdate = false; med1.updateMatrix(); scene.add(med1);
-                }
-                const len2 = (length/2) - (-135 + 35);
-                if (len2 > 0) {
-                    const med2 = new THREE.Mesh(new THREE.PlaneGeometry(len2, medianWidth), medianMat);
-                    med2.rotation.x = -Math.PI / 2; med2.position.set((-135 + 35) + len2/2, 0.3, z); med2.receiveShadow = true;
-                    med2.matrixAutoUpdate = false; med2.updateMatrix(); scene.add(med2);
-                }
-            } else {
-                const len1 = (-130 - 35) - (-length/2);
-                if (len1 > 0) {
-                    const med1 = new THREE.Mesh(new THREE.PlaneGeometry(medianWidth, len1), medianMat);
-                    med1.rotation.x = -Math.PI / 2; med1.position.set(x, 0.3, -length/2 + len1/2); med1.receiveShadow = true;
-                    med1.matrixAutoUpdate = false; med1.updateMatrix(); scene.add(med1);
-                }
-                const len2 = (length/2) - (-130 + 35);
-                if (len2 > 0) {
-                    const med2 = new THREE.Mesh(new THREE.PlaneGeometry(medianWidth, len2), medianMat);
-                    med2.rotation.x = -Math.PI / 2; med2.position.set(x, 0.3, (-130 + 35) + len2/2); med2.receiveShadow = true;
-                    med2.matrixAutoUpdate = false; med2.updateMatrix(); scene.add(med2);
-                }
-            }
-
-            const ixSize = 45; 
-            const treeCount = Math.floor(length / 20);
-            for(let i = 0; i < treeCount; i++) {
-                const offset = (i - treeCount/2) * 20;
-                if (Math.abs(offset) > length / 2 - 70) continue; 
-                const tx = isEW ? x + offset : x;
-                const tz = isEW ? z : z + offset;
-                
-                if (isEW && Math.abs(tx - (-135)) < ixSize) continue;
-                if (!isEW && Math.abs(tz - (-130)) < ixSize) continue;
-                if (Math.hypot(tx, tz) < ISLAND_RADIUS - 10) instanceData.trees.push({x: tx, y: 0.3, z: tz});
-            }
-
-            const laneOffsets = [-18, -10, 10, 18];
-            laneOffsets.forEach(offset => {
-                const dashLen = 4; const gapLen = 5;
-                const dashCount = Math.floor(length / (dashLen + gapLen));
-                for(let i=0; i<dashCount; i++) {
-                    const dOffset = (i - dashCount/2) * (dashLen + gapLen);
-                    if (Math.abs(dOffset) > length / 2 - 70) continue; 
-                    const lx = isEW ? x + dOffset : x + offset;
-                    const lz = isEW ? z + offset : z + dOffset;
-                    
-                    if (isEW && Math.abs(lx - (-135)) < ixSize) continue;
-                    if (!isEW && Math.abs(lz - (-130)) < ixSize) continue;
-                    if (Math.hypot(lx, lz) < ISLAND_RADIUS - 5) {
-                        instanceData.lines.push({ x: lx, y: 0.25, z: lz, sx: isEW ? dashLen : 0.5, sy: isEW ? 0.5 : dashLen });
-                    }
-                }
-            });
-        }
-
-        function createAvenues() {
-            createRoadSegment(0, -130, 60, 1900, true);
-            createRoadSegment(-135, 0, 60, 1900, false);
-            
-            const rotPoints = [{x: -800, z: -130}, {x: 800, z: -130}, {x: -135, z: -800}, {x: -135, z: 800}];
-            rotPoints.forEach(p => {
-                const rBaseGeo = new THREE.CircleGeometry(40, 32);
-                const rBaseMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
-                const rBase = new THREE.Mesh(rBaseGeo, rBaseMat);
-                rBase.rotation.x = -Math.PI/2; rBase.position.set(p.x, 0.2, p.z);
-                rBase.matrixAutoUpdate = false; rBase.updateMatrix();
-                scene.add(rBase);
-            });
-        }
-
-        function addTeleporter(x, y, z, color, targetX, targetY, targetZ, label) {
-            const pGeo = new THREE.CylinderGeometry(3, 3, 0.5, 16);
-            const pMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.7 });
-            const pad = new THREE.Mesh(pGeo, pMat);
+        function addTeleporter(x, y, z, color, tX, tY, tZ, label) {
+            const pad = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 0.5, 16), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7 }));
             pad.position.set(x, y + 0.25, z);
-            
-            const labelSprite = createNameLabel(label, '#ffffff');
-            labelSprite.position.set(0, 3, 0); 
-            labelSprite.scale.set(10, 2.5, 1);
-            pad.add(labelSprite);
-            scene.add(pad);
-            warpPads.push({ mesh: pad, target: new THREE.Vector3(targetX, targetY, targetZ), label: label });
+            const labelSprite = createNameLabel(label, '#ffffff'); labelSprite.position.set(0, 3, 0); pad.add(labelSprite);
+            scene.add(pad); warpPads.push({ mesh: pad, target: new THREE.Vector3(tX, tY, tZ), label });
         }
 
-        function createMonorailSystem() {
-            const y = 90;  
-            const points = [
-                new THREE.Vector3(-135, y, -700),
-                new THREE.Vector3(400, y, -130),
-                new THREE.Vector3(-135, y, 500),
-                new THREE.Vector3(-600, y, -130)
-            ];
-            trackSpline = new THREE.CatmullRomCurve3(points, true);
-            trackSpline.curveType = 'centripetal'; trackSpline.tension = 0.5;
+        function buildCity() {
+            // Avenues
+            const roadMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            const ewRoad = new THREE.Mesh(new THREE.PlaneGeometry(1900, 60), roadMat); ewRoad.rotation.x = -Math.PI/2; ewRoad.position.set(0, 0.2, -130); scene.add(ewRoad);
+            const nsRoad = new THREE.Mesh(new THREE.PlaneGeometry(60, 1900), roadMat); nsRoad.rotation.x = -Math.PI/2; nsRoad.position.set(-135, 0.2, 0); scene.add(nsRoad);
 
-            const tubeGeo = new THREE.TubeGeometry(trackSpline, 400, 2, 8, true);
-            const tubeMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
-            const track = new THREE.Mesh(tubeGeo, tubeMat);
-            scene.add(track);
+            // Monorail & Stations (Moved closer to avenues)
+            const pts = [new THREE.Vector3(-135, 90, -700), new THREE.Vector3(400, 90, -130), new THREE.Vector3(-135, 90, 500), new THREE.Vector3(-600, 90, -130)];
+            trackSpline = new THREE.CatmullRomCurve3(pts, true); trackSpline.curveType = 'centripetal'; trackSpline.tension = 0.5;
+            scene.add(new THREE.Mesh(new THREE.TubeGeometry(trackSpline, 400, 2, 8, true), new THREE.MeshLambertMaterial({ color: 0x999999 })));
 
             for (let i = 0; i < 4; i++) {
-                let t = (i * 3) / 12;
-                const pt = trackSpline.getPoint(t);
-                const tangent = trackSpline.getTangent(t);
-                const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-                
+                const pt = trackSpline.getPoint((i * 3) / 12); const normal = new THREE.Vector3(-trackSpline.getTangent((i*3)/12).z, 0, trackSpline.getTangent((i*3)/12).x).normalize();
+                const pLen = 80, pWid = 25;
                 const stGroup = new THREE.Group();
-                const pLen = 80; const pWid = 25;
-                const platGeo = new THREE.BoxGeometry(pWid, 2, pLen);
-                const platMat = new THREE.MeshLambertMaterial({ color: 0xdddddd });
-                const platform = new THREE.Mesh(platGeo, platMat);
-                platform.position.set(0, -3, 0);
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(pWid, 2, pLen), new THREE.MeshLambertMaterial({ color: 0xdddddd })).translateY(-3)); // Platform
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(pWid, 2, pLen), new THREE.MeshStandardMaterial({ color: 0xaaaaaa })).translateY(14)); // Roof
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(pWid - 4, pt.y, pLen - 10), new THREE.MeshLambertMaterial({ color: 0x555555 })).translateY(-pt.y/2)); // Pillar
                 
-                const wallMat = new THREE.MeshBasicMaterial({visible: false});
-                const wall1 = new THREE.Mesh(new THREE.BoxGeometry(1, 10, pLen), wallMat); wall1.position.set(pWid/2, 2, 0);
-                const wall2 = new THREE.Mesh(new THREE.BoxGeometry(1, 10, pLen), wallMat); wall2.position.set(-pWid/2, 2, 0);
-                const wall3 = new THREE.Mesh(new THREE.BoxGeometry(pWid, 10, 1), wallMat); wall3.position.set(0, 2, pLen/2);
-                const wall4 = new THREE.Mesh(new THREE.BoxGeometry(pWid, 10, 1), wallMat); wall4.position.set(0, 2, -pLen/2);
+                // Invisible walls to prevent falling
+                const inv = new THREE.MeshBasicMaterial({visible: false});
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(1, 10, pLen), inv).translateX(pWid/2).translateY(2));
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(1, 10, pLen), inv).translateX(-pWid/2).translateY(2));
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(pWid, 10, 1), inv).translateZ(pLen/2).translateY(2));
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(pWid, 10, 1), inv).translateZ(-pLen/2).translateY(2));
                 
-                stGroup.add(platform, wall1, wall2, wall3, wall4);
-                addCollisionBox(pt.x + normal.x*pWid/2, pt.z + normal.z*pWid/2, pWid, pLen);
-
-                const roofGeo = new THREE.BoxGeometry(pWid, 2, pLen);
-                const roofMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.5, roughness: 0.2 });
-                const roof = new THREE.Mesh(roofGeo, roofMat);
-                roof.position.set(0, 14, 0); 
-                stGroup.add(roof);
-
-                stGroup.position.copy(pt);
-                stGroup.rotation.y = Math.atan2(tangent.x, tangent.z);
-                scene.add(stGroup);
-
-                let groundX, groundZ;
-                if (i === 0) { groundX = -100; groundZ = -700; }
-                if (i === 1) { groundX = 400; groundZ = -100; }
-                if (i === 2) { groundX = -100; groundZ = 500; }
-                if (i === 3) { groundX = -600; groundZ = -100; }
-
-                addTeleporter(groundX, 2, groundZ, 0x10b981, pt.x - normal.x * 8, pt.y - 2, pt.z, "駅ホームへ");
-                addTeleporter(pt.x + normal.x * 8, pt.y - 2, pt.z, 0xff0000, groundX + 10, 2, groundZ + 10, "地上へ");
+                stGroup.position.copy(pt); stGroup.rotation.y = Math.atan2(trackSpline.getTangent((i*3)/12).x, trackSpline.getTangent((i*3)/12).z); scene.add(stGroup);
+                
+                // Warp Pads: Ground (Safe Sidewalk) <-> Station Platform
+                let gX, gZ;
+                if(i===0){gX=-100; gZ=-700;} else if(i===1){gX=400; gZ=-100;} else if(i===2){gX=-100; gZ=500;} else {gX=-600; gZ=-100;}
+                addTeleporter(gX, 2, gZ, 0x10b981, pt.x - normal.x*8, pt.y - 2, pt.z - normal.z*8, "駅ホームへ"); // Ground to Plat
+                addTeleporter(pt.x + normal.x*8, pt.y - 2, pt.z + normal.z*8, 0xff0000, gX + 10, 2, gZ + 10, "地上へ"); // Plat to Ground
+                
+                // Hover Train
+                const car = new THREE.Group();
+                car.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 26), new THREE.MeshStandardMaterial({color: 0x222222})).translateY(2)); // Body
+                const noseGeo = new THREE.ConeGeometry(5, 6, 4); noseGeo.rotateX(Math.PI/2); noseGeo.rotateZ(Math.PI/4);
+                car.add(new THREE.Mesh(noseGeo, new THREE.MeshStandardMaterial({color:0x222222})).setPos(0,2,16));
+                car.add(new THREE.Mesh(noseGeo, new THREE.MeshStandardMaterial({color:0x222222})).setPos(0,2,-16).setRot(0,Math.PI,0));
+                car.add(new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.5, 25), new THREE.MeshLambertMaterial({color: 0x444444})).translateY(-3)); // Floor (Walkable inside)
+                car.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 30), new THREE.MeshBasicMaterial({color: 0x00aaff})).translateX(5.1)); // Neon
+                car.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 30), new THREE.MeshBasicMaterial({color: 0x00aaff})).translateX(-5.1)); // Neon
+                scene.add(car); monorailCars.push({ mesh: car, progress: i * 0.25, state: 'moving', stopTimer: 0, prevPos: null });
             }
+            THREE.Object3D.prototype.setPos = function(x,y,z){this.position.set(x,y,z); return this;};
+            THREE.Object3D.prototype.setRot = function(x,y,z){this.rotation.set(x,y,z); return this;};
 
-            for(let i=0; i<4; i++) {
-                const carGroup = new THREE.Group();
-                const bodyGeo = new THREE.BoxGeometry(10, 8, 26);
-                const bodyMat = new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.8, roughness: 0.2});
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                body.position.y = 1;
-                
-                const noseGeo = new THREE.ConeGeometry(5, 6, 4);
-                noseGeo.rotateX(Math.PI/2); noseGeo.rotateZ(Math.PI/4);
-                const frontNose = new THREE.Mesh(noseGeo, bodyMat); frontNose.position.set(0, 1, 16);
-                const backNose = new THREE.Mesh(noseGeo, bodyMat); backNose.position.set(0, 1, -16); backNose.rotation.y = Math.PI;
-                
-                const glassMat = new THREE.MeshStandardMaterial({color: 0x00ffff, transparent: true, opacity: 0.4});
-                const glass = new THREE.Mesh(new THREE.BoxGeometry(9.8, 4, 25), glassMat);
-                glass.position.y = 2;
-                
-                const neonMat = new THREE.MeshBasicMaterial({color: 0x00aaff});
-                const neonL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 30), neonMat); neonL.position.set(5.1, 0, 0);
-                const neonR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 30), neonMat); neonR.position.set(-5.1, 0, 0);
-                
-                const floorGeo = new THREE.BoxGeometry(9.8, 0.5, 25);
-                const floor = new THREE.Mesh(floorGeo, new THREE.MeshLambertMaterial({color: 0x444444}));
-                floor.position.y = -3;
-                
-                carGroup.add(body, frontNose, backNose, glass, neonL, neonR, floor);
-                scene.add(carGroup);
-                
-                monorailCars.push({ mesh: carGroup, progress: i * 0.25, state: 'moving', stopTimer: 0, prevPos: null });
-            }
-        }
-
-        function createLandmarks() {
+            // Tower (Octagon base & clear observatory)
             const lmGroup = new THREE.Group();
-            
-            const baseGeo = new THREE.CylinderGeometry(40, 40, 50, 16); 
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.3, roughness: 0.4 });
-            const base = new THREE.Mesh(baseGeo, baseMat); base.position.set(0, 25, 0);
-            lmGroup.add(base);
+            const baseGeo = new THREE.CylinderGeometry(35, 35, 50, 8); 
+            lmGroup.add(new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x4a4a4a })).setPos(0, 25, 0));
             addCollisionBox(0, 0, 70, 70); 
-
-            const towerEntGeo = new THREE.BoxGeometry(20, 15, 20);
-            const towerEntMat = new THREE.MeshStandardMaterial({color: 0x111111});
-            const towerEnt = new THREE.Mesh(towerEntGeo, towerEntMat);
-            towerEnt.position.set(0, 7.5, -45); 
-            lmGroup.add(towerEnt);
-
-            const mainTowerGeo = new THREE.CylinderGeometry(35, 35, 425, 8);
-            mainTowerGeo.rotateY(Math.PI / 8);
-            const mainTower = new THREE.Mesh(mainTowerGeo, matSky); mainTower.position.set(0, 237.5, 0);
-            lmGroup.add(mainTower);
-
-            const obsGeo = new THREE.CylinderGeometry(36, 36, 20, 8); obsGeo.rotateY(Math.PI / 8);
-            const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-            const obs = new THREE.Mesh(obsGeo, glassMat); obs.position.set(0, 460, 0);
-            lmGroup.add(obs);
             
-            const topTowerGeo = new THREE.CylinderGeometry(35, 35, 180, 8);
-            topTowerGeo.rotateY(Math.PI / 8);
-            const topTower = new THREE.Mesh(topTowerGeo, matSky); topTower.position.set(0, 560, 0);
-            lmGroup.add(topTower);
-
-            const coreGeo = new THREE.SphereGeometry(25, 32, 32); 
-            const coreMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-            const core = new THREE.Mesh(coreGeo, coreMat);
-            core.position.set(0, 670, 0);
-            lmGroup.add(core);
-
-            const wireCoreGeo = new THREE.SphereGeometry(27, 16, 16);
-            const wireCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3 });
-            const wireCore = new THREE.Mesh(wireCoreGeo, wireCoreMat);
-            wireCore.position.set(0, 670, 0);
-            lmGroup.add(wireCore);
-
-            const exoMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
-            const pillarGeo = new THREE.BoxGeometry(8, 620, 8);
-            const p1 = new THREE.Mesh(pillarGeo, exoMat); p1.position.set(30, 350, 30);
-            const p2 = new THREE.Mesh(pillarGeo, exoMat); p2.position.set(-30, 350, 30);
-            const p3 = new THREE.Mesh(pillarGeo, exoMat); p3.position.set(30, 350, -30);
-            const p4 = new THREE.Mesh(pillarGeo, exoMat); p4.position.set(-30, 350, -30);
-            lmGroup.add(p1, p2, p3, p4);
-
+            // Entrance facing the avenue
+            lmGroup.add(new THREE.Mesh(new THREE.BoxGeometry(20, 15, 10), new THREE.MeshStandardMaterial({color: 0x111111})).setPos(0, 7.5, -35)); 
+            
+            const towerMat = mats.matSky;
+            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 350, 8), towerMat).setPos(0, 225, 0)); // Lower Tower
+            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(32, 32, 30, 8), new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.3 })).setPos(0, 415, 0)); // Observatory
+            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 100, 8), towerMat).setPos(0, 480, 0)); // Upper Tower
+            
+            // Energy Core
+            lmGroup.add(new THREE.Mesh(new THREE.SphereGeometry(25, 32, 32), new THREE.MeshBasicMaterial({ color: 0x00ffff })).setPos(0, 560, 0));
+            lmGroup.add(new THREE.Mesh(new THREE.SphereGeometry(27, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3 })).setPos(0, 560, 0));
             scene.add(lmGroup);
 
-            const mallGroup = new THREE.Group();
-            const mallX = -320; 
-            const mallZ = -130;
+            // Mall (Pyramid Cyberpunk Style, facing avenue)
+            const mallGroup = new THREE.Group(); const mallX = -320, mallZ = -220;
+            const mallMat = new THREE.MeshStandardMaterial({ color: 0xb5b4a0 });
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(180, 20, 180), mallMat).setPos(0, 10, 0));
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(160, 20, 160), mallMat).setPos(0, 30, 0));
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(140, 15, 140), mallMat).setPos(0, 47.5, 0));
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(181, 1, 181), new THREE.MeshBasicMaterial({ color: 0x00ffff })).setPos(0, 20.5, 0));
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(161, 1, 161), new THREE.MeshBasicMaterial({ color: 0xff00ff })).setPos(0, 40.5, 0));
             
-            const mallMat1 = new THREE.MeshStandardMaterial({ color: 0xb5b4a0, roughness: 0.9 });
-            const m1 = new THREE.Mesh(new THREE.BoxGeometry(180, 20, 180), mallMat1); m1.position.set(0, 10, 0);
-            const m2 = new THREE.Mesh(new THREE.BoxGeometry(160, 20, 160), mallMat1); m2.position.set(0, 30, 0);
-            const m3 = new THREE.Mesh(new THREE.BoxGeometry(140, 15, 140), mallMat1); m3.position.set(0, 47.5, 0);
-            mallGroup.add(m1, m2, m3);
-            
+            // Mall Entrance facing South avenue
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(40, 30, 10), new THREE.MeshStandardMaterial({ color: 0x111111 })).setPos(0, 15, 90));
+            mallGroup.position.set(mallX, 0, mallZ); scene.add(mallGroup);
             addCollisionBox(mallX, mallZ, 180, 180);
 
-            const mallNeonCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-            const mallNeonPink = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-            const line1 = new THREE.Mesh(new THREE.BoxGeometry(181, 1, 181), mallNeonCyan); line1.position.set(0, 20.5, 0);
-            const line2 = new THREE.Mesh(new THREE.BoxGeometry(161, 1, 161), mallNeonPink); line2.position.set(0, 40.5, 0);
-            mallGroup.add(line1, line2);
-
-            const entMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 });
-            const frameL = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), entMat); frameL.position.set(-30, 20, 90); 
-            const frameR = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), entMat); frameR.position.set(30, 20, 90);
-            const frameT = new THREE.Mesh(new THREE.BoxGeometry(64, 4, 20), entMat); frameT.position.set(0, 42, 90);
-            const glassEnt = new THREE.Mesh(new THREE.BoxGeometry(56, 40, 2), glassMat); glassEnt.position.set(0, 20, 95);
-            mallGroup.add(frameL, frameR, frameT, glassEnt);
-
-            const domeGeo = new THREE.SphereGeometry(60, 32, 16, 0, Math.PI*2, 0, Math.PI/2);
-            const dome = new THREE.Mesh(domeGeo, glassMat); dome.position.set(0, 55, 0);
-            const wireDome = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.1 })); wireDome.position.set(0, 55.1, 0); 
-            mallGroup.add(dome, wireDome);
-
-            mallGroup.position.set(mallX, 0, mallZ);
-            scene.add(mallGroup);
-        }
-
-        function createExchangeAndPlaza() {
-            const exX = 300; const exZ = -130;
+            // Exchange & Plaza (East Avenue)
+            const exX = 350, exZ = -130;
             const exGroup = new THREE.Group();
-            
-            const exGeo = new THREE.BoxGeometry(100, 25, 80);
-            const exMat = new THREE.MeshStandardMaterial({color: 0x334455});
-            const exMesh = new THREE.Mesh(exGeo, exMat);
-            exMesh.position.set(0, 12.5, 0);
-            exGroup.add(exMesh);
-            
+            exGroup.add(new THREE.Mesh(new THREE.BoxGeometry(100, 30, 80), new THREE.MeshStandardMaterial({color: 0x334455})).setPos(0, 15, 0)); // Building
+            exGroup.add(new THREE.Mesh(new THREE.BoxGeometry(30, 15, 10), new THREE.MeshStandardMaterial({color: 0x111111})).setPos(0, 7.5, 45)); // Ent
+            exGroup.position.set(exX, 0, exZ); scene.add(exGroup);
             addCollisionBox(exX, exZ, 100, 80);
-
-            const exEnt = new THREE.Mesh(new THREE.BoxGeometry(30, 15, 10), new THREE.MeshStandardMaterial({color: 0x111111}));
-            exEnt.position.set(0, 7.5, 45);
-            exGroup.add(exEnt);
             
-            exGroup.position.set(exX, 0, exZ);
-            scene.add(exGroup);
+            // Plaza
+            const plaza = new THREE.Mesh(new THREE.PlaneGeometry(100, 60), new THREE.MeshStandardMaterial({color: 0x228b22})); plaza.rotation.x = -Math.PI/2; plaza.position.set(exX, 0.3, -50); scene.add(plaza);
 
-            const plazaGeo = new THREE.PlaneGeometry(100, 60);
-            const plazaMat = new THREE.MeshStandardMaterial({color: 0x228b22});
-            const plaza = new THREE.Mesh(plazaGeo, plazaMat);
-            plaza.rotation.x = -Math.PI/2;
-            plaza.position.set(exX, 0.3, -50);
-            scene.add(plaza);
+            // Tower Warp (Avoid collision box)
+            addTeleporter(0, 2, -45, 0x00ffff, 0, 401, 20, "展望台へ"); addTeleporter(0, 401, 25, 0xff0000, 0, 2, -50, "地上へ");
+            const obsFloor = new THREE.Mesh(new THREE.RingGeometry(5, 30, 32), new THREE.MeshStandardMaterial({color: 0x555555})); obsFloor.rotation.x = -Math.PI/2; obsFloor.position.set(0, 400, 0); scene.add(obsFloor);
 
-            const fountainBase = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 2, 16), new THREE.MeshStandardMaterial({color: 0xaaaaaa}));
-            fountainBase.position.set(exX, 1, -50);
-            scene.add(fountainBase);
-            const fountainWater = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 2.5, 16), new THREE.MeshStandardMaterial({color: 0x00aaff, transparent: true, opacity: 0.8}));
-            fountainWater.position.set(exX, 1.25, -50);
-            scene.add(fountainWater);
+            // Mall Warp
+            addTeleporter(mallX, 2, mallZ + 105, 0xa855f7, 2000, 2, 1980, "モール内へ"); addTeleporter(2000, 2, 1960, 0xff0000, mallX + 15, 2, mallZ + 105, "外へ");
+            const mFloor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({color: 0x111111})); mFloor.rotation.x = -Math.PI/2; mFloor.position.set(2000, 0, 2000); scene.add(mFloor);
+            const boutiqueFloor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshBasicMaterial({color: 0x1e3a8a})); boutiqueFloor.rotation.x = -Math.PI/2; boutiqueFloor.position.set(2000, 0.1, 2060); scene.add(boutiqueFloor);
+            const bLabel = createNameLabel("👗 AVATAR SHOP", "#c084fc"); bLabel.position.set(2000, 15, 2060); bLabel.scale.set(40, 10, 1); scene.add(bLabel);
+            for(let i=0; i<6; i++) { scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 20, 40), new THREE.MeshStandardMaterial({color: 0x88ccff, transparent: true, opacity: 0.3})).setPos(1910 + (i%2)*180, 10, 1910 + Math.floor(i/2)*90)); } // Shops
 
-            addTeleporter(exX, 2, -80, 0xfacc15, 4000, 2, 4000, "証券取引所へ");
-        }
-
-        function createInteriors() {
-            addTeleporter(0, 2, -55, 0x00ffff, 0, 451, 20, "展望台へ"); 
-            addTeleporter(0, 451, 30, 0xff0000, 0, 2, -65, "地上へ");
+            // Exchange Warp
+            addTeleporter(exX, 2, -80, 0xfacc15, 4000, 2, 4000, "証券取引所へ"); addTeleporter(4000, 2, 4040, 0xff0000, exX + 20, 2, -80, "地上へ");
+            const exFloor = new THREE.Mesh(new THREE.PlaneGeometry(150, 100), new THREE.MeshStandardMaterial({color: 0x223344})); exFloor.rotation.x = -Math.PI/2; exFloor.position.set(4000, 0, 4000); scene.add(exFloor);
+            scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 5, 10), new THREE.MeshStandardMaterial({color: 0x554433})).setPos(4000, 2.5, 3970)); // Desk
             
-            const obsFloor = new THREE.Mesh(new THREE.RingGeometry(5, 35, 32), new THREE.MeshStandardMaterial({color: 0x555555}));
-            obsFloor.rotation.x = -Math.PI/2;
-            obsFloor.position.set(0, 450, 0);
-            scene.add(obsFloor);
+            // Stock Chart Canvas
+            stockChartCanvas = document.createElement('canvas'); stockChartCanvas.width = 512; stockChartCanvas.height = 256;
+            stockChartCtx = stockChartCanvas.getContext('2d'); stockChartTex = new THREE.CanvasTexture(stockChartCanvas);
+            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(80, 40), new THREE.MeshBasicMaterial({map: stockChartTex})).setPos(4000, 20, 3951));
 
-            const mallIntGroup = new THREE.Group();
-            const mFloor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({color: 0x111111}));
-            mFloor.rotation.x = -Math.PI / 2; mFloor.position.set(2000, 0, 2000);
-            const mWall = new THREE.Mesh(new THREE.BoxGeometry(300, 30, 300), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.BackSide}));
-            mWall.position.set(2000, 15, 2000);
-            mallIntGroup.add(mFloor, mWall);
-            
-            const shopGlassMat = new THREE.MeshStandardMaterial({color: 0x88ccff, transparent: true, opacity: 0.3});
-            for(let i=0; i<4; i++) {
-                const shop = new THREE.Mesh(new THREE.BoxGeometry(40, 15, 40), shopGlassMat);
-                shop.position.set(1930 + (i%2)*140, 7.5, 1930 + Math.floor(i/2)*140);
-                mallIntGroup.add(shop);
-            }
-
-            const boutiqueFloor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshBasicMaterial({color: 0x1e3a8a}));
-            boutiqueFloor.rotation.x = -Math.PI/2; boutiqueFloor.position.set(2000, 0.1, 2050);
-            mallIntGroup.add(boutiqueFloor);
-            
-            const bLabel = createNameLabel("👗 AVATAR SHOP (アバター変更エリア)", "#c084fc");
-            bLabel.position.set(2000, 15, 2050); bLabel.scale.set(40, 10, 1);
-            mallIntGroup.add(bLabel);
-
-            scene.add(mallIntGroup);
-
-            const mallX = -320; const mallZ = -130;
-            addTeleporter(mallX, 2, -35, 0xa855f7, 2000, 2, 1980, "モール内へ");
-            addTeleporter(2000, 2, 1960, 0xff0000, mallX + 15, 2, -30, "外へ");
-
-            const exIntGroup = new THREE.Group();
-            const exFloor = new THREE.Mesh(new THREE.PlaneGeometry(150, 100), new THREE.MeshStandardMaterial({color: 0x223344}));
-            exFloor.rotation.x = -Math.PI / 2; exFloor.position.set(4000, 0, 4000);
-            const exWall = new THREE.Mesh(new THREE.BoxGeometry(150, 20, 100), new THREE.MeshStandardMaterial({color: 0x112233, side: THREE.BackSide}));
-            exWall.position.set(4000, 10, 4000);
-            
-            const desk = new THREE.Mesh(new THREE.BoxGeometry(40, 5, 10), new THREE.MeshStandardMaterial({color: 0x554433}));
-            desk.position.set(4000, 2.5, 3970);
-            const plantGeo = new THREE.ConeGeometry(3, 8); const plantMat = new THREE.MeshStandardMaterial({color: 0x228b22});
-            const p1 = new THREE.Mesh(plantGeo, plantMat); p1.position.set(3970, 4, 3970);
-            const p2 = new THREE.Mesh(plantGeo, plantMat); p2.position.set(4030, 4, 3970);
-            exIntGroup.add(desk, p1, p2);
-
-            exIntGroup.add(exFloor, exWall);
-            
-            stockChartCanvas = document.createElement('canvas');
-            stockChartCanvas.width = 512; stockChartCanvas.height = 256;
-            stockChartCtx = stockChartCanvas.getContext('2d');
-            stockChartTex = new THREE.CanvasTexture(stockChartCanvas);
-            const graphBoard = new THREE.Mesh(new THREE.PlaneGeometry(80, 40), new THREE.MeshBasicMaterial({map: stockChartTex}));
-            graphBoard.position.set(4000, 10, 3951); 
-            exIntGroup.add(graphBoard);
-            scene.add(exIntGroup);
-
-            addTeleporter(4000, 2, 4040, 0xff0000, 300, 2, -70, "地上へ");
-        }
-
-        function updateStockChart(price) {
-            stockHistory.push(price);
-            if(stockHistory.length > 20) stockHistory.shift();
-
-            stockChartCtx.fillStyle = '#0f172a';
-            stockChartCtx.fillRect(0, 0, 512, 256);
-            stockChartCtx.strokeStyle = '#334155'; stockChartCtx.lineWidth = 2;
-            for(let i=0; i<5; i++) {
-                stockChartCtx.beginPath(); stockChartCtx.moveTo(0, i*50+28); stockChartCtx.lineTo(512, i*50+28); stockChartCtx.stroke();
-            }
-
-            if(stockHistory.length > 1) {
-                stockChartCtx.strokeStyle = '#34d399';
-                stockChartCtx.lineWidth = 4;
-                stockChartCtx.beginPath();
-                const step = 512 / 19;
-                const maxP = Math.max(10, ...stockHistory) * 1.2;
-                stockHistory.forEach((p, i) => {
-                    const x = i * step; const y = 256 - (p / maxP) * 200 - 20;
-                    if(i === 0) stockChartCtx.moveTo(x, y);
-                    else stockChartCtx.lineTo(x, y);
-                });
-                stockChartCtx.stroke();
-            }
-            
-            stockChartCtx.fillStyle = '#ffffff';
-            stockChartCtx.font = 'bold 32px sans-serif';
-            stockChartCtx.fillText(`CURRENT: ${price} G`, 20, 40);
-            stockChartTex.needsUpdate = true;
-        }
-
-        function generateCity() {
-            const blockSize = 40;
-            for (let x = -960; x < 960; x += blockSize) {
-                for (let z = -960; z < 960; z += blockSize) {
-                    const bx = x + blockSize / 2;
-                    const bz = z + blockSize / 2;
-                    const dist = Math.hypot(bx, bz);
-
-                    if (dist > ISLAND_RADIUS - 40) continue; 
-                    if (Math.abs(bx) < 80 && Math.abs(bz) < 80) continue; 
-                    if (bx > -420 && bx < -220 && bz > -230 && bz < -30) continue;
-                    if (bx > 250 && bx < 350 && bz > -180 && bz < -80) continue;
-                    if (bz > -170 && bz < -90) continue; 
-                    if (bx > -165 && bx < -105) continue; 
+            const bs = 40;
+            for (let x = -960; x < 960; x += bs) {
+                for (let z = -960; z < 960; z += bs) {
+                    const bx = x + bs/2, bz = z + bs/2, dist = Math.hypot(bx, bz);
+                    if (dist > ISLAND_RADIUS - 40 || (Math.abs(bx) < 80 && Math.abs(bz) < 80)) continue; // Keep center clear
+                    if (bx > mallX-110 && bx < mallX+110 && bz > mallZ-110 && bz < mallZ+110) continue; // Mall clear
+                    if (bx > exX-70 && bx < exX+70 && bz > exZ-60 && bz < exZ+60) continue; // Exchange clear
+                    if ((bz > -170 && bz < -90) || (bx > -165 && bx < -105)) continue; // Avenues
                     
-                    let nearStation = false;
-                    for(let i = 0; i < 4; i++) {
-                        const pt = trackSpline.getPoint((i * 3) / 12);
-                        if (Math.hypot(bx - pt.x, bz - pt.z) < 55) nearStation = true;
-                    }
-                    if (nearStation) continue;
+                    let nearSt = false; for(let i=0; i<4; i++) if(Math.hypot(bx - trackSpline.getPoint((i*3)/12).x, bz - trackSpline.getPoint((i*3)/12).z) < 60) nearSt = true;
+                    if(nearSt) continue;
 
-                    let nearRotary = false;
-                    const rotPoints = [{x: -800, z: -130}, {x: 800, z: -130}, {x: -135, z: -800}, {x: -135, z: 800}];
-                    rotPoints.forEach(p => { if (Math.hypot(bx - p.x, bz - p.z) < 80) nearRotary = true; });
-                    if (nearRotary) continue;
-
-                    instanceData.bases.push({x: bx, y: 0.5, z: bz, sx: blockSize - 8, sy: 1, sz: blockSize - 8});
-                    const split = Math.random() > 0.5; 
-                    const buildings = split ? 4 : 1;
-                    const subSize = split ? (blockSize - 12) / 2 : blockSize - 12;
-
-                    for (let i = 0; i < buildings; i++) {
-                        const offsetX = split ? (i % 2 === 0 ? -subSize/2 : subSize/2) : 0;
-                        const offsetZ = split ? (i < 2 ? -subSize/2 : subSize/2) : 0;
-                        const finalX = bx + offsetX;
-                        const finalZ = bz + offsetZ;
-
-                        let isSkyscraper = false;
-                        let bHeight = 20 + Math.random() * 60;
-                        if (dist < 400) bHeight += 40; 
-
-                        if (!split && dist > 150 && dist < 500 && Math.random() < 0.5) {
-                            isSkyscraper = true;
-                            bHeight = 150 + Math.random() * 100; 
-                        }
-
-                        const matKey = isSkyscraper ? 'matSky' : `mat${Math.floor(Math.random() * 3) + 1}`;
-                        instanceData[matKey].push({x: finalX, y: bHeight / 2 + 1, z: finalZ, sx: subSize, sy: bHeight, sz: subSize});
+                    instanceData.bases.push({x: bx, y: 0.5, z: bz, sx: bs - 8, sy: 1, sz: bs - 8});
+                    const split = Math.random() > 0.5; const c = split ? 4 : 1; const ss = split ? (bs-12)/2 : bs-12;
+                    for (let i = 0; i < c; i++) {
+                        const fX = bx + (split ? (i%2===0 ? -ss/2 : ss/2) : 0), fZ = bz + (split ? (i<2 ? -ss/2 : ss/2) : 0);
+                        let bh = 20 + Math.random()*60; if(dist<400) bh+=40;
+                        const isSky = (!split && dist>150 && dist<500 && Math.random()<0.3); if(isSky) bh = 150 + Math.random()*100;
+                        const mk = isSky ? 'matSky' : `mat${Math.floor(Math.random()*3)+1}`;
                         
-                        addCollisionBox(finalX, finalZ, subSize, subSize);
-
-                        if (!split) {
-                            instanceData.entrances.push({x: finalX + (subSize/2) - 1, y: 3, z: finalZ, sx: 6, sy: 4, sz: subSize - 4});
-                        }
-
-                        if (bHeight > 80) {
-                            instanceData[matKey].push({x: finalX, y: bHeight + 6, z: finalZ, sx: subSize - 10, sy: 10, sz: subSize - 10});
-                            if (Math.random() > 0.4) instanceData.antennas.push({x: finalX, y: bHeight + 20, z: finalZ});
-                            
-                            if (Math.random() > 0.6) {
-                                const colors = ['red', 'green', 'blue', 'yellow'];
-                                const c = colors[Math.floor(Math.random() * colors.length)];
-                                instanceData.neons[c].push({ x: finalX + (subSize/2), y: bHeight/2, z: finalZ, sx: 1.5, sy: 20 + Math.random()*20, sz: 8 });
-                            }
+                        instanceData[mk].push({x: fX, y: bh/2+1, z: fZ, sx: ss, sy: bh, sz: ss});
+                        addCollisionBox(fX, fZ, ss, ss);
+                        
+                        if(!split) instanceData.entrances.push({x: fX+(ss/2)-1, y: 3, z: fZ, sx: 6, sy: 4, sz: ss-4});
+                        if(bh>80 && Math.random()>0.7) {
+                            const cols = ['red', 'green', 'blue', 'yellow'];
+                            instanceData.neons[cols[Math.floor(Math.random()*cols.length)]].push({x: fX+ss/2, y: bh/2, z: fZ, sx: 1.5, sy: 30+Math.random()*20, sz: 8});
                         }
                     }
                 }
             }
-        }
 
-        function renderInstances() {
-            const dummy = new THREE.Object3D();
-            const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-            
-            function buildIMesh(geo, mat, dataArray, hasShadow) {
-                if(dataArray.length === 0) return;
-                const imesh = new THREE.InstancedMesh(geo, mat, dataArray.length);
-                if(hasShadow) { imesh.castShadow = true; imesh.receiveShadow = true; }
-                for(let i=0; i<dataArray.length; i++) {
-                    const d = dataArray[i];
-                    dummy.position.set(d.x, d.y, d.z);
-                    dummy.scale.set(d.sx || 1, d.sy || 1, d.sz || 1);
-                    dummy.rotation.set(0,0,0); dummy.updateMatrix();
-                    imesh.setMatrixAt(i, dummy.matrix);
-                }
-                scene.add(imesh);
-            }
-
-            buildIMesh(boxGeo, mat1, instanceData.mat1, true);
-            buildIMesh(boxGeo, mat2, instanceData.mat2, true);
-            buildIMesh(boxGeo, mat3, instanceData.mat3, true);
-            buildIMesh(boxGeo, matSky, instanceData.matSky, true);
-
-            buildIMesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x999999 }), instanceData.bases, false);
-            buildIMesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x333333 }), instanceData.entrances, false);
-
-            const cylGeo = new THREE.CylinderGeometry(0.5, 0.5, 20, 6);
-            buildIMesh(cylGeo, new THREE.MeshBasicMaterial({ color: 0xff0000 }), instanceData.antennas, false);
-
-            if(instanceData.trees.length > 0) {
-                const tMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
-                const lMat = new THREE.MeshLambertMaterial({ color: 0x228b22 });
-                const tMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 6, 5), tMat, instanceData.trees.length);
-                const lMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(4, 5, 5), lMat, instanceData.trees.length);
-                tMesh.castShadow = true; lMesh.castShadow = true;
-                for(let i=0; i<instanceData.trees.length; i++) {
-                    const p = instanceData.trees[i];
-                    dummy.scale.set(1,1,1); dummy.rotation.set(0,0,0);
-                    dummy.position.set(p.x, p.y + 3, p.z); dummy.updateMatrix(); tMesh.setMatrixAt(i, dummy.matrix);
-                    dummy.position.set(p.x, p.y + 7, p.z); dummy.updateMatrix(); lMesh.setMatrixAt(i, dummy.matrix);
-                }
-                scene.add(tMesh); scene.add(lMesh);
-            }
-
-            if(instanceData.lines.length > 0) {
-                const lineGeo = new THREE.PlaneGeometry(1, 1);
-                const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-                const lineMesh = new THREE.InstancedMesh(lineGeo, lineMat, instanceData.lines.length);
-                for(let i=0; i<instanceData.lines.length; i++) {
-                    const d = instanceData.lines[i];
-                    dummy.position.set(d.x, d.y, d.z); dummy.scale.set(d.sx, d.sy, 1);
-                    dummy.rotation.set(-Math.PI/2, 0, 0); dummy.updateMatrix(); lineMesh.setMatrixAt(i, dummy.matrix);
-                }
-                scene.add(lineMesh);
-            }
-
-            const neonGeo = new THREE.BoxGeometry(1, 1, 1);
-            const neonMats = {
-                red: new THREE.MeshBasicMaterial({color: 0xff0055}),
-                green: new THREE.MeshBasicMaterial({color: 0x00ffaa}),
-                blue: new THREE.MeshBasicMaterial({color: 0x00aaff}),
-                yellow: new THREE.MeshBasicMaterial({color: 0xffff00})
+            // Render Instances
+            const dummy = new THREE.Object3D(), boxGeo = new THREE.BoxGeometry(1, 1, 1);
+            const buildIMesh = (mat, data) => {
+                if(data.length===0) return; const mesh = new THREE.InstancedMesh(boxGeo, mat, data.length); mesh.castShadow=true; mesh.receiveShadow=true;
+                data.forEach((d, i) => { dummy.position.set(d.x, d.y, d.z); dummy.scale.set(d.sx||1, d.sy||1, d.sz||1); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
+                scene.add(mesh);
             };
-            for(let color in neonMats) { buildIMesh(neonGeo, neonMats[color], instanceData.neons[color], false); }
+            buildIMesh(mats.mat1, instanceData.mat1); buildIMesh(mats.mat2, instanceData.mat2); buildIMesh(mats.mat3, instanceData.mat3); buildIMesh(mats.matSky, instanceData.matSky);
+            buildIMesh(new THREE.MeshLambertMaterial({color: 0x999999}), instanceData.bases); buildIMesh(new THREE.MeshLambertMaterial({color: 0x333333}), instanceData.entrances);
+            
+            for(let c in instanceData.neons) {
+                const m = new THREE.InstancedMesh(boxGeo, new THREE.MeshBasicMaterial({color: c==='red'?0xff0055:c==='green'?0x00ffaa:c==='blue'?0x00aaff:0xffff00}), instanceData.neons[c].length);
+                instanceData.neons[c].forEach((d, i) => { dummy.position.set(d.x, d.y, d.z); dummy.scale.set(d.sx, d.sy, d.sz); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); });
+                scene.add(m);
+            }
         }
 
         function createAvatarMesh(config) {
-            const group = new THREE.Group();
-            group.avatarConfig = config;
-            
-            const bodyMat = new THREE.MeshStandardMaterial({ color: config.body });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), bodyMat);
-            body.position.y = 1.0; body.castShadow = true;
-            group.add(body);
-            
-            const headMat = new THREE.MeshStandardMaterial({ color: config.skin });
-            const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMat);
-            head.position.y = 2.6; head.castShadow = true;
-            group.add(head);
-            
-            const visorMat = new THREE.MeshBasicMaterial({ color: config.visor });
-            const visor = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.4, 0.2), visorMat);
-            visor.position.set(0, 2.7, 0.55);
-            group.add(visor);
-
+            const grp = new THREE.Group();
+            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), new THREE.MeshStandardMaterial({ color: config.body })).setPos(0, 1.0, 0)); // Body
+            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: config.skin })).setPos(0, 2.6, 0)); // Head
+            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.4, 0.2), new THREE.MeshBasicMaterial({ color: config.visor })).setPos(0, 2.7, 0.55)); // Visor
             if (config.accessory === 'hat') {
-                const hatMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-                const brim = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 16), hatMat);
-                brim.position.y = 3.3;
-                const top = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, 16), hatMat);
-                top.position.y = 4.0;
-                group.add(brim, top);
+                grp.add(new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x222222 })).setPos(0, 3.3, 0));
+                grp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x222222 })).setPos(0, 4.0, 0));
             } else if (config.accessory === 'catEars') {
-                const earMat = new THREE.MeshStandardMaterial({ color: config.body });
-                const earL = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 4), earMat);
-                earL.position.set(-0.4, 3.4, 0); earL.rotation.z = Math.PI/8;
-                const earR = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 4), earMat);
-                earR.position.set(0.4, 3.4, 0); earR.rotation.z = -Math.PI/8;
-                group.add(earL, earR);
+                const ear = new THREE.MeshStandardMaterial({ color: config.body }), geo = new THREE.ConeGeometry(0.3, 0.8, 4);
+                grp.add(new THREE.Mesh(geo, ear).setPos(-0.4, 3.4, 0).setRot(0, 0, Math.PI/8));
+                grp.add(new THREE.Mesh(geo, ear).setPos(0.4, 3.4, 0).setRot(0, 0, -Math.PI/8));
             }
-
-            return group;
+            return grp;
         }
 
         function createNameLabel(name, color) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.font = 'bold 56px sans-serif';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.lineWidth = 6; ctx.strokeStyle = '#000000';
-            ctx.strokeText(name, 256, 64);
+            const cvs = document.createElement('canvas'); cvs.width = 512; cvs.height = 128; const ctx = cvs.getContext('2d');
+            ctx.font = 'bold 64px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.lineWidth = 8; ctx.strokeStyle = '#000000'; ctx.strokeText(name, 256, 64);
             ctx.fillStyle = color; ctx.fillText(name, 256, 64);
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            const spriteMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.scale.set(6, 1.5, 1);
-            sprite.position.y = 5.0;
-            sprite.renderOrder = 999; 
-            return sprite;
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cvs), depthTest: false, transparent: true }));
+            sprite.scale.set(6, 1.5, 1); sprite.position.y = 5.0; sprite.renderOrder = 999; return sprite;
         }
 
         function updateAvatarConfig() {
-            const newConfig = {
-                body: document.getElementById('color-body').value,
-                skin: document.getElementById('color-skin').value,
-                visor: document.getElementById('color-visor').value,
-                nameColor: document.getElementById('color-name').value,
-                accessory: document.getElementById('select-accessory').value
-            };
-            socket.emit('changeAvatarConfig', newConfig);
+            const cfg = { body: document.getElementById('color-body').value, skin: document.getElementById('color-skin').value, visor: document.getElementById('color-visor').value, nameColor: document.getElementById('color-name').value, accessory: document.getElementById('select-accessory').value };
+            socket.emit('changeAvatarConfig', cfg);
+        }
+        function applyAvatarConfig(mesh, label, config, username) {
+            if(!mesh) return null; const nm = createAvatarMesh(config); nm.position.copy(mesh.position); nm.rotation.copy(mesh.rotation);
+            const nl = createNameLabel(username, config.nameColor); nm.add(nl); scene.remove(mesh); scene.add(nm); return { mesh: nm, label: nl };
         }
 
-        function applyAvatarConfig(mesh, labelSprite, config, username) {
-            if(!mesh) return null;
-            const newMesh = createAvatarMesh(config);
-            newMesh.position.copy(mesh.position);
-            newMesh.rotation.copy(mesh.rotation);
-            
-            const newLabel = createNameLabel(username, config.nameColor);
-            newMesh.add(newLabel);
-            
-            scene.remove(mesh);
-            scene.add(newMesh);
-            return { mesh: newMesh, label: newLabel };
-        }
-
-        function createCoinMesh() {
-            const geo = new THREE.CylinderGeometry(0.6, 0.6, 0.2, 16);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
-            const coin = new THREE.Mesh(geo, mat);
-            coin.rotation.x = Math.PI / 2; coin.castShadow = true;
-            return coin;
+        function updateStockChart(price) {
+            stockHistory.push(price); if(stockHistory.length > 20) stockHistory.shift();
+            stockChartCtx.fillStyle = '#0f172a'; stockChartCtx.fillRect(0, 0, 512, 256);
+            stockChartCtx.strokeStyle = '#334155'; stockChartCtx.lineWidth = 2; for(let i=0; i<5; i++) { stockChartCtx.beginPath(); stockChartCtx.moveTo(0, i*50+28); stockChartCtx.lineTo(512, i*50+28); stockChartCtx.stroke(); }
+            if(stockHistory.length > 1) {
+                stockChartCtx.strokeStyle = '#34d399'; stockChartCtx.lineWidth = 4; stockChartCtx.beginPath();
+                const step = 512 / 19, maxP = Math.max(10, ...stockHistory) * 1.2;
+                stockHistory.forEach((p, i) => { const x = i * step, y = 256 - (p / maxP) * 200 - 20; if(i === 0) stockChartCtx.moveTo(x, y); else stockChartCtx.lineTo(x, y); });
+                stockChartCtx.stroke();
+            }
+            stockChartCtx.fillStyle = '#ffffff'; stockChartCtx.font = 'bold 36px sans-serif'; stockChartCtx.fillText(`CURRENT: ${price} G`, 20, 50);
+            if(stockChartTex) stockChartTex.needsUpdate = true;
         }
 
         function setupSocketEvents() {
             socket.on('initData', (data) => {
-                document.getElementById('stock-price-display').innerText = data.stockPrice;
-                updateStockChart(data.stockPrice); 
-                
+                document.getElementById('stock-price-display').innerText = data.stockPrice; updateStockChart(data.stockPrice); 
                 Object.keys(data.players).forEach(id => {
                     const info = data.players[id];
                     if (id === socket.id) {
-                        localPlayerMesh = createAvatarMesh(info.avatar);
-                        localPlayerMesh.position.set(info.x, info.y, info.z);
-                        localPlayerMesh.rotation.y = info.rotation;
-                        const label = createNameLabel(info.username, info.avatar.nameColor);
-                        localPlayerMesh.add(label);
-                        scene.add(localPlayerMesh);
-                        
-                        document.getElementById('color-body').value = info.avatar.body;
-                        document.getElementById('color-skin').value = info.avatar.skin;
-                        document.getElementById('color-visor').value = info.avatar.visor;
-                        document.getElementById('color-name').value = info.avatar.nameColor;
+                        localPlayerMesh = createAvatarMesh(info.avatar); localPlayerMesh.position.set(info.x, info.y, info.z); localPlayerMesh.rotation.y = info.rotation;
+                        localPlayerMesh.add(createNameLabel(info.username, info.avatar.nameColor)); scene.add(localPlayerMesh);
+                        document.getElementById('color-body').value = info.avatar.body; document.getElementById('color-skin').value = info.avatar.skin;
+                        document.getElementById('color-visor').value = info.avatar.visor; document.getElementById('color-name').value = info.avatar.nameColor;
                         document.getElementById('select-accessory').value = info.avatar.accessory || 'none';
                     } else {
-                        addOtherPlayer(info);
+                        const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z); m.rotation.y = info.rotation;
+                        const l = createNameLabel(info.username, info.avatar.nameColor); m.add(l); scene.add(m); otherPlayers[id] = m; otherLabels[id] = l;
                     }
                 });
-                Object.keys(data.coins).forEach(id => addCoin(data.coins[id]));
+                Object.keys(data.coins).forEach(id => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0xffd700 })); m.rotation.x = Math.PI / 2; m.position.set(data.coins[id].x, data.coins[id].y, data.coins[id].z); scene.add(m); coinsMap[id] = m; });
             });
-
-            socket.on('newPlayer', (info) => addOtherPlayer(info));
-
-            socket.on('playerMoved', (info) => {
-                if (otherPlayers[info.id]) {
-                    otherPlayers[info.id].position.set(info.x, info.y, info.z);
-                    otherPlayers[info.id].rotation.y = info.rotation; 
-                }
+            socket.on('newPlayer', (info) => {
+                const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z); m.rotation.y = info.rotation;
+                const l = createNameLabel(info.username, info.avatar.nameColor); m.add(l); scene.add(m); otherPlayers[info.id] = m; otherLabels[info.id] = l;
             });
-
-            socket.on('avatarChanged', (data) => {
-                if (data.id === socket.id) {
-                    const updated = applyAvatarConfig(localPlayerMesh, null, data.avatar, currentUsername);
-                    if(updated) localPlayerMesh = updated.mesh;
-                } else if (otherPlayers[data.id]) {
-                    const updated = applyAvatarConfig(otherPlayers[data.id], otherLabels[data.id], data.avatar, data.username);
-                    if(updated) {
-                        otherPlayers[data.id] = updated.mesh;
-                        otherLabels[data.id] = updated.label;
-                    }
-                }
+            socket.on('playerMoved', (i) => { if (otherPlayers[i.id]) { otherPlayers[i.id].position.set(i.x, i.y, i.z); otherPlayers[i.id].rotation.y = i.rotation; } });
+            socket.on('avatarChanged', (d) => {
+                if (d.id === socket.id) { const up = applyAvatarConfig(localPlayerMesh, null, d.avatar, currentUsername); if(up) localPlayerMesh = up.mesh; }
+                else if (otherPlayers[d.id]) { const up = applyAvatarConfig(otherPlayers[d.id], otherLabels[d.id], d.avatar, d.username); if(up) { otherPlayers[d.id] = up.mesh; otherLabels[d.id] = up.label; } }
             });
-
-            socket.on('playerDisconnected', (id) => {
-                if (otherPlayers[id]) {
-                    scene.remove(otherPlayers[id]);
-                    delete otherPlayers[id];
-                    delete otherLabels[id];
-                }
-            });
-
-            socket.on('marketUpdate', (price) => {
-                document.getElementById('stock-price-display').innerText = price;
-                updateStockChart(price);
-                showNotification('info', `📈 株価変動: ${price}G`);
-            });
-
-            socket.on('updateEconomy', (data) => {
-                document.getElementById('ui-money').innerText = data.money;
-                document.getElementById('ui-stocks').innerText = data.stocks;
-            });
-            
-            socket.on('speedUpdated', (mult) => { adminSpeedMult = mult; });
-
-            socket.on('notification', (msg) => showNotification(msg.type, msg.text));
+            socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; delete otherLabels[id]; } });
+            socket.on('marketUpdate', (p) => { document.getElementById('stock-price-display').innerText = p; updateStockChart(p); showNotification('info', `📈 株価変動: ${p}G`); });
+            socket.on('updateEconomy', (d) => { document.getElementById('ui-money').innerText = d.money; document.getElementById('ui-stocks').innerText = d.stocks; });
+            socket.on('speedUpdated', (m) => { adminSpeedMult = m; });
+            socket.on('notification', (m) => showNotification(m.type, m.text));
             socket.on('chatMessage', (msg) => {
-                const msgs = document.getElementById('chat-messages');
-                const div = document.createElement('div');
-                div.className = 'chat-msg' + (msg.isAdmin ? ' admin' : '');
-                div.innerHTML = `<span class="name">${msg.username}:</span> ${msg.text}`;
-                msgs.appendChild(div);
-                msgs.scrollTop = msgs.scrollHeight;
-                showBubble(msg.id, msg.text);
+                const msgs = document.getElementById('chat-messages'); const div = document.createElement('div'); div.className = 'chat-msg' + (msg.isAdmin ? ' admin' : '');
+                div.innerHTML = `<span class="name">${msg.username}:</span> ${msg.text}`; msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight; showBubble(msg.id, msg.text);
             });
-
-            socket.on('newCoin', (coinInfo) => addCoin(coinInfo));
-            socket.on('coinCollected', (coinId) => {
-                if (coinsMap[coinId]) { scene.remove(coinsMap[coinId]); delete coinsMap[coinId]; }
-            });
-        }
-
-        function addOtherPlayer(info) {
-            const mesh = createAvatarMesh(info.avatar);
-            mesh.position.set(info.x, info.y, info.z);
-            mesh.rotation.y = info.rotation;
-            const label = createNameLabel(info.username, info.avatar.nameColor);
-            mesh.add(label);
-            scene.add(mesh);
-            otherPlayers[info.id] = mesh;
-            otherLabels[info.id] = label;
-        }
-
-        function addCoin(info) {
-            const mesh = createCoinMesh();
-            mesh.position.set(info.x, info.y, info.z);
-            scene.add(mesh);
-            coinsMap[info.id] = mesh;
+            socket.on('newCoin', (i) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0xffd700 })); m.rotation.x = Math.PI / 2; m.position.set(i.x, i.y, i.z); scene.add(m); coinsMap[i.id] = m; });
+            socket.on('coinCollected', (id) => { if (coinsMap[id]) { scene.remove(coinsMap[id]); delete coinsMap[id]; } });
         }
 
         function tradeStock(type) {
-            const amount = document.getElementById('trade-amount').value;
-            if(!amount) return showNotification('error', '数量を入力してください');
-            socket.emit(type === 'buy' ? 'buyStock' : 'sellStock', amount);
-            document.getElementById('trade-amount').value = '';
+            const amount = document.getElementById('trade-amount').value; if(!amount) return showNotification('error', '数量を入力してください');
+            socket.emit(type === 'buy' ? 'buyStock' : 'sellStock', amount); document.getElementById('trade-amount').value = '';
         }
-
         function toggleCameraMode() {
-            if(cameraMode === 'TPS') {
-                cameraMode = 'FPS';
-                document.getElementById('btn-camera').innerText = 'TPS視点に切り替え';
-                document.getElementById('crosshair').style.display = 'block';
-                if(localPlayerMesh) localPlayerMesh.visible = false;
-            } else {
-                cameraMode = 'TPS';
-                document.getElementById('btn-camera').innerText = 'FPS視点に切り替え';
-                document.getElementById('crosshair').style.display = 'none';
-                if(localPlayerMesh) localPlayerMesh.visible = true;
-            }
+            cameraMode = cameraMode === 'TPS' ? 'FPS' : 'TPS';
+            document.getElementById('btn-camera').innerText = cameraMode === 'TPS' ? 'FPS視点に切り替え' : 'TPS視点に切り替え';
+            document.getElementById('crosshair').style.display = cameraMode === 'TPS' ? 'none' : 'block';
+            if(localPlayerMesh) localPlayerMesh.visible = cameraMode === 'TPS';
         }
 
         function checkCollisions(nextX, nextZ, currentY) {
-            if (nextX > 1000) {
-                if (nextX > 1800 && nextX < 2200 && nextZ > 1800 && nextZ < 2200) { 
-                    const distSqX = (nextX - 2000)*(nextX - 2000); const distSqZ = (nextZ - 2000)*(nextZ - 2000);
-                    return { canMoveX: distSqX < 140*140, canMoveZ: distSqZ < 140*140 };
-                }
-                if (nextX > 3800 && nextX < 4200 && nextZ > 3800 && nextZ < 4200) { 
-                    const distSqX = (nextX - 4000)*(nextX - 4000); const distSqZ = (nextZ - 4000)*(nextZ - 4000);
-                    return { canMoveX: distSqX < 70*70, canMoveZ: distSqZ < 45*45 };
-                }
+            if (nextX > 1000) { // Indoors
+                if (nextX > 1850 && nextX < 2150 && nextZ > 1850 && nextZ < 2150) return { canMoveX: Math.abs(nextX-2000)<145, canMoveZ: Math.abs(nextZ-2000)<145 }; // Mall
+                if (nextX > 3850 && nextX < 4150 && nextZ > 3850 && nextZ < 4150) return { canMoveX: Math.abs(nextX-4000)<70, canMoveZ: Math.abs(nextZ-4000)<45 }; // Exchange
                 return { canMoveX: false, canMoveZ: false };
             }
-            if (currentY > 400) { 
-                const distSq = nextX*nextX + nextZ*nextZ;
-                return { canMoveX: distSq < 33*33, canMoveZ: distSq < 33*33 };
-            }
-            if (currentY > 70 && currentY < 130) { 
-                for (let car of monorailCars) {
-                    if (Math.hypot(nextX - car.mesh.position.x, nextZ - car.mesh.position.z) < 13) return { canMoveX: true, canMoveZ: true };
-                }
-                const stations = [ {x:-135, z:-700, w:80, l:25}, {x:400, z:-130, w:25, l:80}, {x:-135, z:500, w:80, l:25}, {x:-600, z:-130, w:25, l:80} ];
-                for(let s of stations) {
-                    if (nextX > s.x - s.w/2 && nextX < s.x + s.w/2 && nextZ > s.z - s.l/2 && nextZ < s.z + s.l/2) return { canMoveX: true, canMoveZ: true };
-                }
+            if (currentY > 300) return { canMoveX: Math.hypot(nextX, nextZ) < 28, canMoveZ: Math.hypot(nextX, nextZ) < 28 }; // Observatory
+            if (currentY > 70 && currentY < 130) { // Train Stations
+                for (let car of monorailCars) if (Math.hypot(nextX - car.mesh.position.x, nextZ - car.mesh.position.z) < 13) return { canMoveX: true, canMoveZ: true };
+                const s = [ {x:-135, z:-700, w:80, l:25}, {x:400, z:-130, w:25, l:80}, {x:-135, z:500, w:80, l:25}, {x:-600, z:-130, w:25, l:80} ];
+                for(let st of s) if (nextX > st.x-st.w/2 && nextX < st.x+st.w/2 && nextZ > st.z-st.l/2 && nextZ < st.z+st.l/2) return { canMoveX: true, canMoveZ: true };
                 return { canMoveX: false, canMoveZ: false };
             }
             
-            let canMoveX = true; let canMoveZ = true;
-            const radius = 1.5;
-            const minGx = Math.floor((nextX - radius) / 100); const maxGx = Math.floor((nextX + radius) / 100);
-            const minGz = Math.floor((nextZ - radius) / 100); const maxGz = Math.floor((nextZ + radius) / 100);
-
-            for (let gx = minGx; gx <= maxGx; gx++) {
-                for (let gz = minGz; gz <= maxGz; gz++) {
-                    const key = `${gx},${gz}`;
-                    const boxes = gridCollisions[key] || [];
-                    for (let box of boxes) {
-                        if (nextX + radius > box.minX && nextX - radius < box.maxX && nextZ + radius > box.minZ && nextZ - radius < box.maxZ) {
-                            const curX = localPlayerMesh.position.x; const curZ = localPlayerMesh.position.z;
-                            if (curX + radius <= box.minX || curX - radius >= box.maxX) canMoveX = false;
-                            if (curZ + radius <= box.minZ || curZ - radius >= box.maxZ) canMoveZ = false;
-                            if (!canMoveX && !canMoveZ) return { canMoveX: false, canMoveZ: false };
+            let canX = true, canZ = true; const r = 1.5;
+            for (let gx = Math.floor((nextX-r)/100); gx <= Math.floor((nextX+r)/100); gx++) {
+                for (let gz = Math.floor((nextZ-r)/100); gz <= Math.floor((nextZ+r)/100); gz++) {
+                    const boxes = gridCollisions[`${gx},${gz}`] || [];
+                    for (let b of boxes) {
+                        if (nextX+r > b.minX && nextX-r < b.maxX && nextZ+r > b.minZ && nextZ-r < b.maxZ) {
+                            const cX = localPlayerMesh.position.x, cZ = localPlayerMesh.position.z;
+                            if (cX+r <= b.minX || cX-r >= b.maxX) canX = false;
+                            if (cZ+r <= b.minZ || cZ-r >= b.maxZ) canZ = false;
+                            if (!canX && !canZ) return { canMoveX: false, canMoveZ: false };
                         }
                     }
                 }
             }
-            return { canMoveX, canMoveZ };
+            return { canMoveX: canX, canMoveZ: canZ };
         }
 
         function checkWarpPads() {
             if (!localPlayerMesh || isWarping) return;
             for (let pad of warpPads) {
                 if (localPlayerMesh.position.distanceTo(pad.mesh.position) < 4.0 && Math.abs(localPlayerMesh.position.y - pad.mesh.position.y) < 3) {
-                    isWarping = true;
-                    showNotification('info', `ワープ中: ${pad.label}`);
-                    setTimeout(() => {
-                        localPlayerMesh.position.copy(pad.target);
-                        isWarping = false;
-                    }, 500);
-                    break;
+                    isWarping = true; showNotification('info', `ワープ中: ${pad.label}`);
+                    setTimeout(() => { localPlayerMesh.position.copy(pad.target); isWarping = false; }, 500); break;
                 }
             }
         }
 
         function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-            const time = clock.getElapsedTime();
+            requestAnimationFrame(animate); const delta = clock.getDelta(), time = clock.getElapsedTime();
+            Object.values(coinsMap).forEach(c => { c.rotation.z += 2*delta; c.position.y = 2 + Math.sin(time*3 + c.position.x)*0.5; });
 
-            Object.values(coinsMap).forEach(coin => { coin.rotation.z += 2 * delta; coin.position.y = 2 + Math.sin(time * 3 + coin.position.x) * 0.5; });
-
-            let riding = false; 
-
+            let riding = false;
             if (trackSpline) {
-                const stationStops = [0, 0.25, 0.5, 0.75, 1.0];
-                const stopDuration = 5.0; 
-
                 for(let i = 0; i < 4; i++) {
                     let car = monorailCars[i];
-                    
                     if (car.state === 'moving') {
-                        car.progress += 0.02 * delta; 
-                        if (car.progress > 1) car.progress -= 1;
-                        
-                        for(let stop of stationStops) {
-                            if (Math.abs(car.progress - stop) < 0.005) {
-                                car.progress = stop; car.state = 'stopped'; car.stopTimer = stopDuration; break;
-                            }
-                        }
+                        car.progress += 0.02 * delta; if (car.progress > 1) car.progress -= 1;
+                        for(let stop of [0, 0.25, 0.5, 0.75]) { if (Math.abs(car.progress - stop) < 0.005) { car.progress = stop; car.state = 'stopped'; car.stopTimer = 5.0; break; } }
                     } else if (car.state === 'stopped') {
-                        car.stopTimer -= delta;
-                        if (car.stopTimer <= 0) { car.state = 'moving'; car.progress += 0.01; }
+                        car.stopTimer -= delta; if (car.stopTimer <= 0) { car.state = 'moving'; car.progress += 0.01; }
                     }
-
-                    const pt = trackSpline.getPoint(car.progress % 1);
-                    const tangent = trackSpline.getTangent(car.progress % 1);
-                    car.mesh.position.copy(pt);
-                    car.mesh.rotation.y = Math.atan2(tangent.x, tangent.z);
+                    const pt = trackSpline.getPoint(car.progress % 1), tangent = trackSpline.getTangent(car.progress % 1);
+                    car.mesh.position.copy(pt); car.mesh.rotation.y = Math.atan2(tangent.x, tangent.z);
 
                     if (localPlayerMesh && Math.abs(localPlayerMesh.position.y - car.mesh.position.y) < 15) {
                         if (Math.hypot(localPlayerMesh.position.x - car.mesh.position.x, localPlayerMesh.position.z - car.mesh.position.z) < 13) {
-                            riding = true;
-                            if (car.prevPos) {
-                                localPlayerMesh.position.x += (car.mesh.position.x - car.prevPos.x);
-                                localPlayerMesh.position.z += (car.mesh.position.z - car.prevPos.z);
-                            }
+                            riding = true; if (car.prevPos) { localPlayerMesh.position.x += (car.mesh.position.x - car.prevPos.x); localPlayerMesh.position.z += (car.mesh.position.z - car.prevPos.z); }
                         }
                     }
                     car.prevPos = car.mesh.position.clone(); 
@@ -1278,79 +601,52 @@
             }
 
             if (localPlayerMesh && !isWarping) {
-                let moved = false;
-                const speed = (keysPressed.shift ? 45 : 15) * adminSpeedMult; 
+                let moved = false; const speed = (keysPressed.shift ? 45 : 15) * adminSpeedMult; 
                 
+                // CORRECTED A/D Vectors (Cross product logic for strafing)
                 const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
-                const right = new THREE.Vector3(-Math.cos(cameraYaw), 0, Math.sin(cameraYaw));
+                const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)); // X-axis relative to forward
 
-                let nextX = localPlayerMesh.position.x;
-                let nextZ = localPlayerMesh.position.z;
-
+                let nextX = localPlayerMesh.position.x, nextZ = localPlayerMesh.position.z;
                 if (keysPressed['w'] || keysPressed['arrowup']) { nextX += forward.x * speed * delta; nextZ += forward.z * speed * delta; }
                 if (keysPressed['s'] || keysPressed['arrowdown']) { nextX -= forward.x * speed * delta; nextZ -= forward.z * speed * delta; }
-                if (keysPressed['a'] || keysPressed['arrowleft']) { nextX += right.x * speed * delta; nextZ += right.z * speed * delta; }
-                if (keysPressed['d'] || keysPressed['arrowright']) { nextX -= right.x * speed * delta; nextZ -= right.z * speed * delta; }
+                if (keysPressed['a'] || keysPressed['arrowleft']) { nextX -= right.x * speed * delta; nextZ -= right.z * speed * delta; } // FIXED: Minus for Left
+                if (keysPressed['d'] || keysPressed['arrowright']) { nextX += right.x * speed * delta; nextZ += right.z * speed * delta; } // FIXED: Plus for Right
 
-                const collision = checkCollisions(nextX, nextZ, localPlayerMesh.position.y);
-                if (collision.canMoveX) { localPlayerMesh.position.x = nextX; moved = true; }
-                if (collision.canMoveZ) { localPlayerMesh.position.z = nextZ; moved = true; }
+                const col = checkCollisions(nextX, nextZ, localPlayerMesh.position.y);
+                if (col.canMoveX) { localPlayerMesh.position.x = nextX; moved = true; }
+                if (col.canMoveZ) { localPlayerMesh.position.z = nextZ; moved = true; }
                 if (riding) moved = true;
 
                 localPlayerMesh.rotation.y = cameraYaw;
-                checkWarpPads();
-                updateBubbles();
+                checkWarpPads(); updateBubbles();
 
-                if (localPlayerMesh.position.x > 3800 && localPlayerMesh.position.x < 4200) {
-                    document.getElementById('stock-panel').style.display = 'block';
-                    document.getElementById('boutique-panel').style.display = 'none';
-                } else if (localPlayerMesh.position.x > 1950 && localPlayerMesh.position.x < 2050 && localPlayerMesh.position.z > 2000 && localPlayerMesh.position.z < 2100) {
-                    document.getElementById('stock-panel').style.display = 'none';
-                    document.getElementById('boutique-panel').style.display = 'block';
-                } else {
-                    document.getElementById('stock-panel').style.display = 'none';
-                    document.getElementById('boutique-panel').style.display = 'none';
-                }
+                // Zone UI toggles
+                if (localPlayerMesh.position.x > 3800 && localPlayerMesh.position.x < 4200) { document.getElementById('stock-panel').style.display = 'block'; document.getElementById('boutique-panel').style.display = 'none'; }
+                else if (localPlayerMesh.position.x > 1950 && localPlayerMesh.position.x < 2050 && localPlayerMesh.position.z > 2000 && localPlayerMesh.position.z < 2100) { document.getElementById('stock-panel').style.display = 'none'; document.getElementById('boutique-panel').style.display = 'block'; }
+                else { document.getElementById('stock-panel').style.display = 'none'; document.getElementById('boutique-panel').style.display = 'none'; }
 
+                // Collect Coins
                 if (localPlayerMesh.position.y < 5) {
-                    Object.keys(coinsMap).forEach(coinId => {
-                        if (localPlayerMesh.position.distanceTo(coinsMap[coinId].position) < 3.0) {
-                            socket.emit('collectCoin', coinId);
-                            scene.remove(coinsMap[coinId]); delete coinsMap[coinId];
-                        }
-                    });
+                    Object.keys(coinsMap).forEach(id => { if (localPlayerMesh.position.distanceTo(coinsMap[id].position) < 3.0) { socket.emit('collectCoin', id); scene.remove(coinsMap[id]); delete coinsMap[id]; } });
                 }
 
-                if (moved) {
-                    socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
-                }
+                if (moved) socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
 
+                // Camera Logic
                 if(cameraMode === 'TPS') {
-                    const cameraOffset = new THREE.Vector3(-forward.x * 15, 10, -forward.z * 15);
-                    camera.position.lerp(localPlayerMesh.position.clone().add(cameraOffset), 0.2);
-                    const lookTarget = localPlayerMesh.position.clone();
-                    lookTarget.y += 2 + Math.sin(cameraPitch) * 10;
-                    camera.lookAt(lookTarget);
+                    const offset = new THREE.Vector3(-forward.x * 15, 10, -forward.z * 15);
+                    camera.position.lerp(localPlayerMesh.position.clone().add(offset), 0.2);
+                    const target = localPlayerMesh.position.clone(); target.y += 2 + Math.sin(cameraPitch) * 10;
+                    camera.lookAt(target);
                 } else { 
-                    const eyePos = localPlayerMesh.position.clone(); eyePos.y += 2.5; 
-                    camera.position.copy(eyePos);
-                    const lookTarget = eyePos.clone();
-                    lookTarget.x += Math.sin(cameraYaw) * Math.cos(cameraPitch);
-                    lookTarget.y += Math.sin(cameraPitch);
-                    lookTarget.z += Math.cos(cameraYaw) * Math.cos(cameraPitch);
-                    camera.lookAt(lookTarget);
+                    const eye = localPlayerMesh.position.clone(); eye.y += 2.5; camera.position.copy(eye);
+                    const target = eye.clone(); target.x += Math.sin(cameraYaw)*Math.cos(cameraPitch); target.y += Math.sin(cameraPitch); target.z += Math.cos(cameraYaw)*Math.cos(cameraPitch);
+                    camera.lookAt(target);
                 }
             }
             renderer.render(scene, camera);
         }
-
-        window.addEventListener('resize', () => {
-            if (camera && renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        });
     </script>
 </body>
 </html>
