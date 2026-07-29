@@ -15,20 +15,19 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'main.html'));
 });
 
-// ユーザーデータ (キーは username に変更)
+// ユーザーデータ
 const usersDb = {}; 
 const players = {}; 
 let coins = {};     
 
-let stockPrice = 100; // 株の初期価格
+let stockPrice = 100; 
 const MAX_COINS = 30;
-const COIN_BASE_VALUE = 10; // コイン価値は固定
+const COIN_BASE_VALUE = 10; 
 
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// コイン生成
 function spawnCoin() {
     const id = crypto.randomUUID();
     const r = Math.random() * 800;
@@ -40,10 +39,8 @@ for (let i = 0; i < MAX_COINS; i++) spawnCoin();
 
 // 経済（株価）の変動ループ（30秒ごと）
 setInterval(() => {
-    // -20% ～ +20% のランダム変動。最低価格は10G
     const changeRate = 1 + (Math.random() - 0.5) * 0.4;
     stockPrice = Math.floor(Math.max(10, stockPrice * changeRate));
-    console.log(`[経済変動] 現在の株価: ${stockPrice}G`);
     io.emit('marketUpdate', stockPrice);
 }, 30000);
 
@@ -87,15 +84,20 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     const user = usersDb[socket.username];
     
-    // スポーン位置：ランドマーク北西 (-50, -50) 付近の歩道
+    // スポーン位置：ランドマークのコリジョンを確実に避けた北西の歩道 (x:-90, z:-90)
     players[socket.id] = {
         id: socket.id,
         username: socket.username,
-        x: -50 + (Math.random() - 0.5) * 10, 
+        x: -90 + (Math.random() - 0.5) * 10, 
         y: 2, 
-        z: -50 + (Math.random() - 0.5) * 10, 
+        z: -90 + (Math.random() - 0.5) * 10, 
         rotation: 0,
-        color: '#' + Math.floor(Math.random()*16777215).toString(16)
+        avatar: {
+            body: '#38bdf8',
+            skin: '#ffcc99',
+            visor: '#00ffff',
+            nameColor: '#ffffff'
+        }
     };
 
     socket.emit('initData', { 
@@ -118,11 +120,11 @@ io.on('connection', (socket) => {
         }
     });
 
-    // アバター色変更
-    socket.on('changeAvatar', (colorHex) => {
+    // アバター詳細変更
+    socket.on('changeAvatarConfig', (newConfig) => {
         if (players[socket.id]) {
-            players[socket.id].color = colorHex;
-            io.emit('avatarChanged', { id: socket.id, color: colorHex });
+            players[socket.id].avatar = newConfig;
+            io.emit('avatarChanged', { id: socket.id, avatar: newConfig });
         }
     });
 
@@ -131,7 +133,6 @@ io.on('connection', (socket) => {
         if (coins[coinId]) {
             delete coins[coinId]; 
             usersDb[socket.username].money += COIN_BASE_VALUE;
-            
             io.emit('coinCollected', coinId);
             socket.emit('updateEconomy', { money: usersDb[socket.username].money, stocks: usersDb[socket.username].stocks });
             socket.emit('notification', { type: 'success', text: `コイン獲得！ +${COIN_BASE_VALUE}G` });
@@ -139,7 +140,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 株購入 (モール内限定)
+    // 株取引
     socket.on('buyStock', (amountStr) => {
         const amount = parseInt(amountStr, 10);
         if (isNaN(amount) || amount <= 0) return;
@@ -154,7 +155,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 株売却 (モール内限定)
     socket.on('sellStock', (amountStr) => {
         const amount = parseInt(amountStr, 10);
         if (isNaN(amount) || amount <= 0) return;
@@ -171,40 +171,45 @@ io.on('connection', (socket) => {
 
     // チャット＆Adminコマンド処理
     socket.on('chatMessage', (text) => {
-        if (text.startsWith('/admin ')) {
-            const pass = text.split(' ')[1];
-            if (pass === 'admin123') { // 管理者パスワード
-                socket.isAdmin = true;
-                socket.emit('notification', { type: 'success', text: '【管理者権限】を取得しました' });
-            } else {
-                socket.emit('notification', { type: 'error', text: 'パスワードが違います' });
-            }
-            return;
-        }
-        
-        if (socket.isAdmin) {
-            if (text.startsWith('/setmoney ')) {
-                const parts = text.split(' ');
-                const targetUser = parts[1];
-                const amount = parseInt(parts[2]);
-                if (usersDb[targetUser] && !isNaN(amount)) {
-                    usersDb[targetUser].money = amount;
-                    io.emit('notification', { type: 'info', text: `[ADMIN] ${targetUser}の所持金を${amount}Gに変更しました` });
-                    const targetSocket = Array.from(io.sockets.sockets.values()).find(s => s.username === targetUser);
-                    if (targetSocket) targetSocket.emit('updateEconomy', { money: amount, stocks: usersDb[targetUser].stocks });
+        // コマンドの場合はここで処理し、一般チャットには流さない (returnする)
+        if (text.startsWith('/')) {
+            if (text.startsWith('/admin ')) {
+                const pass = text.split(' ')[1];
+                if (pass === 'admin123') { 
+                    socket.isAdmin = true;
+                    socket.emit('notification', { type: 'success', text: '【管理者権限】を取得しました' });
+                } else {
+                    socket.emit('notification', { type: 'error', text: 'パスワードが違います' });
                 }
                 return;
             }
-            if (text.startsWith('/ban ')) {
-                const targetUser = text.split(' ')[1];
-                if (usersDb[targetUser]) {
-                    usersDb[targetUser].isBanned = true;
-                    io.emit('notification', { type: 'error', text: `[ADMIN] ${targetUser} がBANされました` });
-                    const targetSocket = Array.from(io.sockets.sockets.values()).find(s => s.username === targetUser);
-                    if (targetSocket) targetSocket.disconnect();
+            
+            if (socket.isAdmin) {
+                if (text.startsWith('/setmoney ')) {
+                    const parts = text.split(' ');
+                    const targetUser = parts[1];
+                    const amount = parseInt(parts[2]);
+                    if (usersDb[targetUser] && !isNaN(amount)) {
+                        usersDb[targetUser].money = amount;
+                        io.emit('notification', { type: 'info', text: `[ADMIN] ${targetUser}の所持金を${amount}Gに変更しました` });
+                        const targetSocket = Array.from(io.sockets.sockets.values()).find(s => s.username === targetUser);
+                        if (targetSocket) targetSocket.emit('updateEconomy', { money: amount, stocks: usersDb[targetUser].stocks });
+                    }
+                    return;
                 }
-                return;
+                if (text.startsWith('/ban ')) {
+                    const targetUser = text.split(' ')[1];
+                    if (usersDb[targetUser]) {
+                        usersDb[targetUser].isBanned = true;
+                        io.emit('notification', { type: 'error', text: `[ADMIN] ${targetUser} がBANされました` });
+                        const targetSocket = Array.from(io.sockets.sockets.values()).find(s => s.username === targetUser);
+                        if (targetSocket) targetSocket.disconnect();
+                    }
+                    return;
+                }
             }
+            // 未知のコマンド、または権限がない場合もチャットには流さない
+            return; 
         }
 
         // 通常のチャットブロードキャスト

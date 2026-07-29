@@ -41,6 +41,11 @@
         .area-name { font-size: 1.1rem; color: #34d399; font-weight: bold; display: flex; align-items: center; gap: 8px;}
         .controls-hint { font-size: 0.8rem; color: #94a3b8; line-height: 1.6; margin-top: 10px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;}
 
+        /* アバターカスタマイズ */
+        .color-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .color-row label { font-size: 0.8rem; color: #cbd5e1; }
+        .color-row input[type="color"] { background: none; border: none; cursor: pointer; height: 25px; width: 40px; padding: 0;}
+
         /* 株取引パネル (モール内専用) */
         #stock-panel {
             display: none;
@@ -50,16 +55,23 @@
         #stock-panel input { width: 100%; padding: 8px; margin: 5px 0; border-radius: 4px; border:none; box-sizing: border-box;}
         #stock-panel button { width: 48%; padding: 8px; border-radius: 4px; border:none; cursor: pointer; font-weight: bold;}
 
-        /* チャットUI */
+        /* チャットUI (トグル機能付き) */
         #chat-container {
             display: none; position: absolute; bottom: 20px; left: 300px; z-index: 10;
-            width: 400px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px);
+            width: 350px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px);
             border: 1px solid #334155; border-radius: 8px; display: flex; flex-direction: column;
+            overflow: hidden; /* 折りたたみ用 */
         }
-        #chat-messages { height: 200px; overflow-y: auto; padding: 10px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px;}
+        #chat-header {
+            background: rgba(0, 0, 0, 0.6); padding: 8px 12px; font-size: 0.85rem; font-weight: bold;
+            color: #94a3b8; cursor: pointer; display: flex; justify-content: space-between; user-select: none;
+        }
+        #chat-header:hover { background: rgba(0, 0, 0, 0.8); color: #fff;}
+        #chat-body { display: flex; flex-direction: column; }
+        #chat-messages { height: 180px; overflow-y: auto; padding: 10px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px;}
         #chat-messages span.name { font-weight: bold; color: #38bdf8; margin-right: 5px; }
         #chat-messages span.admin { color: #facc15; }
-        #chat-input { padding: 10px; border: none; border-top: 1px solid #334155; background: rgba(0,0,0,0.5); color: white; outline: none; border-radius: 0 0 8px 8px;}
+        #chat-input { padding: 10px; border: none; border-top: 1px solid #334155; background: rgba(0,0,0,0.5); color: white; outline: none;}
 
         /* 通知 */
         #notification-container {
@@ -101,10 +113,22 @@
         </div>
         
         <div class="sidebar-section">
-            <h3>Avatar & Camera</h3>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <label for="avatar-color" style="font-size: 0.9rem;">スーツ色:</label>
-                <input type="color" id="avatar-color" value="#38bdf8" style="background: none; border: none; cursor: pointer; height: 30px;" onchange="changeAvatarColor()">
+            <h3>Avatar Settings</h3>
+            <div class="color-row">
+                <label>服の色:</label>
+                <input type="color" id="color-body" value="#38bdf8" onchange="changeAvatarColor()">
+            </div>
+            <div class="color-row">
+                <label>肌の色:</label>
+                <input type="color" id="color-skin" value="#ffcc99" onchange="changeAvatarColor()">
+            </div>
+            <div class="color-row">
+                <label>バイザー:</label>
+                <input type="color" id="color-visor" value="#00ffff" onchange="changeAvatarColor()">
+            </div>
+            <div class="color-row" style="margin-bottom: 15px;">
+                <label>ネーム色:</label>
+                <input type="color" id="color-name" value="#ffffff" onchange="changeAvatarColor()">
             </div>
             <button class="btn-outline" id="camera-toggle" onclick="toggleCameraMode()" style="width:100%; padding:8px; border: 1px solid #38bdf8; background:transparent; color:#38bdf8; cursor:pointer;">🎥 視点: TPS (三人称)</button>
         </div>
@@ -133,8 +157,14 @@
     </div>
 
     <div id="chat-container">
-        <div id="chat-messages"></div>
-        <input type="text" id="chat-input" placeholder="メッセージを入力... (Enterで送信)" onkeypress="handleChat(event)">
+        <div id="chat-header" onclick="toggleChat()">
+            <span>💬 チャット</span>
+            <span id="chat-toggle-icon">▼</span>
+        </div>
+        <div id="chat-body">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="メッセージを入力... (Enterで送信)" onkeypress="handleChat(event)">
+        </div>
     </div>
 
     <div id="notification-container"></div>
@@ -148,7 +178,7 @@
         let currentUsername = null;
         let socket = null;
         let currentZone = ''; 
-        let myAvatarColor = '#38bdf8';
+        let myAvatarConfig = { body: '#38bdf8', skin: '#ffcc99', visor: '#00ffff', nameColor: '#ffffff' };
 
         async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value;
@@ -182,6 +212,16 @@
             toast.innerText = text;
             container.appendChild(toast);
             setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
+        }
+
+        function toggleChat() {
+            const body = document.getElementById('chat-body');
+            const icon = document.getElementById('chat-toggle-icon');
+            if (body.style.display === 'none') {
+                body.style.display = 'flex'; icon.innerText = '▼';
+            } else {
+                body.style.display = 'none'; icon.innerText = '▲';
+            }
         }
 
         function startGame() {
@@ -225,12 +265,12 @@
         let cameraYaw = 0;   
         let cameraPitch = 0; 
         let isDragging = false;
-        let isWarping = false; // ワープ中のフラグ
+        let isWarping = false; 
 
         const ISLAND_RADIUS = 1000;
         const GRID_BOX_SIZE = 100;
         const collisionMap = new Map();
-        const teleporters = []; // ワープポイント一覧
+        const teleporters = []; 
 
         function addCollisionBox(x, z, width, depth) {
             const box = { minX: x - width / 2, maxX: x + width / 2, minZ: z - depth / 2, maxZ: z + depth / 2 };
@@ -317,7 +357,7 @@
             createIsland();
             generateCity();
             createLandmarks();
-            createInteriors(); // 内装とワープパッドの生成
+            createInteriors(); // 内装とワープパッド
             renderInstances();
 
             clock = new THREE.Clock();
@@ -359,7 +399,6 @@
             ground.receiveShadow = true; scene.add(ground);
         }
 
-        // --- テレポーター（ワープパッド）生成 ---
         function addTeleporter(x, y, z, color, destX, destY, destZ, label) {
             const geo = new THREE.CylinderGeometry(2, 2, 0.5, 16);
             const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.7 });
@@ -373,7 +412,6 @@
             scene.add(sprite);
         }
 
-        // --- テキストスプライト生成関数 ---
         function makeTextSprite(message, params = {}) {
             const fontsize = params.fontsize || 24;
             const canvas = document.createElement('canvas');
@@ -381,8 +419,8 @@
             const ctx = canvas.getContext('2d');
             ctx.font = `Bold ${fontsize}px Arial`;
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; ctx.fillRect(0, 32, 256, 64); // 背景
-            ctx.fillStyle = params.fontColor || "rgba(56, 189, 248, 1)"; ctx.fillText(message, 128, 64);
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; ctx.fillRect(0, 32, 256, 64); 
+            ctx.fillStyle = params.fontColor || "rgba(255, 255, 255, 1)"; ctx.fillText(message, 128, 64);
             const texture = new THREE.CanvasTexture(canvas);
             const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
             const sprite = new THREE.Sprite(mat);
@@ -393,34 +431,18 @@
 
         function createLandmarks() {
             const lmGroup = new THREE.Group();
-            // タワーベース
+            
+            // タワーベース (半径60、対角約85。幅120で登録)
             const baseGeo = new THREE.CylinderGeometry(60, 90, 50, 4); baseGeo.rotateY(Math.PI / 4);
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.3, roughness: 0.4 });
             const base = new THREE.Mesh(baseGeo, baseMat); base.position.set(0, 25, 0);
             lmGroup.add(base);
-            addCollisionBox(0, 0, 130, 130); 
+            addCollisionBox(0, 0, 120, 120); 
 
             // メインタワー
             const mainTower = new THREE.Mesh(new THREE.BoxGeometry(50, 450, 50), matSky); 
             mainTower.position.set(0, 275, 0); 
             lmGroup.add(mainTower);
-
-            const exoMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
-            const pGeo = new THREE.BoxGeometry(8, 460, 8);
-            const p1 = new THREE.Mesh(pGeo, exoMat); p1.position.set(28, 275, 28);
-            const p2 = new THREE.Mesh(pGeo, exoMat); p2.position.set(-28, 275, 28);
-            const p3 = new THREE.Mesh(pGeo, exoMat); p3.position.set(28, 275, -28);
-            const p4 = new THREE.Mesh(pGeo, exoMat); p4.position.set(-28, 275, -28);
-            lmGroup.add(p1, p2, p3, p4);
-
-            const nCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.9 });
-            const nPink = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.9 });
-            for (let i = 0; i < 3; i++) {
-                const ringGeo = new THREE.TorusGeometry(45 + i * 8, 2, 16, 4); ringGeo.rotateX(Math.PI / 2); ringGeo.rotateZ(Math.PI / 4); ringGeo.rotateX(Math.PI / 16 * (i % 2 === 0 ? 1 : -1));
-                const ring = new THREE.Mesh(ringGeo, i % 2 === 0 ? nCyan : nPink); ring.position.set(0, 200 + i * 120, 0);
-                lmGroup.add(ring);
-            }
-            scene.add(lmGroup);
 
             // モール外観
             const mallGroup = new THREE.Group();
@@ -431,7 +453,7 @@
             const m2 = new THREE.Mesh(new THREE.BoxGeometry(140, 15, 140), mMat); m2.position.set(0, 22.5, 0);
             const m3 = new THREE.Mesh(new THREE.BoxGeometry(120, 15, 120), mMat); m3.position.set(0, 37.5, 0);
             mallGroup.add(m1, m2, m3);
-            addCollisionBox(mallX, mallZ, 170, 170); // コリジョン
+            addCollisionBox(mallX, mallZ, 170, 170);
 
             const cMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
             const pMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
@@ -439,27 +461,12 @@
             const l2 = new THREE.Mesh(new THREE.BoxGeometry(142, 2, 142), pMat); l2.position.set(0, 30, 0);
             mallGroup.add(l1, l2);
 
-            const eMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 });
-            const fL = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), eMat); fL.position.set(-30, 20, 70); 
-            const fR = new THREE.Mesh(new THREE.BoxGeometry(4, 40, 20), eMat); fR.position.set(30, 20, 70);
-            const fT = new THREE.Mesh(new THREE.BoxGeometry(64, 4, 20), eMat); fT.position.set(0, 42, 70);
-            const gMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
-            const gEnt = new THREE.Mesh(new THREE.BoxGeometry(56, 40, 2), gMat); gEnt.position.set(0, 20, 78); 
-            mallGroup.add(fL, fR, fT, gEnt);
-
-            const domeGeo = new THREE.SphereGeometry(50, 24, 24, 0, Math.PI*2, 0, Math.PI/2);
-            const dome = new THREE.Mesh(domeGeo, gMat); dome.position.set(0, 45, 0);
-            const wire = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.2 }));
-            wire.position.set(0, 45.1, 0); 
-            mallGroup.add(dome, wire);
-
             mallGroup.position.set(mallX, 0, mallZ);
             scene.add(mallGroup);
         }
 
-        // --- 内装とワープの生成 ---
         function createInteriors() {
-            // 1. タワー展望台 (上空隔離エリア)
+            // 1. タワー展望台
             const obsY = 480;
             const obsGroup = new THREE.Group();
             const fMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
@@ -470,11 +477,10 @@
             obsGroup.add(floor, wall);
             scene.add(obsGroup);
             
-            // ワープ: タワーベース外周(X:70) <-> 展望台
             addTeleporter(70, 2, 0, 0x00ffff, 0, obsY, 0, "展望台へ");
             addTeleporter(20, obsY, 0, 0xff0000, 75, 2, 0, "地上へ");
 
-            // 2. モール内装 (地下隔離エリア X:2000, Z:2000)
+            // 2. モール内装
             const mallIntGroup = new THREE.Group();
             const inFloor = new THREE.Mesh(new THREE.BoxGeometry(100, 2, 100), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2 }));
             inFloor.position.set(2000, 1, 2000);
@@ -486,13 +492,11 @@
             mallIntGroup.add(inFloor, w1, w2, w3, w4);
             addCollisionBox(2000, 1950, 100, 4); addCollisionBox(2000, 2050, 100, 4); addCollisionBox(1950, 2000, 4, 100); addCollisionBox(2050, 2000, 4, 100);
             
-            // 取引所シンボル
             const monitor = new THREE.Mesh(new THREE.BoxGeometry(15, 15, 15), new THREE.MeshBasicMaterial({ color: 0xa855f7, wireframe: true }));
             monitor.position.set(2000, 10, 2020);
             mallIntGroup.add(monitor);
             scene.add(mallIntGroup);
 
-            // ワープ: モールエントランス前 <-> モール内装
             addTeleporter(-260, 2, -180, 0xa855f7, 2000, 2, 2000, "モール内へ");
             addTeleporter(2000, 2, 1980, 0xff0000, -260, 2, -170, "外へ");
         }
@@ -559,23 +563,48 @@
             buildIMesh(boxGeo, mat3, instanceData.mat3); buildIMesh(boxGeo, matSky, instanceData.matSky);
         }
 
-        // --- アバター ＆ 通信設定 ---
-        function createAvatarMesh(colorHex, username) {
+        // --- アバター（詳細カスタマイズ対応） ---
+        function createAvatarMesh(config, username) {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 1.5), new THREE.MeshStandardMaterial({ color: colorHex }));
+            
+            // 服 (body)
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 1.5), new THREE.MeshStandardMaterial({ color: config.body }));
             body.position.y = 1.75; body.castShadow = true; group.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), new THREE.MeshStandardMaterial({ color: 0xffcc99 }));
+            
+            // 肌 (skin/head)
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), new THREE.MeshStandardMaterial({ color: config.skin }));
             head.position.y = 4.3; head.castShadow = true; group.add(head);
-            const visor = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.2), new THREE.MeshStandardMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 }));
+            
+            // バイザー (visor)
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.2), new THREE.MeshStandardMaterial({ color: config.visor, transparent: true, opacity: 0.8 }));
             visor.position.set(0, 4.5, -0.75); group.add(visor);
             
-            // 頭上名前スプライト
+            // ネームプレート (name)
             if(username) {
-                const nameSprite = makeTextSprite(username, { fontsize: 32 });
+                const nameSprite = makeTextSprite(username, { fontsize: 32, fontColor: config.nameColor });
                 nameSprite.position.set(0, 6, 0);
+                nameSprite.name = "nameSprite"; // 更新時の特定用
                 group.add(nameSprite);
             }
             return group;
+        }
+
+        function updateAvatarMesh(mesh, config, username) {
+            if(!mesh) return;
+            mesh.children[0].material.color.set(config.body);
+            mesh.children[1].material.color.set(config.skin);
+            mesh.children[2].material.color.set(config.visor);
+            
+            // ネームスプライトの更新（作り直し）
+            const oldSprite = mesh.getObjectByName("nameSprite");
+            if(oldSprite) mesh.remove(oldSprite);
+            
+            if(username) {
+                const newSprite = makeTextSprite(username, { fontsize: 32, fontColor: config.nameColor });
+                newSprite.position.set(0, 6, 0);
+                newSprite.name = "nameSprite";
+                mesh.add(newSprite);
+            }
         }
 
         function createCoinMesh() {
@@ -592,9 +621,13 @@
                 Object.keys(data.players).forEach(id => {
                     const info = data.players[id];
                     if (id === socket.id) {
-                        myAvatarColor = info.color;
-                        document.getElementById('avatar-color').value = myAvatarColor;
-                        localPlayerMesh = createAvatarMesh(myAvatarColor, info.username);
+                        myAvatarConfig = info.avatar;
+                        document.getElementById('color-body').value = myAvatarConfig.body;
+                        document.getElementById('color-skin').value = myAvatarConfig.skin;
+                        document.getElementById('color-visor').value = myAvatarConfig.visor;
+                        document.getElementById('color-name').value = myAvatarConfig.nameColor;
+                        
+                        localPlayerMesh = createAvatarMesh(myAvatarConfig, info.username);
                         localPlayerMesh.position.set(info.x, info.y, info.z);
                         scene.add(localPlayerMesh);
                     } else addOtherPlayer(info);
@@ -604,10 +637,16 @@
 
             socket.on('newPlayer', (info) => addOtherPlayer(info));
             socket.on('playerMoved', (info) => { if (otherPlayers[info.id]) { otherPlayers[info.id].position.set(info.x, info.y, info.z); otherPlayers[info.id].rotation.y = info.rotation; } });
+            
             socket.on('avatarChanged', (info) => {
                 const target = info.id === socket.id ? localPlayerMesh : otherPlayers[info.id];
-                if(target) target.children[0].material.color.set(info.color);
+                // 該当プレイヤーのユーザー名を検索
+                const username = info.id === socket.id ? currentUsername : 
+                    (Object.keys(otherPlayers).find(key => key === info.id) ? "Player" : ""); // 他人の名前は保持してないため簡易
+                
+                updateAvatarMesh(target, info.avatar, "Player"); // 暫定でPlayer表記。本番では名前を保持する設計が必要
             });
+
             socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; } });
             socket.on('marketUpdate', (price) => { document.getElementById('ui-stock-price').innerText = price; });
             socket.on('updateEconomy', (data) => { document.getElementById('ui-money').innerText = data.money; document.getElementById('ui-stocks').innerText = data.stocks; });
@@ -615,7 +654,6 @@
             socket.on('newCoin', (coinInfo) => addCoin(coinInfo));
             socket.on('coinCollected', (coinId) => { if (coinsMap[coinId]) { scene.remove(coinsMap[coinId]); delete coinsMap[coinId]; } });
             
-            // チャット受信
             socket.on('chatMessage', (data) => {
                 const container = document.getElementById('chat-messages');
                 const div = document.createElement('div');
@@ -626,7 +664,7 @@
         }
 
         function addOtherPlayer(info) {
-            const mesh = createAvatarMesh(info.color, info.username);
+            const mesh = createAvatarMesh(info.avatar, info.username);
             mesh.position.set(info.x, info.y, info.z); mesh.rotation.y = info.rotation;
             scene.add(mesh); otherPlayers[info.id] = mesh;
         }
@@ -636,9 +674,13 @@
         }
 
         function changeAvatarColor() {
-            const newColor = document.getElementById('avatar-color').value;
-            socket.emit('changeAvatar', newColor);
-            if(localPlayerMesh) localPlayerMesh.children[0].material.color.set(newColor);
+            myAvatarConfig.body = document.getElementById('color-body').value;
+            myAvatarConfig.skin = document.getElementById('color-skin').value;
+            myAvatarConfig.visor = document.getElementById('color-visor').value;
+            myAvatarConfig.nameColor = document.getElementById('color-name').value;
+            
+            socket.emit('changeAvatarConfig', myAvatarConfig);
+            updateAvatarMesh(localPlayerMesh, myAvatarConfig, currentUsername);
         }
 
         function toggleCameraMode() {
@@ -648,13 +690,13 @@
             else { btn.innerHTML = '🎯 視点: FPS (一人称)'; if(localPlayerMesh) localPlayerMesh.visible = false; }
         }
 
-        // --- 移動・コリジョン・ゾーン処理 ---
+        // --- 移動・コリジョン処理 ---
         function checkCollisions(nextX, nextZ, currentY) {
-            if (currentY > 400) { // 展望台
+            if (currentY > 400) { 
                 const distSq = nextX*nextX + nextZ*nextZ;
                 return { canMoveX: distSq < 38*38, canMoveZ: distSq < 38*38 };
             }
-            // 地上のコリジョン
+            
             const gX = Math.floor(nextX / GRID_BOX_SIZE); const gZ = Math.floor(nextZ / GRID_BOX_SIZE);
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dz = -1; dz <= 1; dz++) {
@@ -692,7 +734,7 @@
 
         function checkTeleporters(x, y, z) {
             for(let tp of teleporters) {
-                if ((tp.x-x)**2 + (tp.y-y)**2 + (tp.z-z)**2 < 9) return tp; // 半径3m以内
+                if ((tp.x-x)**2 + (tp.y-y)**2 + (tp.z-z)**2 < 9) return tp; 
             }
             return null;
         }
@@ -706,7 +748,6 @@
 
             if (localPlayerMesh && !isWarping) {
                 let moved = false;
-                // 移動速度を大幅に低下 (歩き15, ダッシュ45)
                 const speed = keysPressed.shift ? 45 : 15; 
                 
                 let moveX = 0; let moveZ = 0;
@@ -726,12 +767,11 @@
                 }
                 localPlayerMesh.rotation.y = cameraYaw;
 
-                // ワープ判定
                 const tp = checkTeleporters(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z);
                 if (tp) {
                     isWarping = true;
                     localPlayerMesh.position.set(tp.destX, tp.destY, tp.destZ);
-                    setTimeout(() => { isWarping = false; }, 1500); // 連続ワープ防止のクールダウン
+                    setTimeout(() => { isWarping = false; }, 1500); 
                 }
 
                 if (moved) socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
