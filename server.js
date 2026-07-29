@@ -213,7 +213,7 @@ io.on('connection', (socket) => {
         }
 
         // 通常のチャットブロードキャスト
-        io.emit('chatMessage', { username: socket.username, text: text, isAdmin: socket.isAdmin });
+        io.emit('chatMessage', { id: socket.id, username: socket.username, text: text, isAdmin: socket.isAdmin });
     });
 
     socket.on('disconnect', () => {
