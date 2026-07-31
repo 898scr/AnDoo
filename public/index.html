@@ -682,13 +682,24 @@
                 for(let train of trains) {
                     if(train.state === 'moving') {
                         train.angle += train.speed * delta;
-                        let mod = Math.abs(train.angle % (Math.PI/4));
-                        if(mod < Math.abs(train.speed*delta) || Math.PI/4 - mod < Math.abs(train.speed*delta)) {
-                            train.angle = Math.round(train.angle / (Math.PI/4)) * (Math.PI/4);
-                            train.state = 'stopped'; train.timer = 5.0;
+                        
+                        // 駅の角度 (45度 = Math.PI/4 ごと) に近いか判定
+                        let targetAngle = Math.round(train.angle / (Math.PI/4)) * (Math.PI/4);
+                        let diff = Math.abs(train.angle - targetAngle);
+                        
+                        // 駅に到着した時 (誤差がスピード分未満になったらピタッと止める)
+                        if(diff < Math.abs(train.speed * delta) && !train.justDeparted) {
+                            train.angle = targetAngle;
+                            train.state = 'stopped'; 
+                            train.timer = 5.0;
+                            train.justDeparted = true; // 停車フラグON
+                        } else if (diff > 0.1) {
+                            // 駅から十分に離れたら停車フラグをリセットし、次の駅で止まれるようにする
+                            train.justDeparted = false;
                         }
                     } else {
-                        train.timer -= delta; if(train.timer <= 0) train.state = 'moving';
+                        train.timer -= delta; 
+                        if(train.timer <= 0) train.state = 'moving';
                     }
                     let nextX = train.r * Math.cos(train.angle); let nextZ = train.r * Math.sin(train.angle);
                     train.mesh.position.set(nextX, train.y, nextZ); 
