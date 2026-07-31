@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAKUYARC Metaverse</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #020205; color: #fff; }
         
         /* ログイン画面 (サイバー風) */
-        #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a0b2e 0%, #000000 100%); display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .panel { background: rgba(10, 10, 25, 0.85); padding: 30px; border-radius: 12px; border: 1px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); width: 320px; backdrop-filter: blur(10px);}
-        .panel h2 { margin-top: 0; color: #00ffff; text-align: center; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px #00ffff;}
+        #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a0b2e 0%, #020205 100%); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .panel { background: rgba(10, 10, 25, 0.85); padding: 30px; border-radius: 12px; border: 1px solid #00ffff; box-shadow: 0 0 40px rgba(0, 255, 255, 0.3); width: 320px; backdrop-filter: blur(10px);}
+        .panel h2 { margin-top: 0; color: #00ffff; text-aalign: center; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px #00ffff;}
         .panel input { width: 100%; box-sizing: border-box; padding: 12px; margin: 10px 0; border: 1px solid #ff00ff; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none; transition: 0.3s;}
         .panel input:focus { box-shadow: 0 0 15px rgba(255, 0, 255, 0.5); }
         .panel button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px;}
@@ -150,10 +150,10 @@
             neons: { cyan: [], magenta: [], yellow: [] } 
         };
 
-        // サイバーパンクテクスチャ生成
+        // サイバーパンクテクスチャ生成 (暗めのベースに発光窓)
         function createTexture(type) {
             const cvs = document.createElement('canvas'); cvs.width = 128; cvs.height = 128; const ctx = cvs.getContext('2d');
-            ctx.fillStyle = type === 'sky' ? '#050510' : (type === 1 ? '#111' : (type === 2 ? '#1a1a2e' : '#222')); ctx.fillRect(0, 0, 128, 128);
+            ctx.fillStyle = type === 'sky' ? '#020205' : (type === 1 ? '#050508' : (type === 2 ? '#080510' : '#050a10')); ctx.fillRect(0, 0, 128, 128);
             ctx.fillStyle = type === 'sky' ? '#00ffff' : '#ff00ff'; // 窓の光
             if (type === 'sky') { for(let i=0; i<128; i+=16) for(let j=0; j<128; j+=32) if(Math.random()>0.2) ctx.fillRect(i+2, j+4, 12, 24); }
             else if (type === 1) { for(let i=8; i<128; i+=24) for(let j=8; j<128; j+=32) if(Math.random()>0.3) ctx.fillRect(i, j, 12, 20); }
@@ -180,7 +180,7 @@
             }
         }
 
-        // デカ文字廃止。ホログラムサークルによるワープパッド
+        // ホログラムサークルによるワープパッド
         function addTeleporter(x, y, z, color, tX, tY, tZ, label) {
             const group = new THREE.Group();
             group.position.set(x, y + 0.1, z);
@@ -206,8 +206,8 @@
             const tex = new THREE.CanvasTexture(cvs);
             const spriteMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
             const sprite = new THREE.Sprite(spriteMat);
-            sprite.scale.set(10, 2.5, 1); // サイズを小さく調整
-            sprite.position.y = 4.0; // 頭上に配置
+            sprite.scale.set(6, 1.5, 1); // サイズを小さく調整
+            sprite.position.y = 4.5; // 頭上
             sprite.renderOrder = 999; 
             return sprite;
         }
@@ -293,8 +293,11 @@
                     chatBubbles[id].element.style.top = `${(v.y * -.5 + .5) * window.innerHeight - 20}px`;
                 }
             };
-            if (localPlayerMesh) updatePos(socket.id, localPlayerMesh.position, 6); // 頭上少し高め
-            for (let id in otherPlayers) updatePos(id, otherPlayers[id].mesh.position, 6);
+            // 修正: localPlayerMeshがnullまたはmeshが未定義の場合のエラーを回避
+            if (localPlayerMesh && localPlayerMesh.mesh) updatePos(socket.id, localPlayerMesh.mesh.position, 6); 
+            for (let id in otherPlayers) {
+                if (otherPlayers[id] && otherPlayers[id].mesh) updatePos(id, otherPlayers[id].mesh.position, 6);
+            }
         }
 
         function updateAvatarConfig() {
@@ -312,7 +315,7 @@
         }
 
         function createStarfield() {
-            const geo = new THREE.BufferGeometry(); const count = 3000;
+            const geo = new THREE.BufferGeometry(); const count = 6000;
             const positions = new Float32Array(count * 3); const colors = new Float32Array(count * 3);
             for(let i=0; i<count*3; i+=3) {
                 positions[i] = (Math.random() - 0.5) * 4000;
@@ -323,17 +326,17 @@
             }
             geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            const mat = new THREE.PointsMaterial({ size: 4, vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
+            const mat = new THREE.PointsMaterial({ size: 5, vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
             scene.add(new THREE.Points(geo, mat));
         }
 
         function createAvenues() {
-            const roadMat = new THREE.MeshStandardMaterial({ color: 0x111, roughness: 0.9 });
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x05050a, roughness: 0.9 });
             const ewRoad = new THREE.Mesh(new THREE.PlaneGeometry(1900, 60), roadMat); ewRoad.rotation.x = -Math.PI/2; ewRoad.position.set(0, 0.2, -130); scene.add(ewRoad);
             const nsRoad = new THREE.Mesh(new THREE.PlaneGeometry(60, 1900), roadMat); nsRoad.rotation.x = -Math.PI/2; nsRoad.position.set(-135, 0.2, 0); scene.add(nsRoad);
             
             // サイバーパンクな発光ライン
-            const lineMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.5, blending: THREE.AdditiveBlending});
+            const lineMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.6, blending: THREE.AdditiveBlending});
             scene.add(new THREE.Mesh(new THREE.PlaneGeometry(1900, 1), lineMat).setPos(0, 0.25, -130).setRot(-Math.PI/2,0,0));
             scene.add(new THREE.Mesh(new THREE.PlaneGeometry(1, 1900), lineMat).setPos(-135, 0.25, 0).setRot(-Math.PI/2,0,0));
         }
@@ -356,9 +359,9 @@
                 const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
                 
                 const stGroup = new THREE.Group();
-                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(25, 2, 80), new THREE.MeshStandardMaterial({ color: 0x222 })).translateY(-3)); // Platform
-                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(25, 2, 80), new THREE.MeshStandardMaterial({ color: 0x333 })).translateY(14)); // Roof
-                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(21, pt.y, 70), new THREE.MeshStandardMaterial({ color: 0x111 })).translateY(-pt.y/2)); // Pillar
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(25, 2, 80), new THREE.MeshStandardMaterial({ color: 0x111 })).translateY(-3)); // Platform
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(25, 2, 80), new THREE.MeshStandardMaterial({ color: 0x222 })).translateY(14)); // Roof
+                stGroup.add(new THREE.Mesh(new THREE.BoxGeometry(21, pt.y, 70), new THREE.MeshStandardMaterial({ color: 0x0a0a0f })).translateY(-pt.y/2)); // Pillar
                 
                 const glass = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.2, side: THREE.DoubleSide});
                 stGroup.add(new THREE.Mesh(new THREE.PlaneGeometry(80, 15), glass).translateX(-12.5).translateY(5).setRot(0,Math.PI/2,0)); // 外側の壁
@@ -369,7 +372,7 @@
                 // ワープ配置 (地上は歩道、ホームは端)
                 let gX = pt.x + normal.x * 20, gZ = pt.z + normal.z * 20; 
                 const hX = pt.x + normal.x * -8, hY = pt.y - 2, hZ = pt.z + normal.z * -8;
-                addTeleporter(gX, 2, gZ, 0x00ffff, hX, hY, hZ, "駅ホーム"); 
+                addTeleporter(gX, 2, gZ, 0x00ffff, hX, hY, hZ + 15, "駅ホーム"); 
                 addTeleporter(hX, hY, hZ + 15, 0xff00ff, gX + 5, 2, gZ, "地上");
 
                 // SFホバー列車
@@ -377,7 +380,7 @@
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 26), new THREE.MeshStandardMaterial({color: 0x111})).translateY(-2)); // 床
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 26), new THREE.MeshStandardMaterial({color: 0x111})).translateY(8)); // 屋根
                 
-                const wGlass = new THREE.MeshBasicMaterial({color: 0xff00ff, transparent: true, opacity: 0.3});
+                const wGlass = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide});
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 26), wGlass).translateX(-4.8).translateY(3)); // 逆側窓
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 6), wGlass).translateX(4.8).translateY(3).translateZ(10)); // ホーム側窓前
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 6), wGlass).translateX(4.8).translateY(3).translateZ(-10)); // ホーム側窓後
@@ -398,11 +401,11 @@
             addCollisionBox(0, 0, 70, 70); 
             
             // 下部ビルと上部ビル
-            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 380, 8), mats.matSky).setPos(0, 240, 0)); 
-            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 100, 8), mats.matSky).setPos(0, 480, 0)); 
+            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 380, 8), mats.matSky).setPos(0, 240, 0)); // 高さ50～430
+            lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 100, 8), mats.matSky).setPos(0, 500, 0)); // 高さ450～550
             
-            // 展望台 (間に挟む)
-            const obsMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4, side:THREE.DoubleSide });
+            // 展望台 (間に挟む 430～450)
+            const obsMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3, side:THREE.DoubleSide });
             lmGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 20, 16), obsMat).setPos(0, 440, 0)); 
             
             // コア
@@ -412,40 +415,54 @@
             scene.add(lmGroup);
 
             // Tower Warp & Observatory Interior (Zファイティング防止で高さをずらす)
-            addTeleporter(0, 2, -45, 0x00ffff, 0, 431, 15, "展望台"); 
-            addTeleporter(0, 431, 20, 0xff00ff, 0, 2, -55, "地上");
-            scene.add(new THREE.Mesh(new THREE.RingGeometry(5, 29, 32), new THREE.MeshStandardMaterial({color: 0x222, side:THREE.DoubleSide})).setPos(0, 430.1, 0).setRot(Math.PI/2,0,0)); // 床
-            scene.add(new THREE.Mesh(new THREE.RingGeometry(5, 29, 32), new THREE.MeshStandardMaterial({color: 0x111, side:THREE.DoubleSide})).setPos(0, 449.9, 0).setRot(Math.PI/2,0,0)); // 天井
+            addTeleporter(0, 2, -45, 0x00ffff, 0, 431, 15, "展望台へ"); 
+            addTeleporter(0, 431, 20, 0xff00ff, 0, 2, -55, "地上へ");
+            scene.add(new THREE.Mesh(new THREE.RingGeometry(5, 29, 32), new THREE.MeshStandardMaterial({color: 0x222, side:THREE.DoubleSide})).setPos(0, 430.2, 0).setRot(Math.PI/2,0,0)); // 床
+            scene.add(new THREE.Mesh(new THREE.RingGeometry(5, 29, 32), new THREE.MeshStandardMaterial({color: 0x111, side:THREE.DoubleSide})).setPos(0, 449.8, 0).setRot(Math.PI/2,0,0)); // 天井
+            // 窓ガラスフレーム
+            for(let i=0; i<16; i++) {
+                scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 20, 1), new THREE.MeshStandardMaterial({color: 0x111})).setPos(28*Math.cos(i*Math.PI/8), 440, 28*Math.sin(i*Math.PI/8)));
+            }
 
-            // 2. Mall (隔離空間での内装生成)
+            // 2. Mall
             const mallX = -350, mallZ = -250;
             const mallGroup = new THREE.Group();
             mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(180, 20, 180), mats.mat1).setPos(0, 10, 0));
             mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(160, 20, 160), mats.mat1).setPos(0, 30, 0));
-            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(181, 1, 181), new THREE.MeshBasicMaterial({ color: 0x00ffff })).setPos(0, 20.1, 0)); // ネオン浮かせ
+            mallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(181, 1, 181), new THREE.MeshBasicMaterial({ color: 0x00ffff })).setPos(0, 20.2, 0)); // ネオン浮かせ
             mallGroup.position.set(mallX, 0, mallZ); scene.add(mallGroup);
             addCollisionBox(mallX, mallZ, 180, 180);
 
             // Mall Interior (2000, 0, 2000)
-            addTeleporter(mallX, 2, mallZ + 100, 0xff00ff, 2000, 2, 1980, "モール"); 
-            addTeleporter(2000, 2, 1960, 0x00ffff, mallX, 2, mallZ + 110, "地上");
+            addTeleporter(mallX, 2, mallZ + 100, 0xff00ff, 2000, 2, 1980, "モール内へ"); 
+            addTeleporter(2000, 2, 1960, 0x00ffff, mallX, 2, mallZ + 110, "外へ");
             
-            const mRoom = new THREE.Mesh(new THREE.BoxGeometry(300, 50, 300), new THREE.MeshStandardMaterial({color: 0x1a1a1a, side: THREE.BackSide})); mRoom.position.set(2000, 25, 2000); scene.add(mRoom);
+            const mRoom = new THREE.Mesh(new THREE.BoxGeometry(300, 50, 300), new THREE.MeshStandardMaterial({color: 0x0a0a0f, side: THREE.BackSide})); mRoom.position.set(2000, 25, 2000); scene.add(mRoom);
+            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({color: 0x1a1a24})).setPos(2000, 0.1, 2000).setRot(-Math.PI/2,0,0)); // 床
+            
+            // アバターブティックエリア
             const boutiqueFloor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshBasicMaterial({color: 0x002244})); boutiqueFloor.rotation.x = -Math.PI/2; boutiqueFloor.position.set(2000, 0.2, 2060); scene.add(boutiqueFloor);
             const bLabel = createNameLabel("CYBER BOUTIQUE", "#00ffff"); bLabel.position.set(2000, 15, 2060); scene.add(bLabel);
-            for(let i=0; i<6; i++) { scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 20, 40), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe:true})).setPos(1910 + (i%2)*180, 10, 1910 + Math.floor(i/2)*90)); } 
+            for(let i=0; i<8; i++) { 
+                scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 20, 40), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe:true, transparent:true, opacity:0.3})).setPos(1910 + (i%2)*180, 10, 1910 + Math.floor(i/2)*45)); 
+            }
 
             // 3. Exchange
             const exX = 350, exZ = -130;
             scene.add(new THREE.Mesh(new THREE.BoxGeometry(100, 30, 80), mats.mat3).setPos(exX, 15, exZ)); addCollisionBox(exX, exZ, 100, 80);
-            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 60), new THREE.MeshStandardMaterial({color: 0x003311})).setPos(exX, 0.3, -50).setRot(-Math.PI/2,0,0)); // Plaza
+            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 60), new THREE.MeshStandardMaterial({color: 0x050508})).setPos(exX, 0.3, -50).setRot(-Math.PI/2,0,0)); // Plaza
 
             // Exchange Interior (4000, 0, 4000)
-            addTeleporter(exX, 2, -80, 0xffff00, 4000, 2, 4000, "取引所"); 
-            addTeleporter(4000, 2, 4040, 0x00ffff, exX, 2, -70, "地上");
+            addTeleporter(exX, 2, -80, 0xffff00, 4000, 2, 4000, "取引所内へ"); 
+            addTeleporter(4000, 2, 4040, 0x00ffff, exX, 2, -70, "外へ");
             
-            const exRoom = new THREE.Mesh(new THREE.BoxGeometry(150, 50, 100), new THREE.MeshStandardMaterial({color: 0x111, side: THREE.BackSide})); exRoom.position.set(4000, 25, 4000); scene.add(exRoom);
+            const exRoom = new THREE.Mesh(new THREE.BoxGeometry(150, 50, 100), new THREE.MeshStandardMaterial({color: 0x0a0a0f, side: THREE.BackSide})); exRoom.position.set(4000, 25, 4000); scene.add(exRoom);
+            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(150, 100), new THREE.MeshStandardMaterial({color: 0x111})).setPos(4000, 0.1, 4000).setRot(-Math.PI/2,0,0)); // 床
             scene.add(new THREE.Mesh(new THREE.BoxGeometry(40, 5, 10), new THREE.MeshStandardMaterial({color: 0x333})).setPos(4000, 2.5, 3970)); // Desk
+            
+            // 植物
+            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(2,2,10), new THREE.MeshStandardMaterial({color: 0x00ff88})).setPos(3960, 5, 3970));
+            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(2,2,10), new THREE.MeshStandardMaterial({color: 0x00ff88})).setPos(4040, 5, 3970));
             
             // Stock Chart
             stockChartCanvas = document.createElement('canvas'); stockChartCanvas.width = 512; stockChartCanvas.height = 256;
@@ -480,7 +497,7 @@
                         if(!split) instanceData.entrances.push({x: fX+(ss/2)-1, y: 3, z: fZ, sx: 6, sy: 4, sz: ss-4});
                         if(bh>80 && Math.random()>0.5) {
                             const cols = ['cyan', 'magenta', 'yellow'];
-                            instanceData.neons[cols[Math.floor(Math.random()*cols.length)]].push({x: fX+ss/2, y: bh/2, z: fZ, sx: 1.5, sy: 30+Math.random()*20, sz: 8});
+                            instanceData.neons[cols[Math.floor(Math.random()*cols.length)]].push({x: fX+ss/2, y: bh/2, z: fZ, sx: 2, sy: 30+Math.random()*40, sz: 8});
                         }
                     }
                 }
@@ -493,7 +510,7 @@
                 scene.add(mesh);
             };
             buildIMesh(mats.mat1, instanceData.mat1); buildIMesh(mats.mat2, instanceData.mat2); buildIMesh(mats.mat3, instanceData.mat3); buildIMesh(mats.matSky, instanceData.matSky);
-            buildIMesh(new THREE.MeshStandardMaterial({color: 0x333}), instanceData.bases); buildIMesh(new THREE.MeshStandardMaterial({color: 0x111}), instanceData.entrances);
+            buildIMesh(new THREE.MeshStandardMaterial({color: 0x111}), instanceData.bases); buildIMesh(new THREE.MeshStandardMaterial({color: 0x050505}), instanceData.entrances);
             
             for(let c in instanceData.neons) {
                 const hex = c==='cyan'?0x00ffff:c==='magenta'?0xff00ff:0xffff00;
@@ -505,20 +522,20 @@
 
         function initThreeJS() {
             scene = new THREE.Scene(); 
-            scene.background = new THREE.Color(0x050515); // 暗い宇宙
-            scene.fog = new THREE.FogExp2(0x050515, 0.0015); // サイバーフォグ
+            scene.background = new THREE.Color(0x020205); // 漆黒の宇宙
+            scene.fog = new THREE.FogExp2(0x080414, 0.002); // 濃い紫のサイバーフォグ
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight); 
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // サイバーライティング
-            scene.add(new THREE.AmbientLight(0x111122, 1.5));
-            const hemiLight = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.4); hemiLight.position.set(0, 200, 0); scene.add(hemiLight);
-            const dirLight = new THREE.DirectionalLight(0x4466aa, 1.2); dirLight.position.set(800, 1500, 500); scene.add(dirLight);
+            // 圧倒的サイバーライティング
+            scene.add(new THREE.AmbientLight(0x111122, 2.0));
+            const hemiLight = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.6); hemiLight.position.set(0, 200, 0); scene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0x335588, 1.5); dirLight.position.set(800, 1500, 500); scene.add(dirLight);
 
-            const ground = new THREE.Mesh(new THREE.CircleGeometry(ISLAND_RADIUS, 64), new THREE.MeshStandardMaterial({ color: 0x0a0a1a }));
+            const ground = new THREE.Mesh(new THREE.CircleGeometry(ISLAND_RADIUS, 64), new THREE.MeshStandardMaterial({ color: 0x05050a }));
             ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
             createStarfield();
@@ -530,7 +547,15 @@
             clock = new THREE.Clock();
             window.addEventListener('keydown', (e) => { keysPressed[e.key.toLowerCase()] = true; if(e.key.toLowerCase()==='e' && interactionTarget) executeInteraction(); });
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
-            window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+            
+            // リサイズイベントの安全な登録
+            window.addEventListener('resize', () => { 
+                if (camera && renderer) {
+                    camera.aspect = window.innerWidth/window.innerHeight; 
+                    camera.updateProjectionMatrix(); 
+                    renderer.setSize(window.innerWidth, window.innerHeight); 
+                }
+            });
 
             renderer.domElement.addEventListener('mousedown', () => isDragging = true);
             renderer.domElement.addEventListener('mouseup', () => isDragging = false);
@@ -571,12 +596,12 @@
                 const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z); m.rotation.y = info.rotation;
                 const l = createNameLabel(info.username, info.avatar.nameColor); m.add(l); scene.add(m); otherPlayers[info.id] = {mesh: m, label: l};
             });
-            socket.on('playerMoved', (i) => { if (otherPlayers[i.id]) { otherPlayers[i.id].mesh.position.set(i.x, i.y, i.z); otherPlayers[i.id].mesh.rotation.y = i.rotation; } });
+            socket.on('playerMoved', (i) => { if (otherPlayers[i.id] && otherPlayers[i.id].mesh) { otherPlayers[i.id].mesh.position.set(i.x, i.y, i.z); otherPlayers[i.id].mesh.rotation.y = i.rotation; } });
             socket.on('avatarChanged', (d) => {
                 if (d.id === socket.id) applyAvatarConfig(localPlayerMesh, d.avatar, currentUsername);
                 else if (otherPlayers[d.id]) applyAvatarConfig(otherPlayers[d.id], d.avatar, d.username);
             });
-            socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id].mesh); delete otherPlayers[id]; } });
+            socket.on('playerDisconnected', (id) => { if (otherPlayers[id] && otherPlayers[id].mesh) { scene.remove(otherPlayers[id].mesh); delete otherPlayers[id]; } });
             socket.on('marketUpdate', (p) => { updateStockChart(p); });
             socket.on('updateEconomy', (d) => { document.getElementById('ui-money').innerText = d.money; document.getElementById('ui-stocks').innerText = d.stocks; });
             socket.on('speedUpdated', (m) => { adminSpeedMult = m; });
@@ -589,7 +614,7 @@
 
         function updateStockChart(price) {
             stockHistory.push(price); if(stockHistory.length > 20) stockHistory.shift();
-            stockChartCtx.fillStyle = '#0a0a1a'; stockChartCtx.fillRect(0, 0, 512, 256);
+            stockChartCtx.fillStyle = '#0a0a0f'; stockChartCtx.fillRect(0, 0, 512, 256);
             stockChartCtx.strokeStyle = '#222'; stockChartCtx.lineWidth = 2; for(let i=0; i<5; i++) { stockChartCtx.beginPath(); stockChartCtx.moveTo(0, i*50+28); stockChartCtx.lineTo(512, i*50+28); stockChartCtx.stroke(); }
             if(stockHistory.length > 1) {
                 stockChartCtx.strokeStyle = '#00ffff'; stockChartCtx.lineWidth = 4; stockChartCtx.beginPath();
@@ -609,6 +634,7 @@
                     const boxes = gridCollisions[`${gx},${gz}`] || [];
                     for (let b of boxes) {
                         if (nextX+r > b.minX && nextX-r < b.maxX && nextZ+r > b.minZ && nextZ-r < b.maxZ) {
+                            if (!localPlayerMesh || !localPlayerMesh.mesh) continue;
                             const cX = localPlayerMesh.mesh.position.x, cZ = localPlayerMesh.mesh.position.z;
                             if (cX+r <= b.minX || cX-r >= b.maxX) canX = false;
                             if (cZ+r <= b.minZ || cZ-r >= b.maxZ) canZ = false;
@@ -621,12 +647,12 @@
         }
 
         function checkInteractions() {
-            if (!localPlayerMesh || isWarping) return;
+            if (!localPlayerMesh || !localPlayerMesh.mesh || isWarping) return;
             interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
             for (let pad of warpPads) {
                 if (localPlayerMesh.mesh.position.distanceTo(pad.mesh.position) < 5.0 && Math.abs(localPlayerMesh.mesh.position.y - pad.mesh.position.y) < 3) {
                     interactionTarget = pad;
-                    document.getElementById('prompt-text').innerText = `${pad.label}へ入る`;
+                    document.getElementById('prompt-text').innerText = `${pad.label}`;
                     document.getElementById('interaction-prompt').style.display = 'block';
                     break;
                 }
@@ -634,7 +660,7 @@
         }
         
         function executeInteraction() {
-            if(!interactionTarget || isWarping) return;
+            if(!interactionTarget || isWarping || !localPlayerMesh || !localPlayerMesh.mesh) return;
             isWarping = true; document.getElementById('interaction-prompt').style.display = 'none';
             showNotification('info', `WARP ENGAGED: ${interactionTarget.label}`);
             setTimeout(() => { localPlayerMesh.mesh.position.copy(interactionTarget.target); isWarping = false; }, 500);
@@ -643,9 +669,8 @@
         function animate() {
             requestAnimationFrame(animate); const delta = clock.getDelta();
             
-            // モノレール運行ロジック
             let riding = false;
-            if (trackSpline && localPlayerMesh) {
+            if (trackSpline && localPlayerMesh && localPlayerMesh.mesh) {
                 const stationStops = [1/12, 4/12, 7/12, 10/12];
                 for(let i = 0; i < 4; i++) {
                     let car = monorailCars[i];
@@ -660,7 +685,6 @@
                     const pt = trackSpline.getPoint(car.progress % 1), tangent = trackSpline.getTangent(car.progress % 1);
                     car.mesh.position.copy(pt); car.mesh.rotation.y = Math.atan2(tangent.x, tangent.z);
 
-                    // 乗車追従 (カーブ振り落とし防止)
                     if (Math.abs(localPlayerMesh.mesh.position.y - car.mesh.position.y) < 15) {
                         const dx = localPlayerMesh.mesh.position.x - car.mesh.position.x;
                         const dz = localPlayerMesh.mesh.position.z - car.mesh.position.z;
@@ -678,18 +702,18 @@
                 }
             }
 
-            if (localPlayerMesh && !isWarping) {
+            if (localPlayerMesh && localPlayerMesh.mesh && !isWarping) {
                 let moved = false; const speed = (keysPressed.shift ? 45 : 15) * adminSpeedMult; 
                 
-                // 完全なカメラ基準の移動ベクトル
+                // カメラ基準の移動ベクトル (A/Dキーの直感的な動作に完全対応)
                 const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                 const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)); 
 
                 let moveDir = new THREE.Vector3();
                 if (keysPressed['w'] || keysPressed['arrowup']) moveDir.add(forward);
                 if (keysPressed['s'] || keysPressed['arrowdown']) moveDir.sub(forward);
-                if (keysPressed['a'] || keysPressed['arrowleft']) moveDir.sub(right); // Aで左
-                if (keysPressed['d'] || keysPressed['arrowright']) moveDir.add(right); // Dで右
+                if (keysPressed['a'] || keysPressed['arrowleft']) moveDir.add(right); // 左
+                if (keysPressed['d'] || keysPressed['arrowright']) moveDir.sub(right); // 右
 
                 let nextX = localPlayerMesh.mesh.position.x, nextZ = localPlayerMesh.mesh.position.z;
                 if (moveDir.lengthSq() > 0) {
@@ -707,12 +731,19 @@
                 checkInteractions(); updateBubbles();
 
                 // ゾーン判定UI
-                if (localPlayerMesh.mesh.position.x > 1950) { document.getElementById('boutique-panel').style.display = 'block'; document.getElementById('ui-area').innerText = '📍 BOUTIQUE'; }
-                else { document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 SECTOR-01'; }
+                if (localPlayerMesh.mesh.position.x > 1950 && localPlayerMesh.mesh.position.x < 2050 && localPlayerMesh.mesh.position.z > 2000 && localPlayerMesh.mesh.position.z < 2100) { 
+                    document.getElementById('boutique-panel').style.display = 'block'; document.getElementById('ui-area').innerText = '📍 BOUTIQUE'; 
+                } else if (localPlayerMesh.mesh.position.x > 1900 && localPlayerMesh.mesh.position.x < 2100 && localPlayerMesh.mesh.position.z > 1900 && localPlayerMesh.mesh.position.z < 2100) {
+                    document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 MALL INTERIOR';
+                } else if (localPlayerMesh.mesh.position.x > 3900) {
+                    document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 EXCHANGE';
+                } else { 
+                    document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 SECTOR-01'; 
+                }
 
                 if (moved) socket.emit('playerMovement', { x: localPlayerMesh.mesh.position.x, y: localPlayerMesh.mesh.position.y, z: localPlayerMesh.mesh.position.z, rotation: localPlayerMesh.mesh.rotation.y });
 
-                // TPSカメラ制御 (壁抜け防止Raycaster搭載)
+                // TPSカメラ制御 (壁抜け防止完全版)
                 const offset = new THREE.Vector3(-forward.x * 15, 10, -forward.z * 15);
                 const idealPosition = localPlayerMesh.mesh.position.clone().add(offset);
                 const target = localPlayerMesh.mesh.position.clone(); target.y += 2 + Math.sin(cameraPitch) * 10;
@@ -726,9 +757,8 @@
                 let finalPosition = idealPosition;
                 
                 for (let hit of intersects) {
-                    // 当たったオブジェクトが環境物（アバター自身や見えない判定以外）ならカメラを寄せる
                     if (hit.object.geometry && !hit.object.geometry.boundingBox) hit.object.geometry.computeBoundingBox();
-                    if (hit.distance < rayDist && hit.object.type !== 'Sprite') {
+                    if (hit.distance < rayDist && hit.object.type !== 'Sprite' && hit.object.type !== 'Points') {
                         finalPosition = rayOrigin.clone().add(rayDir.multiplyScalar(Math.max(2.0, hit.distance - 1.0)));
                         break;
                     }
@@ -740,4 +770,4 @@
         }
     </script>
 </body>
-</html>
+</html>ｇ
