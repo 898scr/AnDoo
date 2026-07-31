@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAKUYARC Metaverse - Cyberpunk Edition</title>
+    <title>HAKUYARC Metaverse</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #020108; color: #fff; }
         
@@ -30,6 +30,19 @@
         #interaction-prompt { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 25px; border-radius: 30px; color: #00ffff; font-weight: bold; font-size: 1.2rem; text-shadow: 0 0 10px #00ffff; box-shadow: 0 0 20px rgba(0,255,255,0.3); z-index: 20; display: none; pointer-events: none; transition: opacity 0.2s;}
         .key-btn { display: inline-block; background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; font-family: monospace;}
 
+        /* チャット */
+        #chat-container { position: absolute; bottom: 20px; left: 300px; z-index: 10; width: 350px; background: rgba(10, 10, 25, 0.8); border-radius: 8px; border: 1px solid rgba(255,0,255,0.5); display: none; flex-direction: column; box-shadow: 0 0 15px rgba(255,0,255,0.2);}
+        #chat-header { background: rgba(255, 0, 255, 0.2); padding: 8px 12px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold; color: #ff00ff; font-size: 0.9rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,0,255,0.5);}
+        #chat-messages { height: 150px; overflow-y: auto; padding: 10px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px; }
+        .chat-msg { padding: 4px; border-radius: 4px; word-wrap: break-word; color: #ddd;}
+        .chat-msg .name { font-weight: bold; color: #00ffff; margin-right: 5px;}
+        .chat-msg.admin .name { color: #ff0055; text-shadow: 0 0 5px #ff0055;}
+        #chat-input-area { display: flex; padding: 10px; border-top: 1px solid rgba(255,0,255,0.5); }
+        #chat-input { flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,255,255,0.3); background: rgba(0,0,0,0.5); color: white; outline: none;}
+        
+        /* 吹き出し */
+        .chat-bubble { position: absolute; background: rgba(255,255,255,0.9); color: #000; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: bold; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); z-index: 20; opacity: 0; transition: opacity 0.2s;}
+        
         /* ブティックUI */
         #boutique-panel { position: absolute; right: 20px; top: 20px; z-index: 10; background: rgba(10, 10, 25, 0.95); padding: 20px; border-radius: 12px; width: 260px; display: none; border: 1px solid #00ffff; box-shadow: 0 0 20px rgba(0,255,255,0.3); }
         #boutique-panel h3 { color: #00ffff; margin-top: 0; text-transform: uppercase; text-shadow: 0 0 10px #00ffff;}
@@ -78,6 +91,12 @@
 
     <div id="interaction-prompt"><span class="key-btn">E</span><span id="prompt-text">アクション</span></div>
 
+    <div id="chat-container">
+        <div id="chat-header" onclick="toggleChat()"><span>💬 HAKUYARC COMMS</span><span id="chat-toggle-icon">▼</span></div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area"><input type="text" id="chat-input" placeholder="Message... (/admin)"></div>
+    </div>
+
     <div id="boutique-panel">
         <h3>Cyber Avatar</h3>
         <div class="color-picker-group"><label>Suit</label><input type="color" id="color-body" value="#00ffff" onchange="updateAvatarConfig()"></div>
@@ -102,47 +121,80 @@
     <script>
         let currentUsername = null, socket = null, adminSpeedMult = 1.0;
         let scene, camera, renderer, clock;
-        const otherPlayers = {};
-        let localPlayerMesh = null;
+        const otherPlayers = {}, chatBubbles = {};
+        let localPlayerMesh = null, interactionTarget = null;
         
-        // 物理演算（超高速グリッド衝突判定）
-        const gridCollisions = {};
-        const GRID_SIZE = 100;
+        const keysPressed = {};
+        let cameraYaw = 0, cameraPitch = 0, isDragging = false, prevMouse = { x: 0, y: 0 };
         
-        function addCollisionBox(x, z, width, depth) {
-            const minX = x - width/2, maxX = x + width/2, minZ = z - depth/2, maxZ = z + depth/2;
-            for(let gx = Math.floor(minX/GRID_SIZE); gx <= Math.floor(maxX/GRID_SIZE); gx++) {
-                for(let gz = Math.floor(minZ/GRID_SIZE); gz <= Math.floor(maxZ/GRID_SIZE); gz++) {
-                    const key = `${gx},${gz}`;
-                    if (!gridCollisions[key]) gridCollisions[key] = [];
-                    gridCollisions[key].push({ minX, maxX, minZ, maxZ });
-                }
-            }
-        }
-
-        function getCollision(x, z, r = 1.5) {
-            const gx = Math.floor(x/GRID_SIZE), gz = Math.floor(z/GRID_SIZE);
-            const boxes = gridCollisions[`${gx},${gz}`];
-            if (boxes) {
-                for(let b of boxes) {
-                    if (x+r > b.minX && x-r < b.maxX && z+r > b.minZ && z-r < b.maxZ) return true;
-                }
-            }
-            return false;
-        }
-
         const warps = [];
-        function addWarp(x, y, z, targetX, targetY, targetZ, label, color) {
-            const group = new THREE.Group();
-            const ring = new THREE.Mesh(new THREE.RingGeometry(3, 4, 32), new THREE.MeshBasicMaterial({color: color, side: THREE.DoubleSide, transparent:true, opacity:0.8}));
-            ring.rotation.x = Math.PI/2;
-            group.add(ring);
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 20, 16, 1, true), new THREE.MeshBasicMaterial({color: color, transparent:true, opacity:0.2, side: THREE.DoubleSide, blending: THREE.AdditiveBlending}));
-            beam.position.y = 10;
-            group.add(beam);
-            group.position.set(x, y+0.1, z);
-            scene.add(group);
-            warps.push({x, y, z, targetX, targetY, targetZ, label});
+        const trains = [];
+        const drones = [];
+        let stockChartTex = null, stockChartCtx = null, stockHistory = [];
+
+        // 画像のような放射状と環状の都市構造を作るための極座標システム
+        const LANDMARK_DIST = 900;
+        const RING_INNER = 500;
+        const RING_OUTER = 900;
+
+        const landmarks = [
+            {x: LANDMARK_DIST*Math.cos(Math.PI/4), z: LANDMARK_DIST*Math.sin(Math.PI/4), type: 'mall', name: "Shopping Mall"},
+            {x: LANDMARK_DIST*Math.cos(3*Math.PI/4), z: LANDMARK_DIST*Math.sin(3*Math.PI/4), type: 'dome', name: "Entertainment Dome"},
+            {x: LANDMARK_DIST*Math.cos(-3*Math.PI/4), z: LANDMARK_DIST*Math.sin(-3*Math.PI/4), type: 'security', name: "Security Center"},
+            {x: LANDMARK_DIST*Math.cos(-Math.PI/4), z: LANDMARK_DIST*Math.sin(-Math.PI/4), type: 'exchange', name: "Stock Exchange"}
+        ];
+
+        // 超軽量＆確実な極座標コリジョン（O(1)で計算可能）
+        function isWalkable(x, z, y = 0) {
+            // 空中や屋内は自由に歩ける
+            if (x > 3000 || y > 150) return true;
+
+            const r = Math.hypot(x, z);
+            const theta = Math.atan2(z, x);
+
+            if (r < 220) return true; // 中央広場
+
+            // 各ランドマーク敷地
+            for(let lm of landmarks) {
+                if(Math.hypot(x - lm.x, z - lm.z) < 180) return true;
+            }
+
+            // 環状道路 (幅80)
+            if (Math.abs(r - RING_INNER) < 60 || Math.abs(r - RING_OUTER) < 60) return true;
+
+            // 放射状道路 (8本)
+            let angleMod = Math.abs((theta % (Math.PI/4)) + (theta < 0 ? Math.PI/4 : 0)) % (Math.PI/4);
+            if (angleMod > Math.PI/8) angleMod = Math.PI/4 - angleMod; // 中心からのズレ角
+            const distToRoad = r * Math.sin(angleMod); // 道路中心線からの距離
+            if (distToRoad < 40) return true;
+
+            return false; // それ以外はビル群のブロックなので進入不可
+        }
+
+        async function attemptAuth(endpoint) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+                const data = await res.json();
+                if (data.success) {
+                    if (endpoint === '/api/login') {
+                        currentUsername = data.username;
+                        document.getElementById('ui-username').innerText = currentUsername;
+                        document.getElementById('ui-money').innerText = data.money;
+                        document.getElementById('ui-stocks').innerText = data.stocks;
+                        startGame();
+                    } else {
+                        document.getElementById('auth-error').style.color = '#00ffff';
+                        document.getElementById('auth-error').innerText = data.message;
+                    }
+                } else {
+                    document.getElementById('auth-error').style.color = '#ff0055';
+                    document.getElementById('auth-error').innerText = data.message;
+                }
+            } catch(e) {
+                document.getElementById('auth-error').innerText = '通信エラー';
+            }
         }
 
         function showNotification(type, text) {
@@ -151,17 +203,34 @@
             container.appendChild(toast); setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
+        let chatVisible = true;
+        function toggleChat() {
+            chatVisible = !chatVisible;
+            document.getElementById('chat-messages').style.display = chatVisible ? 'flex' : 'none'; 
+            document.getElementById('chat-input-area').style.display = chatVisible ? 'flex' : 'none';
+            document.getElementById('chat-toggle-icon').innerText = chatVisible ? '▼' : '▲';
+        }
+
+        function showBubble(playerId, text) {
+            if (!chatBubbles[playerId]) {
+                const b = document.createElement('div'); b.className = 'chat-bubble';
+                document.body.appendChild(b); chatBubbles[playerId] = { element: b, timer: null };
+            }
+            const bubble = chatBubbles[playerId];
+            bubble.element.innerText = text; bubble.element.style.opacity = '1';
+            if (bubble.timer) clearTimeout(bubble.timer);
+            bubble.timer = setTimeout(() => { bubble.element.style.opacity = '0'; }, 5000);
+        }
+
         function createNameLabel(name, color) {
-            const cvs = document.createElement('canvas'); cvs.width = 512; cvs.height = 128; const ctx = cvs.getContext('2d');
-            ctx.font = 'bold 72px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.lineWidth = 12; ctx.strokeStyle = '#000000'; ctx.strokeText(name, 256, 64);
-            ctx.fillStyle = color; ctx.fillText(name, 256, 64);
+            const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const ctx = cvs.getContext('2d');
+            ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.lineWidth = 6; ctx.strokeStyle = '#000000'; ctx.strokeText(name, 128, 32);
+            ctx.fillStyle = color; ctx.fillText(name, 128, 32);
             const tex = new THREE.CanvasTexture(cvs);
             const spriteMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
             const sprite = new THREE.Sprite(spriteMat);
-            sprite.scale.set(3, 0.75, 1); 
-            sprite.position.y = 5.5; 
-            sprite.renderOrder = 999; 
+            sprite.scale.set(4, 1, 1); sprite.position.y = 5.0; sprite.renderOrder = 999; 
             return sprite;
         }
 
@@ -199,287 +268,268 @@
             socket.emit('changeAvatarConfig', cfg);
         }
 
-        // 画像のような完璧な放射状と環状の都市構造を作る
-        const RING_INNER = 500;
-        const RING_OUTER = 1100;
-        const LM_DIST = 1100; // Landmark distance from center
-
-        const landmarkCenters = [
-            {x: LM_DIST*Math.cos(Math.PI/4), z: LM_DIST*Math.sin(Math.PI/4), type: 'mall', name: "Shopping Mall"},
-            {x: LM_DIST*Math.cos(3*Math.PI/4), z: LM_DIST*Math.sin(3*Math.PI/4), type: 'dome', name: "Entertainment Dome"},
-            {x: LM_DIST*Math.cos(-3*Math.PI/4), z: LM_DIST*Math.sin(-3*Math.PI/4), type: 'security', name: "Security Center"},
-            {x: LM_DIST*Math.cos(-Math.PI/4), z: LM_DIST*Math.sin(-Math.PI/4), type: 'exchange', name: "Stock Exchange"}
-        ];
-
-        function isOnRoad(x, z) {
-            let r = Math.hypot(x, z);
-            if (r < 250) return true; // Central Plaza
-            if (Math.abs(r - RING_INNER) < 50) return true;
-            if (Math.abs(r - RING_OUTER) < 60) return true;
-            
-            // 8 Radial Roads
-            let angle = Math.atan2(z, x) * 180 / Math.PI;
-            let modAngle = Math.abs(angle % 45);
-            if (modAngle > 22.5) modAngle = 45 - modAngle;
-            let distToRadial = r * Math.sin(modAngle * Math.PI / 180);
-            if (distToRadial < 40) return true;
-            
-            return false;
+        function addWarp(x, y, z, tx, ty, tz, label, color) {
+            const group = new THREE.Group();
+            const ring = new THREE.Mesh(new THREE.RingGeometry(3, 4, 32), new THREE.MeshBasicMaterial({color: color, side: THREE.DoubleSide, transparent:true, opacity:0.8}));
+            ring.rotation.x = Math.PI/2; group.add(ring);
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 20, 16, 1, true), new THREE.MeshBasicMaterial({color: color, transparent:true, opacity:0.2, side: THREE.DoubleSide, blending: THREE.AdditiveBlending}));
+            beam.position.y = 10; group.add(beam);
+            group.position.set(x, y+0.1, z); scene.add(group);
+            warps.push({x, y, z, tx, ty, tz, label});
         }
 
-        function inLandmarkZone(x, z) {
-            for(let lm of landmarkCenters) {
-                if (Math.hypot(x - lm.x, z - lm.z) < 220) return true;
-            }
-            return false;
-        }
+        function generateCyberCity() {
+            // Floating Island Base
+            const island = new THREE.Mesh(new THREE.ConeGeometry(1300, 600, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x0a0a0a, roughness: 1}));
+            island.position.y = -300; island.rotation.x = Math.PI; scene.add(island);
+            
+            const ground = new THREE.Mesh(new THREE.CircleGeometry(1300, 64), new THREE.MeshStandardMaterial({color: 0x050508}));
+            ground.rotation.x = -Math.PI/2; scene.add(ground);
+            
+            const grid = new THREE.GridHelper(2600, 130, 0x00ffff, 0x002233);
+            grid.position.y = 0.1; scene.add(grid);
 
-        function buildCity() {
-            const matDark = new THREE.MeshStandardMaterial({color: 0x050508, roughness: 0.9});
-            const matGlass = new THREE.MeshStandardMaterial({color: 0x111115, roughness: 0.1, metalness: 0.8});
-            
-            const bGeo = new THREE.BoxGeometry(1,1,1);
-            const nGeo = new THREE.BoxGeometry(1,1,1);
-            
+            // Instanced Buildings
+            const matDark = new THREE.MeshStandardMaterial({color: 0x0a0a10, roughness: 0.9});
+            const bGeo = new THREE.BoxGeometry(1, 1, 1);
             const bData = [], nCyan = [], nPink = [];
-            
-            // Generate standard buildings
-            for(let x = -1500; x <= 1500; x += 60) {
-                for(let z = -1500; z <= 1500; z += 60) {
-                    if(Math.hypot(x, z) > 1500) continue;
-                    if(isOnRoad(x, z)) continue;
-                    if(inLandmarkZone(x, z)) continue;
+
+            for (let r = 250; r < 1200; r += 60) {
+                const count = Math.floor(2 * Math.PI * r / 60);
+                for (let i = 0; i < count; i++) {
+                    const theta = (i / count) * 2 * Math.PI;
+                    const x = r * Math.cos(theta); const z = r * Math.sin(theta);
                     
-                    let h = 40 + Math.random() * 120;
-                    if (Math.hypot(x,z) < 400) h += 80;
-                    
-                    bData.push({x: x, y: h/2, z: z, sx: 45, sy: h, sz: 45});
-                    addCollisionBox(x, z, 45, 45);
-                    
-                    // Add Cyber Neon Strips
-                    if(Math.random() > 0.4 && h > 60) {
-                        if(Math.random() > 0.5) {
-                            nCyan.push({x: x+22.6, y: h/2, z: z, sx: 1, sy: h*0.8, sz: 6});
-                        } else {
-                            nPink.push({x: x, y: h/2, z: z+22.6, sx: 6, sy: h*0.8, sz: 1});
+                    if (!isWalkable(x, z, 0)) {
+                        let h = 40 + Math.random() * 120;
+                        if(r < 400) h += 100;
+                        bData.push({x: x, y: h/2, z: z, sx: 45, sy: h, sz: 45});
+                        
+                        if(Math.random() > 0.4 && h > 60) {
+                            if(Math.random() > 0.5) nCyan.push({x: x+22.6, y: h/2, z: z, sx: 1, sy: h*0.8, sz: 4});
+                            else nPink.push({x: x, y: h/2, z: z+22.6, sx: 4, sy: h*0.8, sz: 1});
                         }
                     }
                 }
             }
 
-            // Instanced Meshes
-            const dummy = new THREE.Object3D();
-            const buildInstanced = (geo, mat, data) => {
-                const mesh = new THREE.InstancedMesh(geo, mat, data.length);
-                data.forEach((d, i) => {
-                    dummy.position.set(d.x, d.y, d.z); dummy.scale.set(d.sx, d.sy, d.sz);
-                    dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
-                });
+            const buildIMesh = (geo, mat, data) => {
+                if(data.length===0) return; const mesh = new THREE.InstancedMesh(geo, mat, data.length);
+                const dummy = new THREE.Object3D();
+                data.forEach((d, i) => { dummy.position.set(d.x, d.y, d.z); dummy.scale.set(d.sx, d.sy, d.sz); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
                 scene.add(mesh);
             };
-            
-            buildInstanced(bGeo, matDark, bData);
-            buildInstanced(nGeo, new THREE.MeshBasicMaterial({color: 0x00ffff}), nCyan);
-            buildInstanced(nGeo, new THREE.MeshBasicMaterial({color: 0xff00ff}), nPink);
+            buildIMesh(bGeo, matDark, bData);
+            buildIMesh(bGeo, new THREE.MeshBasicMaterial({color: 0x00ffff}), nCyan);
+            buildIMesh(bGeo, new THREE.MeshBasicMaterial({color: 0xff00ff}), nPink);
 
             // 1. Central Tower (0,0)
             const cGroup = new THREE.Group();
-            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(150, 200, 100, 16), matDark).translateY(50));
-            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(80, 120, 500, 16), matGlass).translateY(350));
-            // Glow beam to space
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 4000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending}));
+            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(120, 180, 200, 32), matDark).translateY(100)); // Base
+            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(60, 100, 300, 16), matDark).translateY(350)); // Upper
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 4000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending}));
             beam.position.y = 2000; cGroup.add(beam);
+            // Core
+            cGroup.add(new THREE.Mesh(new THREE.SphereGeometry(30, 32, 32), new THREE.MeshBasicMaterial({color: 0x00ffff})).translateY(520));
+            cGroup.add(new THREE.Mesh(new THREE.SphereGeometry(35, 16, 16), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true})).translateY(520));
             scene.add(cGroup);
-            addCollisionBox(0,0, 250, 250);
             
-            // Warp into Central Tower
-            addWarp(0, 0, 180, 0, 300, 0, "展望タワーへ", 0x00ffff);
-            addWarp(0, 300, 30, 0, 0, 200, "地上へ戻る", 0xff00ff);
+            // Warp & Observatory
+            addWarp(0, 0, -140, 0, 201, 0, "展望台へ", 0x00ffff);
+            addWarp(0, 201, 30, 0, 0, -150, "地上へ", 0xff00ff);
             
-            // Tower Interior/Observation deck
-            const obs = new THREE.Mesh(new THREE.CylinderGeometry(100, 100, 10, 32), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide}));
-            obs.position.set(0, 299, 0); scene.add(obs);
+            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(110, 110, 10, 32), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide})).translateY(200.1)); // obs floor
+            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(110, 110, 20, 32), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.2})).translateY(210)); // glass
 
-            // 2. Outer Landmarks
-            landmarkCenters.forEach(lm => {
+            // 2. Landmarks & Interiors
+            landmarks.forEach(lm => {
                 const g = new THREE.Group();
-                g.add(new THREE.Mesh(new THREE.BoxGeometry(200, 40, 200), matDark).translateY(20));
+                g.add(new THREE.Mesh(new THREE.BoxGeometry(220, 40, 220), matDark).translateY(20));
                 
                 if (lm.type === 'mall') {
-                    g.add(new THREE.Mesh(new THREE.SphereGeometry(60, 16, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true})).translateY(40));
-                    addWarp(lm.x, 0, lm.z+120, 5000, 2, 0, "モール内へ", 0xff00ff);
+                    g.add(new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true})).translateY(40));
+                    addWarp(lm.x, 0, lm.z+130, 5000, 2, 0, "モール内へ", 0xff00ff);
                 } else if (lm.type === 'exchange') {
-                    g.add(new THREE.Mesh(new THREE.BoxGeometry(100, 80, 100), matGlass).translateY(80));
-                    addWarp(lm.x, 0, lm.z+120, 6000, 2, 0, "取引所へ", 0xffff00);
+                    g.add(new THREE.Mesh(new THREE.BoxGeometry(140, 80, 140), matDark).translateY(80));
+                    addWarp(lm.x, 0, lm.z+130, 6000, 2, 0, "取引所へ", 0xffff00);
                 } else if (lm.type === 'dome') {
-                    g.add(new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true})).translateY(40));
+                    g.add(new THREE.Mesh(new THREE.SphereGeometry(110, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true})).translateY(40));
                 } else if (lm.type === 'security') {
-                    g.add(new THREE.Mesh(new THREE.BoxGeometry(250, 10, 250), matDark).translateY(100));
+                    g.add(new THREE.Mesh(new THREE.BoxGeometry(250, 10, 250), matDark).translateY(150));
                 }
-                
                 g.position.set(lm.x, 0, lm.z);
                 scene.add(g);
-                addCollisionBox(lm.x, lm.z, 200, 200);
             });
 
-            // 3. Interiors (far away)
             // Mall Interior
             const mallInt = new THREE.Group();
-            mallInt.add(new THREE.Mesh(new THREE.BoxGeometry(200, 60, 200), new THREE.MeshStandardMaterial({color: 0x111111, side: THREE.BackSide})).translateY(30));
-            mallInt.add(new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color: 0x222222})).rotateX(-Math.PI/2));
-            const boutique = new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshBasicMaterial({color: 0x000055}));
-            boutique.rotation.x = -Math.PI/2; boutique.position.set(0, 0.1, -50); mallInt.add(boutique);
+            mallInt.add(new THREE.Mesh(new THREE.BoxGeometry(200, 60, 200), new THREE.MeshStandardMaterial({color: 0x111, side: THREE.BackSide})).translateY(30));
+            mallInt.add(new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color: 0x222})).rotateX(-Math.PI/2));
+            mallInt.add(new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshBasicMaterial({color: 0x002244})).rotateX(-Math.PI/2).translateZ(0.1).translateY(50)); // Boutique floor
             mallInt.position.set(5000, 0, 0); scene.add(mallInt);
-            addWarp(5000, 2, 80, landmarkCenters[0].x, 0, landmarkCenters[0].z+140, "外へ戻る", 0x00ffff);
+            addWarp(5000, 2, 80, landmarks[0].x, 0, landmarks[0].z+150, "外へ", 0x00ffff);
 
             // Exchange Interior
             const exInt = new THREE.Group();
-            exInt.add(new THREE.Mesh(new THREE.BoxGeometry(150, 50, 150), new THREE.MeshStandardMaterial({color: 0x111111, side: THREE.BackSide})).translateY(25));
-            exInt.add(new THREE.Mesh(new THREE.PlaneGeometry(150,150), new THREE.MeshStandardMaterial({color: 0x333333})).rotateX(-Math.PI/2));
-            const screen = new THREE.Mesh(new THREE.PlaneGeometry(80, 30), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
-            screen.position.set(0, 20, -74); exInt.add(screen);
+            exInt.add(new THREE.Mesh(new THREE.BoxGeometry(150, 50, 150), new THREE.MeshStandardMaterial({color: 0x111, side: THREE.BackSide})).translateY(25));
+            exInt.add(new THREE.Mesh(new THREE.PlaneGeometry(150,150), new THREE.MeshStandardMaterial({color: 0x333})).rotateX(-Math.PI/2));
+            
+            stockChartTex = new THREE.CanvasTexture(document.createElement('canvas')); stockChartTex.image.width=512; stockChartTex.image.height=256; stockChartCtx = stockChartTex.image.getContext('2d');
+            exInt.add(new THREE.Mesh(new THREE.PlaneGeometry(80, 40), new THREE.MeshBasicMaterial({map: stockChartTex})).setPos(0, 20, -74)); // Screen
+            exInt.add(new THREE.Mesh(new THREE.BoxGeometry(40,5,10), new THREE.MeshStandardMaterial({color: 0x444})).translateY(2.5).translateZ(-50)); // Desk
             exInt.position.set(6000, 0, 0); scene.add(exInt);
-            addWarp(6000, 2, 60, landmarkCenters[3].x, 0, landmarkCenters[3].z+140, "外へ戻る", 0x00ffff);
+            addWarp(6000, 2, 60, landmarks[3].x, 0, landmarks[3].z+150, "外へ", 0x00ffff);
+
+            // Drone Pad
+            const pad = new THREE.Group();
+            pad.add(new THREE.Mesh(new THREE.BoxGeometry(150, 5, 250), matDark));
+            pad.position.set(-1100, 50, 0); scene.add(pad);
         }
 
-        const trains = [];
-        function createTrainMesh() {
+        function createTrainMesh(color) {
             const grp = new THREE.Group();
-            const matDark = new THREE.MeshStandardMaterial({color: 0x111111});
+            const matDark = new THREE.MeshStandardMaterial({color: 0x111});
             grp.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 30), matDark)); // floor
             grp.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 30), matDark).translateY(10)); // roof
             
-            const glass = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide});
+            const glass = new THREE.MeshBasicMaterial({color: color, transparent: true, opacity: 0.3, side: THREE.DoubleSide});
             grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 30), glass).translateY(5).translateX(-4.8));
             grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(10));
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(-10));
+            grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(-10)); // Door gap
             
-            const nose = new THREE.Mesh(new THREE.ConeGeometry(5, 8, 16), matDark);
-            nose.rotation.x = Math.PI/2;
+            const nose = new THREE.Mesh(new THREE.ConeGeometry(5, 8, 16), matDark); nose.rotation.x = Math.PI/2;
             grp.add(nose.clone().translateZ(19).translateY(5));
             grp.add(nose.clone().rotateX(Math.PI).translateZ(-19).translateY(5));
             return grp;
         }
 
         function initTrains() {
-            const trackMat = new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.8});
-            
-            // Inner Loop
-            scene.add(new THREE.Mesh(new THREE.TorusGeometry(RING_INNER, 2, 8, 128), trackMat).setRotationFromEuler(new THREE.Euler(Math.PI/2,0,0)).translateZ(-58));
-            for(let i=0; i<2; i++) {
-                let mesh = createTrainMesh(); scene.add(mesh);
-                trains.push({ r: RING_INNER, y: 60, angle: i*Math.PI, speed: 0.25, state: 'moving', timer: 0, mesh: mesh });
-            }
-            
-            // Outer Loop
-            scene.add(new THREE.Mesh(new THREE.TorusGeometry(RING_OUTER, 2, 8, 256), trackMat).setRotationFromEuler(new THREE.Euler(Math.PI/2,0,0)).translateZ(-88));
-            for(let i=0; i<4; i++) {
-                let mesh = createTrainMesh(); scene.add(mesh);
-                trains.push({ r: RING_OUTER, y: 90, angle: i*Math.PI/2, speed: 0.15, state: 'moving', timer: 0, mesh: mesh });
-            }
+            const trackMat = new THREE.MeshStandardMaterial({color: 0x222, metalness: 0.8});
+            scene.add(new THREE.Mesh(new THREE.TorusGeometry(RING_INNER, 2, 8, 128), trackMat).setRotationFromEuler(new THREE.Euler(Math.PI/2,0,0)).translateY(68));
+            scene.add(new THREE.Mesh(new THREE.TorusGeometry(RING_OUTER, 2, 8, 256), trackMat).setRotationFromEuler(new THREE.Euler(Math.PI/2,0,0)).translateY(88));
 
-            // Stations & Warps
-            for(let i=0; i<4; i++) {
-                let a = i * Math.PI/2;
-                // Inner stations
-                let ix = RING_INNER * Math.cos(a), iz = RING_INNER * Math.sin(a);
-                addWarp(ix, 0, iz, ix+10, 60, iz+10, "プラットフォームへ", 0x00ffff);
-                addWarp(ix+10, 60, iz+10, ix, 0, iz, "地上へ", 0xff00ff);
+            const trainConfigs = [
+                {r: RING_INNER, y: 70, angle: 0, speed: 0.25, c: 0x00ffff}, {r: RING_INNER, y: 70, angle: Math.PI, speed: 0.25, c: 0x00ffff},
+                {r: RING_OUTER, y: 90, angle: 0, speed: -0.15, c: 0xff00ff}, {r: RING_OUTER, y: 90, angle: Math.PI/2, speed: -0.15, c: 0xff00ff},
+                {r: RING_OUTER, y: 90, angle: Math.PI, speed: -0.15, c: 0xff00ff}, {r: RING_OUTER, y: 90, angle: 3*Math.PI/2, speed: -0.15, c: 0xff00ff}
+            ];
+
+            trainConfigs.forEach(cfg => {
+                const mesh = createTrainMesh(cfg.c); scene.add(mesh);
+                trains.push({ r: cfg.r, y: cfg.y, angle: cfg.angle, speed: cfg.speed, state: 'moving', timer: 0, mesh: mesh });
+            });
+
+            // Stations
+            for(let i=0; i<8; i++) {
+                let a = i * Math.PI/4;
+                let r = i%2===0 ? RING_INNER : RING_OUTER; let y = i%2===0 ? 70 : 90;
+                let tx = r * Math.cos(a), tz = r * Math.sin(a);
+                let p = new THREE.Vector3(tx, y, tz);
+                let tangent = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a));
+                let normal = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)); // 中心から外向き
                 
-                // Outer stations
-                let ox = RING_OUTER * Math.cos(a), oz = RING_OUTER * Math.sin(a);
-                addWarp(ox, 0, oz, ox+10, 90, oz+10, "プラットフォームへ", 0x00ffff);
-                addWarp(ox+10, 90, oz+10, ox, 0, oz, "地上へ", 0xff00ff);
-            }
-        }
+                // Platform
+                const plat = new THREE.Group();
+                plat.add(new THREE.Mesh(new THREE.BoxGeometry(15, 2, 50), new THREE.MeshStandardMaterial({color: 0x111})).translateY(-2));
+                plat.position.copy(p).add(normal.clone().multiplyScalar(13)); // 線路の横に配置
+                plat.rotation.y = -a; scene.add(plat);
 
-        const drones = [];
-        function initDrones() {
-            const geo = new THREE.BoxGeometry(4, 1, 6);
-            const mat = new THREE.MeshBasicMaterial({color: 0x00ffff});
-            for(let i=0; i<50; i++) {
-                let d = new THREE.Mesh(geo, mat);
-                d.position.set((Math.random()-0.5)*3000, 100+Math.random()*400, (Math.random()-0.5)*3000);
-                d.userData = { speed: 50 + Math.random()*100, angle: Math.random()*Math.PI*2 };
-                scene.add(d);
-                drones.push(d);
+                // Warps
+                let gx = p.x + normal.x * 25, gz = p.z + normal.z * 25; // 歩道
+                let hx = plat.position.x, hy = plat.position.y, hz = plat.position.z;
+                addWarp(gx, 0, gz, hx, hy, hz, "駅ホームへ", 0x00ffff);
+                addWarp(hx, hy, hz, gx, 0, gz, "地上へ", 0xff00ff);
             }
-        }
-
-        async function attemptAuth(endpoint) {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            // mock network delay
-            setTimeout(() => {
-                currentUsername = username;
-                document.getElementById('ui-username').innerText = currentUsername;
-                startGame();
-            }, 500);
         }
 
         function startGame() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('sidebar').style.display = 'flex';
-            
-            // Mock socket
-            socket = { on: ()=>{}, emit: ()=>{} }; 
+            document.getElementById('chat-container').style.display = 'flex';
+
+            socket = io({ auth: { username: currentUsername } });
             
             initThreeJS();
+            
+            socket.on('initData', (d) => {
+                updateStockChart(d.stockPrice);
+                Object.keys(d.players).forEach(id => {
+                    const info = d.players[id];
+                    if (id === socket.id) {
+                        localPlayerMesh = createAvatarMesh(info.avatar);
+                        localPlayerMesh.position.set(info.x, info.y, info.z);
+                        localPlayerMesh.add(createNameLabel(info.username, info.avatar.nameColor));
+                        scene.add(localPlayerMesh);
+                    } else {
+                        const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z);
+                        m.add(createNameLabel(info.username, info.avatar.nameColor)); scene.add(m); otherPlayers[id] = m;
+                    }
+                });
+            });
+            socket.on('newPlayer', (info) => {
+                const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z);
+                m.add(createNameLabel(info.username, info.avatar.nameColor)); scene.add(m); otherPlayers[info.id] = m;
+            });
+            socket.on('playerMoved', (i) => { if (otherPlayers[i.id]) { otherPlayers[i.id].position.set(i.x, i.y, i.z); otherPlayers[i.id].rotation.y = i.rotation; } });
+            socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; } });
+            socket.on('chatMessage', (msg) => {
+                const msgs = document.getElementById('chat-messages'); const div = document.createElement('div'); div.className = 'chat-msg' + (msg.isAdmin ? ' admin' : '');
+                div.innerHTML = `<span class="name">${msg.username}:</span> ${msg.text}`; msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight; showBubble(msg.id, msg.text);
+            });
+            socket.on('marketUpdate', p => updateStockChart(p));
+            socket.on('updateEconomy', d => { document.getElementById('ui-money').innerText = d.money; document.getElementById('ui-stocks').innerText = d.stocks; });
+            socket.on('speedUpdated', m => adminSpeedMult = m);
+            socket.on('notification', m => showNotification(m.type, m.text));
         }
 
-        // カメラ制御変数
-        let cameraYaw = 0, cameraPitch = 0.2;
-        let isDragging = false, prevMouse = {x:0, y:0};
-        const keysPressed = {};
+        function updateStockChart(price) {
+            if(!stockChartCtx) return;
+            stockHistory.push(price); if(stockHistory.length > 20) stockHistory.shift();
+            stockChartCtx.fillStyle = '#0a0a0f'; stockChartCtx.fillRect(0, 0, 512, 256);
+            stockChartCtx.strokeStyle = '#222'; stockChartCtx.lineWidth = 2; for(let i=0; i<5; i++) { stockChartCtx.beginPath(); stockChartCtx.moveTo(0, i*50+28); stockChartCtx.lineTo(512, i*50+28); stockChartCtx.stroke(); }
+            if(stockHistory.length > 1) {
+                stockChartCtx.strokeStyle = '#00ffff'; stockChartCtx.lineWidth = 4; stockChartCtx.beginPath();
+                const step = 512 / 19, maxP = Math.max(10, ...stockHistory) * 1.2;
+                stockHistory.forEach((p, i) => { const x = i * step, y = 256 - (p / maxP) * 200 - 20; if(i === 0) stockChartCtx.moveTo(x, y); else stockChartCtx.lineTo(x, y); });
+                stockChartCtx.stroke();
+            }
+            stockChartCtx.fillStyle = '#fff'; stockChartCtx.font = 'bold 36px sans-serif'; stockChartCtx.fillText(`CURRENT: ${price} CR`, 20, 50);
+            stockChartTex.needsUpdate = true;
+        }
 
         function initThreeJS() {
-            const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020108); // 漆黒の宇宙
-            scene.fog = new THREE.FogExp2(0x1a0b2e, 0.0008); // ダークパープルの霧
+            scene.background = new THREE.Color(0x020108); // 漆黒宇宙
+            scene.fog = new THREE.FogExp2(0x1a0b2e, 0.001); // ダークパープルフォグ
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
-            
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            container.appendChild(renderer.domElement);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
 
             // サイバーパンク・ライティング
-            scene.add(new THREE.AmbientLight(0x111122, 1.0));
-            const hemi = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8);
-            hemi.position.set(0, 500, 0);
-            scene.add(hemi);
-            
-            // Ground
-            const ground = new THREE.Mesh(new THREE.CylinderGeometry(1500, 1000, 800, 64), new THREE.MeshStandardMaterial({color: 0x050505}));
-            ground.position.y = -400.1; scene.add(ground);
-            
-            // Cyber Grid
-            const grid = new THREE.GridHelper(3000, 150, 0x00ffff, 0x003333);
-            grid.position.y = 0.1; scene.add(grid);
+            scene.add(new THREE.AmbientLight(0x111122, 1.5));
+            const hemi = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8); hemi.position.set(0, 500, 0); scene.add(hemi);
 
-            // Particles (Stars/Dust)
-            const pts = new Float32Array(10000 * 3);
-            for(let i=0; i<30000; i++) pts[i] = (Math.random()-0.5)*4000;
+            // パーティクル（星屑）
+            const pts = new Float32Array(15000 * 3);
+            for(let i=0; i<45000; i++) pts[i] = (Math.random()-0.5)*4000;
             const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-            const pMat = new THREE.PointsMaterial({color: 0xffffff, size: 2, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending});
-            scene.add(new THREE.Points(pGeo, pMat));
+            scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({color: 0x00ffff, size: 3, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending})));
 
-            // Generate World
-            buildCity();
+            for(let i=0; i<50; i++) {
+                let d = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 6), new THREE.MeshBasicMaterial({color: 0x00ffff}));
+                d.position.set((Math.random()-0.5)*3000, 100+Math.random()*400, (Math.random()-0.5)*3000);
+                d.userData = { speed: 50 + Math.random()*100, angle: Math.random()*Math.PI*2 };
+                scene.add(d); drones.push(d);
+            }
+
+            generateCyberCity();
             initTrains();
-            initDrones();
-
-            // Setup Player
-            localPlayerMesh = createAvatarMesh({ body: '#00ffff', skin: '#ffcc99', visor: '#ff00ff', nameColor: '#ffffff', accessory: 'none' });
-            localPlayerMesh.position.set(0, 0, 100);
-            localPlayerMesh.add(createNameLabel(currentUsername, '#ffffff'));
-            scene.add(localPlayerMesh);
 
             clock = new THREE.Clock();
 
-            // Controls
-            window.addEventListener('keydown', e => keysPressed[e.key.toLowerCase()] = true);
+            window.addEventListener('keydown', e => { keysPressed[e.key.toLowerCase()] = true; if(e.key.toLowerCase()==='e' && interactionTarget) executeWarp(); });
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
             
             renderer.domElement.addEventListener('mousedown', () => isDragging = true);
@@ -488,126 +538,129 @@
                 if(isDragging) {
                     cameraYaw -= (e.clientX - prevMouse.x) * 0.005;
                     cameraPitch -= (e.clientY - prevMouse.y) * 0.005;
-                    cameraPitch = Math.max(0.1, Math.min(Math.PI/2 - 0.1, cameraPitch)); 
+                    cameraPitch = Math.max(-0.2, Math.min(Math.PI/2 - 0.1, cameraPitch)); 
                 }
                 prevMouse = {x: e.clientX, y: e.clientY};
             });
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 
             animate();
+        }
+
+        function executeWarp() {
+            if(!interactionTarget || !localPlayerMesh) return;
+            localPlayerMesh.position.set(interactionTarget.tx, interactionTarget.ty, interactionTarget.tz);
+            interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            const p = localPlayerMesh.position;
 
-            // Update Drones
             for(let d of drones) {
-                d.position.x += Math.cos(d.userData.angle) * d.userData.speed * delta;
-                d.position.z += Math.sin(d.userData.angle) * d.userData.speed * delta;
-                d.rotation.y = -d.userData.angle;
-                if(Math.hypot(d.position.x, d.position.z) > 1600) d.userData.angle += Math.PI;
+                d.position.x += Math.cos(d.userData.angle) * d.userData.speed * delta; d.position.z += Math.sin(d.userData.angle) * d.userData.speed * delta;
+                d.rotation.y = -d.userData.angle; if(Math.hypot(d.position.x, d.position.z) > 1600) d.userData.angle += Math.PI;
             }
 
-            // Update Trains & Handle Riding
-            let isRiding = false;
-            for(let train of trains) {
-                if(train.state === 'moving') {
-                    train.angle += train.speed * delta;
-                    let mod = train.angle % (Math.PI/2);
-                    if(mod < train.speed*delta || mod > (Math.PI/2)-train.speed*delta) {
-                        train.angle = Math.round(train.angle / (Math.PI/2)) * (Math.PI/2);
-                        train.state = 'stopped'; train.timer = 5.0;
+            if (localPlayerMesh) {
+                let riding = false;
+                
+                // モノレール処理と乗車判定
+                for(let train of trains) {
+                    if(train.state === 'moving') {
+                        train.angle += train.speed * delta;
+                        let mod = Math.abs(train.angle % (Math.PI/4));
+                        if(mod < Math.abs(train.speed*delta) || Math.PI/4 - mod < Math.abs(train.speed*delta)) {
+                            train.angle = Math.round(train.angle / (Math.PI/4)) * (Math.PI/4);
+                            train.state = 'stopped'; train.timer = 5.0;
+                        }
+                    } else {
+                        train.timer -= delta; if(train.timer <= 0) train.state = 'moving';
                     }
+                    
+                    let nextX = train.r * Math.cos(train.angle); let nextZ = train.r * Math.sin(train.angle);
+                    
+                    // 完璧な乗車追従システム
+                    if(Math.abs(localPlayerMesh.position.y - train.y) < 5 && Math.hypot(localPlayerMesh.position.x - train.mesh.position.x, localPlayerMesh.position.z - train.mesh.position.z) < 15) {
+                        riding = true;
+                        // 遠心力と位置オフセットの計算
+                        const dx = localPlayerMesh.position.x - train.mesh.position.x;
+                        const dz = localPlayerMesh.position.z - train.mesh.position.z;
+                        const dAngle = train.angle - train.prevAngle;
+                        
+                        localPlayerMesh.position.x = nextX + (dx * Math.cos(dAngle) + dz * Math.sin(dAngle));
+                        localPlayerMesh.position.z = nextZ + (-dx * Math.sin(dAngle) + dz * Math.cos(dAngle));
+                        localPlayerMesh.rotation.y -= dAngle; // アバターの向きも回転
+                    }
+                    
+                    train.prevAngle = train.angle;
+                    train.mesh.position.set(nextX, train.y, nextZ); train.mesh.rotation.y = -train.angle;
+                }
+
+                // プレイヤー移動 (A/D完全修正版)
+                if(!riding) {
+                    const speed = (keysPressed['shift'] ? 45 : 15) * adminSpeedMult;
+                    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                    let move = new THREE.Vector3();
+                    
+                    if(keysPressed['w'] || keysPressed['arrowup']) move.add(forward);
+                    if(keysPressed['s'] || keysPressed['arrowdown']) move.sub(forward);
+                    if(keysPressed['a'] || keysPressed['arrowleft']) move.sub(right); // 左
+                    if(keysPressed['d'] || keysPressed['arrowright']) move.add(right); // 右
+                    
+                    if(move.lengthSq() > 0) {
+                        move.normalize();
+                        let nextX = localPlayerMesh.position.x + move.x * speed * delta;
+                        let nextZ = localPlayerMesh.position.z + move.z * speed * delta;
+                        
+                        if(isWalkable(nextX, localPlayerMesh.position.z, localPlayerMesh.position.y)) localPlayerMesh.position.x = nextX;
+                        if(isWalkable(localPlayerMesh.position.x, nextZ, localPlayerMesh.position.y)) localPlayerMesh.position.z = nextZ;
+                        localPlayerMesh.rotation.y = Math.atan2(move.x, move.z);
+                    }
+                }
+                
+                if (keysPressed['w'] || keysPressed['s'] || keysPressed['a'] || keysPressed['d'] || riding) {
+                    socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
+                }
+
+                // Warp interaction
+                interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
+                for(let w of warps) {
+                    if(Math.hypot(localPlayerMesh.position.x - w.x, localPlayerMesh.position.z - w.z) < 5 && Math.abs(localPlayerMesh.position.y - w.y) < 3) {
+                        interactionTarget = w; document.getElementById('prompt-text').innerText = w.label; document.getElementById('interaction-prompt').style.display = 'block'; break;
+                    }
+                }
+
+                // UI Zones
+                if (localPlayerMesh.position.x > 4900 && localPlayerMesh.position.x < 5100 && localPlayerMesh.position.z > -100 && localPlayerMesh.position.z < 100) {
+                    if(localPlayerMesh.position.z > 30) { document.getElementById('boutique-panel').style.display = 'block'; document.getElementById('ui-area').innerText = '📍 BOUTIQUE'; }
+                    else { document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 MALL INTERIOR'; }
+                } else if(localPlayerMesh.position.x > 5900) {
+                    document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 EXCHANGE';
                 } else {
-                    train.timer -= delta;
-                    if(train.timer <= 0) train.state = 'moving';
+                    document.getElementById('boutique-panel').style.display = 'none';
+                    let area = '📍 NEO-AETHERIA';
+                    if(Math.hypot(localPlayerMesh.position.x, localPlayerMesh.position.z) < 220) area = '📍 CYBERCORE';
+                    document.getElementById('ui-area').innerText = area;
                 }
-                
-                let nextX = train.r * Math.cos(train.angle);
-                let nextZ = train.r * Math.sin(train.angle);
-                
-                // If player is inside train
-                if(Math.abs(p.y - train.y) < 5 && Math.hypot(p.x - train.mesh.position.x, p.z - train.mesh.position.z) < 15) {
-                    isRiding = true;
-                    p.x += (nextX - train.mesh.position.x);
-                    p.z += (nextZ - train.mesh.position.z);
-                    // Add rotational centrifugal force offset
-                    if(train.state === 'moving') localPlayerMesh.rotation.y -= (train.speed * delta);
-                }
-                
-                train.mesh.position.set(nextX, train.y, nextZ);
-                train.mesh.rotation.y = -train.angle; // Face tangent
-            }
 
-            // Player Movement (TPS relative to camera)
-            if(!isRiding) {
-                const speed = keysPressed['shift'] ? 45 : 15;
-                const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
-                const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
-                let move = new THREE.Vector3();
+                // Camera Follow
+                const dist = 30; const camY = localPlayerMesh.position.y + dist * Math.sin(cameraPitch) + 3;
+                const xz = dist * Math.cos(cameraPitch); const camX = localPlayerMesh.position.x - xz * Math.sin(cameraYaw); const camZ = localPlayerMesh.position.z - xz * Math.cos(cameraYaw);
+                camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.2); camera.lookAt(localPlayerMesh.position.x, localPlayerMesh.position.y + 4, localPlayerMesh.position.z);
                 
-                if(keysPressed['w'] || keysPressed['arrowup']) move.add(forward);
-                if(keysPressed['s'] || keysPressed['arrowdown']) move.sub(forward);
-                if(keysPressed['a'] || keysPressed['arrowleft']) move.sub(right); // A = left
-                if(keysPressed['d'] || keysPressed['arrowright']) move.add(right); // D = right
-                
-                if(move.lengthSq() > 0) {
-                    move.normalize();
-                    let nextX = p.x + move.x * speed * delta;
-                    let nextZ = p.z + move.z * speed * delta;
-                    
-                    if(!getCollision(nextX, p.z)) p.x = nextX;
-                    if(!getCollision(p.x, nextZ)) p.z = nextZ;
-                    
-                    localPlayerMesh.rotation.y = Math.atan2(move.x, move.z);
-                }
+                // Bubbles Update
+                const updatePos = (id, pos) => {
+                    if (chatBubbles[id] && chatBubbles[id].element.style.opacity === '1') {
+                        const v = new THREE.Vector3(pos.x, pos.y + 6, pos.z); v.project(camera);
+                        if (v.z > 1) { chatBubbles[id].element.style.display = 'none'; return; }
+                        chatBubbles[id].element.style.display = 'block'; chatBubbles[id].element.style.left = `${(v.x * .5 + .5) * window.innerWidth}px`; chatBubbles[id].element.style.top = `${(v.y * -.5 + .5) * window.innerHeight - 20}px`;
+                    }
+                };
+                updatePos(socket.id, localPlayerMesh.position);
+                for(let id in otherPlayers) updatePos(id, otherPlayers[id].position);
             }
-
-            // Interactable Warps
-            let activeWarp = null;
-            for(let w of warps) {
-                if(Math.hypot(p.x - w.x, p.z - w.z) < 4 && Math.abs(p.y - w.y) < 3) {
-                    activeWarp = w; break;
-                }
-            }
-            if(activeWarp) {
-                document.getElementById('interaction-prompt').style.display = 'block';
-                document.getElementById('prompt-text').innerText = activeWarp.label;
-                if(keysPressed['e']) {
-                    p.set(activeWarp.targetX, activeWarp.targetY, activeWarp.targetZ);
-                    keysPressed['e'] = false;
-                }
-            } else {
-                document.getElementById('interaction-prompt').style.display = 'none';
-            }
-
-            // UI Zone updates
-            if (p.x > 4900 && p.x < 5100 && p.z < 100 && p.z > -100) {
-                document.getElementById('boutique-panel').style.display = 'block';
-                document.getElementById('ui-area').innerText = '📍 BOUTIQUE';
-            } else {
-                document.getElementById('boutique-panel').style.display = 'none';
-                let area = '📍 NEO-AETHERIA';
-                if(Math.hypot(p.x, p.z) < 200) area = '📍 CYBERCORE';
-                document.getElementById('ui-area').innerText = area;
-            }
-
-            // Camera Follow
-            const dist = 30;
-            const camY = p.y + dist * Math.sin(cameraPitch) + 3;
-            const xz = dist * Math.cos(cameraPitch);
-            const camX = p.x - xz * Math.sin(cameraYaw);
-            const camZ = p.z - xz * Math.cos(cameraYaw);
-            
-            camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.2);
-            camera.lookAt(p.x, p.y + 4, p.z);
 
             renderer.render(scene, camera);
         }
