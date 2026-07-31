@@ -24,7 +24,6 @@
         .money { font-size: 1.8rem; color: #00ffff; font-weight: bold; margin-top: 5px; text-shadow: 0 0 10px #00ffff;}
         .area-name { font-size: 1.1rem; color: #fff; font-weight: bold; display: flex; align-items: center; gap: 8px;}
         
-        /* Minimap */
         #minimap-container { position: absolute; bottom: 20px; right: 20px; z-index: 10; width: 180px; height: 180px; border-radius: 50%; border: 2px solid #00ffff; background: rgba(10, 10, 25, 0.8); box-shadow: 0 0 20px rgba(0,255,255,0.4); overflow: hidden; display: none; }
         #minimap { width: 100%; height: 100%; }
         #minimap-label { position: absolute; top: 5px; width: 100%; text-align: center; font-size: 0.7rem; color: #00ffff; font-weight: bold; pointer-events: none; }
@@ -66,7 +65,6 @@
         <div class="panel">
             <h2>HAKUYARC</h2>
             <div id="auth-error" class="error-msg"></div>
-            <!-- ★重大修正: IDを username に統一しサーバーとの整合性を確保 -->
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
             <button class="btn-primary" onclick="attemptAuth('/api/login')">ENTER SYSTEM</button>
@@ -143,7 +141,7 @@
             {x: LANDMARK_DIST*Math.cos(-Math.PI/4), z: LANDMARK_DIST*Math.sin(-Math.PI/4), type: 'exchange', name: "Stock Exchange"}
         ];
 
-        // フリーズの元凶だった重いRaycaster判定を排除し、数学で当たり判定を行う最強ロジック
+        // 重いRaycaster判定を排除し、数学で当たり判定を行う超高速ロジック
         function isWalkable(x, z, y = 0) {
             if (x > 3000 || y > 150) return true; // 屋内や上空
             const r = Math.hypot(x, z);
@@ -168,12 +166,22 @@
         async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            
+            // 入力チェックをフロントエンドでも追加して確実にする
+            if (!username || !password) {
+                document.getElementById('auth-error').style.color = '#ff0055';
+                document.getElementById('auth-error').innerText = 'ユーザー名とパスワードを入力してください';
+                return;
+            }
+
             try {
                 const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
                 const data = await res.json();
+                
+                // サーバーからエラーが返ってきた場合は確実に表示して処理を止める
                 if (data.success) {
                     if (endpoint === '/api/login') {
-                        currentUsername = data.username; // ★確実にユーザーネームを取得
+                        currentUsername = data.username;
                         document.getElementById('ui-username').innerText = currentUsername;
                         document.getElementById('ui-money').innerText = data.money;
                         document.getElementById('ui-stocks').innerText = data.stocks;
@@ -187,7 +195,9 @@
                     document.getElementById('auth-error').innerText = data.message;
                 }
             } catch(e) {
-                document.getElementById('auth-error').innerText = '通信エラー';
+                console.error(e);
+                document.getElementById('auth-error').style.color = '#ff0055';
+                document.getElementById('auth-error').innerText = '通信エラーが発生しました';
             }
         }
 
@@ -250,7 +260,7 @@
                 const hpMat = new THREE.MeshStandardMaterial({ color: 0x222, metalness:0.8 });
                 const pad = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16); pad.rotateZ(Math.PI/2);
                 const p1 = new THREE.Mesh(pad, hpMat); p1.position.set(0.65, 2.6, 0);
-                const p2 = new THREE.Mesh(pad, hpMat); p2.position.set(-0.65, 2.6, 0);
+                const p2 = new Mesh(pad, hpMat); p2.position.set(-0.65, 2.6, 0);
                 const band = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.1, 8, 16, Math.PI), hpMat); band.position.set(0, 2.6, 0);
                 grp.add(p1, p2, band);
             } else if (config.accessory === 'cyberGlasses') {
@@ -276,12 +286,13 @@
             warps.push({x, y, z, tx, ty, tz, label});
         }
 
+        // Helper prototypes
         THREE.Object3D.prototype.setPos = function(x,y,z){this.position.set(x,y,z); return this;};
         THREE.Object3D.prototype.rotateX = function(r){this.rotation.x = r; return this;};
         THREE.Object3D.prototype.rotateY = function(r){this.rotation.y = r; return this;};
 
         function generateCyberCity() {
-            // Base
+            // Base Island
             const island = new THREE.Mesh(new THREE.ConeGeometry(1300, 600, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x0a0a0a, roughness: 1}));
             island.position.y = -300; island.rotation.x = Math.PI; scene.add(island);
             const ground = new THREE.Mesh(new THREE.CircleGeometry(1300, 64), new THREE.MeshStandardMaterial({color: 0x050508}));
@@ -334,14 +345,14 @@
             cGroup.add(new THREE.Mesh(new THREE.SphereGeometry(35, 16, 16), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true})).translateY(520));
             scene.add(cGroup);
             
-            // Warp & Observatory
+            // Tower Warp & Observatory
             addWarp(0, 0, -140, 0, 201, 0, "展望台へ", 0x00ffff);
             addWarp(0, 201, 30, 0, 0, -150, "地上へ", 0xff00ff);
             
             scene.add(new THREE.Mesh(new THREE.CylinderGeometry(110, 110, 10, 32), new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide})).translateY(200.1));
             scene.add(new THREE.Mesh(new THREE.CylinderGeometry(110, 110, 20, 32), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.2})).translateY(210)); 
 
-            // Landmarks
+            // Landmarks (4 Corners)
             landmarks.forEach(lm => {
                 const g = new THREE.Group();
                 g.add(new THREE.Mesh(new THREE.BoxGeometry(220, 40, 220), matDark).translateY(20));
@@ -404,8 +415,12 @@
 
         function initTrains() {
             const trackMat = new THREE.MeshStandardMaterial({color: 0x222, metalness: 0.8});
-            scene.add(new THREE.Mesh(new THREE.TorusGeometry(RING_INNER, 2, 8, 128), trackMat).setRotationFromEuler(new THREE.Euler(Math.PI/2,0,0)).translateY(68));
-            scene.add(new THREE.Mesh(new THREE.TorusGeometry(RING_OUTER, 2, 8, 256), trackMat).setRotationFromEuler(new THREE.Euler(Math.PI/2,0,0)).translateY(88));
+            
+            const t1 = new THREE.Mesh(new THREE.TorusGeometry(RING_INNER, 2, 8, 128), trackMat);
+            t1.rotation.x = Math.PI/2; t1.position.y = 68; scene.add(t1);
+
+            const t2 = new THREE.Mesh(new THREE.TorusGeometry(RING_OUTER, 2, 8, 256), trackMat);
+            t2.rotation.x = Math.PI/2; t2.position.y = 88; scene.add(t2);
 
             const trainConfigs = [
                 {r: RING_INNER, y: 70, angle: 0, speed: 0.25, c: 0x00ffff}, {r: RING_INNER, y: 70, angle: Math.PI, speed: 0.25, c: 0x00ffff},
@@ -446,31 +461,24 @@
             if(!localPlayerMesh) return;
             minimapCtx.clearRect(0,0,180,180);
             
-            // 背景
             minimapCtx.fillStyle = 'rgba(10, 10, 25, 0.8)';
             minimapCtx.fillRect(0,0,180,180);
 
-            // スケール計算 (半径1200を描画領域90に収める)
             const scale = 90 / 1200;
             const cx = 90, cy = 90;
 
             minimapCtx.save();
             minimapCtx.translate(cx, cy);
-            // プレイヤーの向きに合わせて回転させる場合は以下を有効化 (今回は固定)
-            // minimapCtx.rotate(-localPlayerMesh.rotation.y); 
 
-            // 中心広場
             minimapCtx.beginPath(); minimapCtx.arc(0, 0, 220 * scale, 0, Math.PI*2);
             minimapCtx.fillStyle = 'rgba(0, 255, 255, 0.2)'; minimapCtx.fill();
             minimapCtx.strokeStyle = 'rgba(0, 255, 255, 0.5)'; minimapCtx.stroke();
 
-            // ランドマーク
             landmarks.forEach(lm => {
                 minimapCtx.fillStyle = 'rgba(255, 0, 255, 0.5)';
                 minimapCtx.fillRect(lm.x * scale - 4, lm.z * scale - 4, 8, 8);
             });
 
-            // 他プレイヤー (青点)
             minimapCtx.fillStyle = '#0088ff';
             for(let id in otherPlayers) {
                 if(otherPlayers[id]) {
@@ -480,13 +488,11 @@
                 }
             }
 
-            // 自分 (赤点・少し大きめ)
             minimapCtx.fillStyle = '#ff0055';
             minimapCtx.beginPath();
             minimapCtx.arc(localPlayerMesh.position.x * scale, localPlayerMesh.position.z * scale, 4, 0, Math.PI*2);
             minimapCtx.fill();
             
-            // 向きの矢印
             minimapCtx.strokeStyle = '#fff';
             minimapCtx.lineWidth = 2;
             minimapCtx.beginPath();
@@ -623,7 +629,6 @@
             if (localPlayerMesh) {
                 let riding = false;
                 
-                // モノレールの神追従システム
                 for(let train of trains) {
                     if(train.state === 'moving') {
                         train.angle += train.speed * delta;
@@ -638,7 +643,6 @@
                     
                     let nextX = train.r * Math.cos(train.angle); let nextZ = train.r * Math.sin(train.angle);
                     
-                    // 完全追従（遠心力計算）
                     if(Math.abs(localPlayerMesh.position.y - train.y) < 5 && Math.hypot(localPlayerMesh.position.x - train.mesh.position.x, localPlayerMesh.position.z - train.mesh.position.z) < 15) {
                         riding = true;
                         const dx = localPlayerMesh.position.x - train.mesh.position.x;
@@ -654,11 +658,10 @@
                     train.mesh.position.set(nextX, train.y, nextZ); train.mesh.rotation.y = -train.angle;
                 }
 
-                // 完全なWASD操作 (カメラのZ軸基準で直感カニ歩き)
                 if(!riding) {
                     const speed = (keysPressed['shift'] ? 45 : 15) * adminSpeedMult;
                     const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)); // ベクトルの符号修正
+                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
                     let move = new THREE.Vector3();
                     
                     if(keysPressed['w'] || keysPressed['arrowup']) move.add(forward);
@@ -681,7 +684,6 @@
                     socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
                 }
 
-                // Warp interaction
                 interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
                 for(let w of warps) {
                     if(Math.hypot(localPlayerMesh.position.x - w.x, localPlayerMesh.position.z - w.z) < 5 && Math.abs(localPlayerMesh.position.y - w.y) < 3) {
@@ -689,7 +691,6 @@
                     }
                 }
 
-                // UI Zones
                 if (localPlayerMesh.position.x > 4900 && localPlayerMesh.position.x < 5100 && localPlayerMesh.position.z > -100 && localPlayerMesh.position.z < 100) {
                     if(localPlayerMesh.position.z > 30) { document.getElementById('boutique-panel').style.display = 'block'; document.getElementById('ui-area').innerText = '📍 BOUTIQUE'; }
                     else { document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 MALL INTERIOR'; }
@@ -702,12 +703,10 @@
                     document.getElementById('ui-area').innerText = area;
                 }
 
-                // Camera Follow
                 const dist = 30; const camY = localPlayerMesh.position.y + dist * Math.sin(cameraPitch) + 3;
                 const xz = dist * Math.cos(cameraPitch); const camX = localPlayerMesh.position.x - xz * Math.sin(cameraYaw); const camZ = localPlayerMesh.position.z - xz * Math.cos(cameraYaw);
                 camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.2); camera.lookAt(localPlayerMesh.position.x, localPlayerMesh.position.y + 4, localPlayerMesh.position.z);
                 
-                // Bubbles Update (エラー防止策徹底)
                 const updatePos = (id, pos) => {
                     if (chatBubbles[id] && chatBubbles[id].element.style.opacity === '1') {
                         const v = new THREE.Vector3(pos.x, pos.y + 6, pos.z); v.project(camera);
