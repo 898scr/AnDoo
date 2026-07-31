@@ -132,7 +132,7 @@
         const drones = [];
         let stockChartTex = null, stockChartCtx = null, stockHistory = [];
 
-        // 画像のような放射状と環状の都市構造を作るための極座標システム
+        // 放射状と環状の都市構造を作るための極座標システム
         const LANDMARK_DIST = 900;
         const RING_INNER = 500;
         const RING_OUTER = 900;
@@ -277,6 +277,10 @@
             group.position.set(x, y+0.1, z); scene.add(group);
             warps.push({x, y, z, tx, ty, tz, label});
         }
+
+        THREE.Object3D.prototype.setPos = function(x,y,z){this.position.set(x,y,z); return this;};
+        THREE.Object3D.prototype.rotateX = function(r){this.rotation.x = r; return this;};
+        THREE.Object3D.prototype.rotateY = function(r){this.rotation.y = r; return this;};
 
         function generateCyberCity() {
             // Floating Island Base
