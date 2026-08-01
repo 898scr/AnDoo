@@ -31,7 +31,7 @@
         #lock-instruction { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); border: 1px solid #ff00ff; padding: 10px 20px; border-radius: 20px; color: #fff; font-weight: bold; z-index: 20; pointer-events: none; text-shadow: 0 0 5px #ff00ff; }
 
         #interaction-prompt { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 25px; border-radius: 30px; color: #00ffff; font-weight: bold; font-size: 1.2rem; z-index: 20; display: none; pointer-events: none;}
-        .key-btn { display: inline-block; background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; font-family: monospace;}
+        .key-btn { display: inline-block; background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; font-family: monospace; font-weight: bold;}
 
         #chat-container { position: absolute; bottom: 20px; left: 300px; z-index: 10; width: 350px; background: rgba(10, 10, 25, 0.8); border-radius: 8px; border: 1px solid rgba(255,0,255,0.5); display: none; flex-direction: column;}
         #chat-header { background: rgba(255, 0, 255, 0.2); padding: 8px 12px; font-weight: bold; color: #ff00ff; font-size: 0.9rem;}
@@ -68,12 +68,12 @@
         </div>
         <div class="sidebar-section">
             <h3>Controls</h3>
-            <p style="font-size: 0.8rem; color:#aaa; line-height:1.6;">
+            <p style="font-size: 0.85rem; color:#ccc; line-height:1.6;">
                 [Click] 画面ロック (視点操作)<br>
                 [W, A, S, D] 移動<br>
                 [V] FPS / TPS 切替<br>
-                [E] アクション・乗降<br>
-                [Space/Shift] ドローン上下<br>
+                <span style="color: #00ffff; font-weight:bold;">[F] アクション・乗降</span><br>
+                <span style="color: #ff00ff; font-weight:bold;">[E / Q] ドローン上昇 / 下降</span><br>
                 [Esc] マウスロック解除
             </p>
         </div>
@@ -82,7 +82,8 @@
     <div id="lock-instruction">画面をクリックして視点操作を開始</div>
     <div id="crosshair"></div>
     <div id="minimap-container"><canvas id="minimap"></canvas></div>
-    <div id="interaction-prompt"><span class="key-btn">E</span><span id="prompt-text">アクション</span></div>
+    <!-- プロンプトのキーを [F] に変更 -->
+    <div id="interaction-prompt"><span class="key-btn">F</span><span id="prompt-text">アクション</span></div>
 
     <div id="chat-container">
         <div id="chat-header">💬 HAKUYARC COMMS</div>
@@ -98,13 +99,11 @@
         const otherPlayers = {}, chatBubbles = {};
         let localPlayerMesh = null, interactionTarget = null;
         
-        // カメラ・移動系
         const keysPressed = {};
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isFPS = false;
         let playerLocalPos = new THREE.Vector3();
         
-        // オブジェクト管理
-        const warps = [], trains = [], personalDrones = [];
+        const trains = [], personalDrones = [];
         let ridingTrain = null, ridingDrone = null;
         const RING_INNER = 500, RING_OUTER = 800;
 
@@ -125,7 +124,10 @@
                         startGame();
                     } else { errorEl.style.color = '#00ffff'; errorEl.innerText = data.message; }
                 } else { errorEl.style.color = '#ff0055'; errorEl.innerText = data.message; }
-            } catch(e) { errorEl.innerText = '通信エラー'; }
+            } catch(e) { 
+                console.log(e); // 開発用
+                errorEl.innerText = '通信エラー'; 
+            }
         }
 
         function startGame() {
@@ -144,7 +146,6 @@
         function setupInputControls() {
             const canvasEl = document.getElementById('canvas-container');
             
-            // マウスロック
             canvasEl.addEventListener('click', () => {
                 if (!document.pointerLockElement) document.body.requestPointerLock();
             });
@@ -157,22 +158,20 @@
                 if (isLocked) {
                     cameraYaw -= e.movementX * 0.002;
                     cameraPitch -= e.movementY * 0.002;
-                    // ピッチ（上下）の制限
                     cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
                 }
             });
 
-            // キーボード
             window.addEventListener('keydown', e => { 
                 const key = e.key.toLowerCase();
                 keysPressed[key] = true; 
-                if(key === 'e') executeInteraction(); 
+                // アクションキーを [F] に変更
+                if(key === 'f') executeInteraction(); 
                 if(key === 'v') {
                     isFPS = !isFPS;
                     document.getElementById('crosshair').style.display = (isLocked && isFPS) ? 'block' : 'none';
-                    if(localPlayerMesh) localPlayerMesh.visible = !isFPS; // FPS時は自分を隠す
+                    if(localPlayerMesh) localPlayerMesh.visible = !isFPS;
                 }
-                // チャット入力へのフォーカス
                 if(key === 't' && !isLocked) document.getElementById('chat-input').focus();
             });
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
@@ -210,86 +209,160 @@
             personalDrones.push({ mesh: grp });
         }
 
+        function createRoads() {
+            // サイバーパンクな発光道路
+            const roadMat = new THREE.MeshBasicMaterial({color: 0x00aaff, transparent:true, opacity:0.25, blending: THREE.AdditiveBlending});
+            // 放射状 (8方向)
+            for(let i=0; i<4; i++) {
+                const rPlane = new THREE.Mesh(new THREE.PlaneGeometry(3000, 80), roadMat);
+                rPlane.rotation.x = -Math.PI/2;
+                rPlane.rotation.z = i * Math.PI/4;
+                rPlane.position.y = 0.2;
+                scene.add(rPlane);
+            }
+            // 環状道路
+            const innerRing = new THREE.Mesh(new THREE.RingGeometry(460, 540, 64), roadMat);
+            innerRing.rotation.x = -Math.PI/2; innerRing.position.y = 0.2; scene.add(innerRing);
+            const outerRing = new THREE.Mesh(new THREE.RingGeometry(760, 840, 64), roadMat);
+            outerRing.rotation.x = -Math.PI/2; outerRing.position.y = 0.2; scene.add(outerRing);
+        }
+
+        function createLandmarks() {
+            const cGroup = new THREE.Group();
+            
+            // 巨大な六角形の土台
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(180, 250, 100, 6), new THREE.MeshStandardMaterial({color: 0x111122, metalness: 0.8, roughness: 0.2}));
+            base.position.y = 50; cGroup.add(base);
+            
+            // メインタワー
+            const tower = new THREE.Mesh(new THREE.CylinderGeometry(80, 150, 800, 16), new THREE.MeshStandardMaterial({color: 0x222233}));
+            tower.position.y = 500; cGroup.add(tower);
+            
+            // サイバーネオンリング
+            const ringMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.8});
+            const ring1 = new THREE.Mesh(new THREE.TorusGeometry(200, 5, 16, 32), ringMat);
+            ring1.rotation.x = Math.PI/2; ring1.position.y = 400; cGroup.add(ring1);
+            const ring2 = new THREE.Mesh(new THREE.TorusGeometry(150, 5, 16, 32), new THREE.MeshBasicMaterial({color: 0xff00ff}));
+            ring2.rotation.x = Math.PI/2; ring2.position.y = 600; cGroup.add(ring2);
+
+            // 天を貫く青いビーム
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 5000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
+            beam.position.y = 2500; cGroup.add(beam);
+            
+            scene.add(cGroup);
+        }
+
+        function createFacilities() {
+            // 外周の四隅に巨大なシンボルを配置
+            const positions = [
+                {x: 750, z: 750, color: 0xff00ff, name: "SHOPPING MALL"},
+                {x: -750, z: 750, color: 0x00ffff, name: "EXCHANGE"},
+                {x: 750, z: -750, color: 0xffff00, name: "ENTERTAINMENT DOME"},
+                {x: -750, z: -750, color: 0x00ff00, name: "DRONE PORT"}
+            ];
+
+            positions.forEach(p => {
+                const grp = new THREE.Group();
+                // 施設の黒い土台
+                const base = new THREE.Mesh(new THREE.BoxGeometry(250, 150, 250), new THREE.MeshStandardMaterial({color: 0x111122, metalness: 0.6}));
+                base.position.y = 75; grp.add(base);
+                
+                // ネオンのワイヤーフレームでサイバー感を演出
+                const neon = new THREE.Mesh(new THREE.BoxGeometry(255, 20, 255), new THREE.MeshBasicMaterial({color: p.color, wireframe: true}));
+                neon.position.y = 120; grp.add(neon);
+
+                // 発光するコア
+                const core = new THREE.Mesh(new THREE.CylinderGeometry(50, 50, 200, 16), new THREE.MeshBasicMaterial({color: p.color, transparent:true, opacity: 0.5}));
+                core.position.y = 150; grp.add(core);
+
+                grp.position.set(p.x, 0, p.z);
+                scene.add(grp);
+            });
+        }
+
         function initTrains() {
+            // 内周と外周の設定
             const trainConfigs = [
-                {r: RING_INNER, y: 30, angle: 0, speed: 0.15, c: 0x00ffff}, 
-                {r: RING_OUTER, y: 30, angle: Math.PI, speed: -0.1, c: 0xff00ff}
+                {r: 500, y: 50, angle: 0, speed: 0.15, c: 0x00ffff}, // 内周
+                {r: 800, y: 50, angle: Math.PI, speed: -0.1, c: 0xff00ff} // 外周
             ];
 
             trainConfigs.forEach(cfg => {
-                const trk = new THREE.Mesh(new THREE.TorusGeometry(cfg.r, 2, 8, 128), new THREE.MeshStandardMaterial({color: 0x8899aa}));
+                // 環状レール
+                const trk = new THREE.Mesh(new THREE.TorusGeometry(cfg.r, 2, 8, 128), new THREE.MeshStandardMaterial({color: 0x8899aa, metalness: 0.8}));
                 trk.rotation.x = Math.PI/2; trk.position.y = cfg.y - 2; scene.add(trk);
 
+                // 各路線に独立した駅を4つずつ配置（東西南北）
+                for(let i=0; i<4; i++) {
+                    const theta = (i * Math.PI) / 2;
+                    const px = cfg.r * Math.cos(theta);
+                    const pz = cfg.r * Math.sin(theta);
+                    
+                    const stationGrp = new THREE.Group();
+                    
+                    // ホーム (レールの少し内側または外側に配置)
+                    const platOffset = (cfg.r === 500) ? -15 : 15; // 内周は内側、外周は外側にホーム
+                    const plat = new THREE.Mesh(new THREE.BoxGeometry(20, 2, 80), new THREE.MeshStandardMaterial({color: 0x222233}));
+                    plat.position.set(platOffset, 0, 0); 
+                    stationGrp.add(plat);
+                    
+                    // サイバーな屋根
+                    const roof = new THREE.Mesh(new THREE.BoxGeometry(22, 2, 84), new THREE.MeshBasicMaterial({color: cfg.c, wireframe: true, transparent:true, opacity: 0.7}));
+                    roof.position.set(platOffset, 15, 0);
+                    stationGrp.add(roof);
+
+                    // 支柱
+                    const pillar = new THREE.Mesh(new THREE.BoxGeometry(10, cfg.y, 10), new THREE.MeshStandardMaterial({color: 0x111111}));
+                    pillar.position.set(platOffset, -cfg.y/2, 0);
+                    stationGrp.add(pillar);
+
+                    stationGrp.position.set(px, cfg.y - 3, pz);
+                    stationGrp.rotation.y = -theta;
+                    scene.add(stationGrp);
+                }
+
+                // 窓付きホバー車両
                 const grp = new THREE.Group();
                 grp.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 34), new THREE.MeshStandardMaterial({color: 0x222})));
-                const glass = new THREE.MeshBasicMaterial({color: cfg.c, transparent:true, opacity:0.3, side: THREE.DoubleSide});
+                const glass = new THREE.MeshBasicMaterial({color: cfg.c, transparent:true, opacity:0.4, side: THREE.DoubleSide});
                 grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 34), glass).translateY(5).translateX(-4.8));
                 grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(12));
                 grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(-12));
+                
                 scene.add(grp);
-                trains.push({ r: cfg.r, y: cfg.y, angle: cfg.angle, speed: cfg.speed, state: 'moving', timer: 0, mesh: grp, justDeparted: false });
+                trains.push({ r: cfg.r, y: cfg.y, angle: cfg.angle, speed: cfg.speed, mesh: grp });
             });
         }
 
         function initThreeJS() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a1a); 
-            scene.fog = new THREE.FogExp2(0x0a0a1a, 0.0015); 
+            scene.background = new THREE.Color(0x05021a); // 深紫の宇宙
+            scene.fog = new THREE.FogExp2(0x05021a, 0.001); // 遠くを霞ませる
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
+            // サイバーライティング
             scene.add(new THREE.AmbientLight(0x222233, 1.5));
             const hemi = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8); hemi.position.set(0, 500, 0); scene.add(hemi);
 
-            // 地面と都市
-            scene.add(new THREE.Mesh(new THREE.CircleGeometry(2000, 64), new THREE.MeshStandardMaterial({color: 0x050505})).rotateX(-Math.PI/2));
-            const grid = new THREE.GridHelper(4000, 100, 0x004466, 0x001122); grid.position.y = 0.1; scene.add(grid);
+            // 地面
+            scene.add(new THREE.Mesh(new THREE.CircleGeometry(2500, 64), new THREE.MeshStandardMaterial({color: 0x050505})).rotateX(-Math.PI/2));
+            const grid = new THREE.GridHelper(5000, 100, 0x004466, 0x001122); grid.position.y = 0.1; scene.add(grid);
 
-            // 放射状の道
-            const roadMat = new THREE.MeshBasicMaterial({color: 0x00aaff, transparent:true, opacity:0.2, blending: THREE.AdditiveBlending});
-            for(let i=0; i<4; i++) {
-                const rPlane = new THREE.Mesh(new THREE.PlaneGeometry(4000, 60), roadMat);
-                rPlane.rotation.x = -Math.PI/2; rPlane.rotation.z = i * Math.PI/4; rPlane.position.y = 0.2; scene.add(rPlane);
-            }
-            scene.add(new THREE.Mesh(new THREE.RingGeometry(RING_INNER-30, RING_INNER+30, 64), roadMat).rotateX(-Math.PI/2).translateZ(0.2));
-            scene.add(new THREE.Mesh(new THREE.RingGeometry(RING_OUTER-30, RING_OUTER+30, 64), roadMat).rotateX(-Math.PI/2).translateZ(0.2));
-
-            // 中央タワー
-            const cGroup = new THREE.Group();
-            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(150, 250, 400, 32), new THREE.MeshStandardMaterial({color: 0x111})).translateY(200)); 
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 4000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
-            beam.position.y = 2000; cGroup.add(beam);
-            scene.add(cGroup);
-
-            // 軽量化されたビル群（インスタンシング）
-            const bGeo = new THREE.BoxGeometry(1, 1, 1);
-            const bMat = new THREE.MeshStandardMaterial({color: 0x0f0f1f});
-            const bData = [];
-            for(let r=300; r<1800; r+=80) {
-                const count = Math.floor(2 * Math.PI * r / 80);
-                for(let i=0; i<count; i++) {
-                    const th = (i/count)*2*Math.PI;
-                    const x = r*Math.cos(th), z = r*Math.sin(th);
-                    // 道を避ける判定
-                    let aMod = Math.abs((th % (Math.PI/4)) + (th<0?Math.PI/4:0)) % (Math.PI/4);
-                    if (aMod > Math.PI/8) aMod = Math.PI/4 - aMod; 
-                    if (r * Math.sin(aMod) < 40) continue; 
-                    if (Math.abs(r - RING_INNER) < 40 || Math.abs(r - RING_OUTER) < 40) continue;
-                    
-                    bData.push({x, y: 100+Math.random()*150, z});
-                }
-            }
-            const iMesh = new THREE.InstancedMesh(bGeo, bMat, bData.length);
-            const dummy = new THREE.Object3D();
-            bData.forEach((d, i) => { dummy.position.set(d.x, d.y/2, d.z); dummy.scale.set(60, d.y, 60); dummy.updateMatrix(); iMesh.setMatrixAt(i, dummy.matrix); });
-            scene.add(iMesh);
-
+            // まっさらな空間にオブジェクトを配置
+            createRoads();
+            createLandmarks();
+            createFacilities();
             initTrains();
-            createRideableDrone(200, 1, 200);
-            createRideableDrone(-200, 1, 200);
+
+            // ドローンをいくつか配置
+            createRideableDrone(100, 1, 100);
+            createRideableDrone(-100, 1, -100);
+            createRideableDrone(450, 1, 0); // 内周駅付近
+            createRideableDrone(750, 1, 0); // 外周駅付近
 
             clock = new THREE.Clock();
             window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
@@ -323,7 +396,6 @@
                 const msgs = document.getElementById('chat-messages'); const div = document.createElement('div'); div.className = 'chat-msg';
                 div.innerHTML = `<span class="name">${msg.username}:</span> ${msg.text}`; msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
                 
-                // 吹き出し表示
                 if (!chatBubbles[msg.id]) { const b = document.createElement('div'); b.className = 'chat-bubble'; document.body.appendChild(b); chatBubbles[msg.id] = { el: b, t: null }; }
                 const bubble = chatBubbles[msg.id];
                 bubble.el.innerText = msg.text; bubble.el.style.opacity = '1';
@@ -352,7 +424,6 @@
                 let move = new THREE.Vector3();
                 
                 if(!isLocked && document.activeElement !== document.getElementById('chat-input')) {
-                    // 入力フォーカスがない時のWASD
                     if(keysPressed['w'] || keysPressed['arrowup']) move.add(forward);
                     if(keysPressed['s'] || keysPressed['arrowdown']) move.sub(forward);
                     if(keysPressed['a'] || keysPressed['arrowleft']) move.add(right);
@@ -364,12 +435,13 @@
                     if(keysPressed['d']) move.sub(right);
                 }
                 
-                const speed = keysPressed['shift'] ? 45 : 15;
+                const speed = keysPressed['shift'] ? 60 : 25;
 
+                // ドローン搭乗時の処理 (Eキー上昇, Qキー下降に変更)
                 if (ridingDrone) {
-                    if(move.lengthSq() > 0) { move.normalize(); ridingDrone.mesh.position.addScaledVector(move, 60 * delta); }
-                    if(keysPressed[' ']) ridingDrone.mesh.position.y += 30 * delta;
-                    if(keysPressed['shift']) ridingDrone.mesh.position.y -= 30 * delta;
+                    if(move.lengthSq() > 0) { move.normalize(); ridingDrone.mesh.position.addScaledVector(move, 80 * delta); }
+                    if(keysPressed['e']) ridingDrone.mesh.position.y += 40 * delta; // Eで上昇
+                    if(keysPressed['q']) ridingDrone.mesh.position.y -= 40 * delta; // Qで下降
                     if(ridingDrone.mesh.position.y < 2) ridingDrone.mesh.position.y = 2;
                     
                     localPlayerMesh.position.copy(playerLocalPos.clone().applyMatrix4(ridingDrone.mesh.matrixWorld));
@@ -379,33 +451,33 @@
                         move.normalize();
                         localPlayerMesh.position.addScaledVector(move, speed * delta);
                         if(localPlayerMesh.position.y < 0) localPlayerMesh.position.y = 0;
-                        if(!isFPS) localPlayerMesh.rotation.y = Math.atan2(move.x, move.z); // TPS時は進行方向を向く
+                        if(!isFPS) localPlayerMesh.rotation.y = Math.atan2(move.x, move.z); 
                     } else if (isFPS) {
-                        localPlayerMesh.rotation.y = cameraYaw; // 止まっていてもカメラの方を向く
+                        localPlayerMesh.rotation.y = cameraYaw;
                     }
                 }
 
                 socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
 
-                // インタラクションチェック
+                // インタラクションチェック (ドローンの乗降)
                 interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
                 if(ridingDrone) {
                     interactionTarget = { type: 'drone', data: ridingDrone }; 
                     document.getElementById('prompt-text').innerText = "ドローンを降りる"; document.getElementById('interaction-prompt').style.display = 'block';
                 } else {
                     for(let d of personalDrones) {
-                        if(localPlayerMesh.position.distanceTo(d.mesh.position) < 8) {
+                        if(localPlayerMesh.position.distanceTo(d.mesh.position) < 15) {
                             interactionTarget = { type: 'drone', data: d }; document.getElementById('prompt-text').innerText = "ドローンに乗る"; document.getElementById('interaction-prompt').style.display = 'block'; break;
                         }
                     }
                 }
 
-                // カメラ追従 (FPS / TPS)
+                // カメラ追従
                 if (isFPS) {
                     camera.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y + 2.5, localPlayerMesh.position.z);
                     camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
                 } else {
-                    const dist = 25; const camY = localPlayerMesh.position.y + dist * Math.sin(cameraPitch) + 4;
+                    const dist = 30; const camY = localPlayerMesh.position.y + dist * Math.sin(cameraPitch) + 4;
                     const xz = dist * Math.cos(cameraPitch); 
                     const camX = localPlayerMesh.position.x - xz * Math.sin(cameraYaw); 
                     const camZ = localPlayerMesh.position.z - xz * Math.cos(cameraYaw);
@@ -414,11 +486,10 @@
                     camera.lookAt(localPlayerMesh.position.x, localPlayerMesh.position.y + 2, localPlayerMesh.position.z);
                 }
                 
-                // ミニマップと吹き出し更新
                 updateMinimap();
                 const updateBubble = (id, pos) => {
                     if (chatBubbles[id] && chatBubbles[id].el.style.opacity === '1') {
-                        const v = new THREE.Vector3(pos.x, pos.y + 6, pos.z).project(camera);
+                        const v = new THREE.Vector3(pos.x, pos.y + 8, pos.z).project(camera);
                         if (v.z > 1) { chatBubbles[id].el.style.display = 'none'; return; }
                         chatBubbles[id].el.style.display = 'block'; chatBubbles[id].el.style.left = `${(v.x * .5 + .5) * window.innerWidth}px`; chatBubbles[id].el.style.top = `${(v.y * -.5 + .5) * window.innerHeight - 20}px`;
                     }
@@ -427,7 +498,7 @@
                 for(let id in otherPlayers) if (otherPlayers[id]) updateBubble(id, otherPlayers[id].position);
             }
 
-            // モノレールの運行
+            // モノレールの周回処理
             for(let train of trains) {
                 train.angle += train.speed * delta;
                 train.mesh.position.set(train.r * Math.cos(train.angle), train.y, train.r * Math.sin(train.angle)); 
@@ -441,7 +512,7 @@
             const cvs = document.getElementById('minimap'); const ctx = cvs.getContext('2d');
             ctx.clearRect(0,0,200,200); ctx.fillStyle = 'rgba(10,10,25,0.8)'; ctx.fillRect(0,0,200,200);
             if(!localPlayerMesh) return;
-            const scale = 100/2000; ctx.save(); ctx.translate(100, 100);
+            const scale = 100/2500; ctx.save(); ctx.translate(100, 100);
             
             ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
             ctx.beginPath(); ctx.arc(0, 0, RING_INNER * scale, 0, Math.PI*2); ctx.stroke();
