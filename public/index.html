@@ -170,6 +170,17 @@
             }
         }
 
+        // --- 乗車・降車状態を同期する関数 ---
+        function updateRidingState() {
+            if (!socket) return;
+            const config = {
+                ridingTrainIndex: ridingTrain ? trains.indexOf(ridingTrain) : -1,
+                ridingDroneIndex: ridingDrone ? personalDrones.indexOf(ridingDrone) : -1
+            };
+            // サーバーの changeAvatarConfig を利用して任意の同期データを送る
+            socket.emit('changeAvatarConfig', config);
+        }
+
         function setupSocketEvents() {
             if (!socket) return;
 
@@ -207,6 +218,14 @@
                 msg.innerHTML = `<strong style="color:#00ffff">${data.username}</strong>: ${data.text}`;
                 document.getElementById('chat-messages').appendChild(msg);
                 document.getElementById('chat-messages').scrollTop = 9999;
+            });
+
+            // 乗車状態の同期を受信
+            socket.on('avatarChanged', (data) => {
+                if (otherPlayers[data.id] && data.avatar) {
+                    otherPlayers[data.id].userData.ridingTrainIndex = data.avatar.ridingTrainIndex !== undefined ? data.avatar.ridingTrainIndex : -1;
+                    otherPlayers[data.id].userData.ridingDroneIndex = data.avatar.ridingDroneIndex !== undefined ? data.avatar.ridingDroneIndex : -1;
+                }
             });
         }
 
@@ -286,6 +305,16 @@
             const mesh = createAvatarMesh(0x0284c7, info.username); // 濃い青色に
             mesh.position.set(info.x, info.y, info.z);
             mesh.rotation.y = info.rotation;
+            
+            // 状態同期用データの初期化
+            if (info.avatar) {
+                mesh.userData.ridingTrainIndex = info.avatar.ridingTrainIndex !== undefined ? info.avatar.ridingTrainIndex : -1;
+                mesh.userData.ridingDroneIndex = info.avatar.ridingDroneIndex !== undefined ? info.avatar.ridingDroneIndex : -1;
+            } else {
+                mesh.userData.ridingTrainIndex = -1;
+                mesh.userData.ridingDroneIndex = -1;
+            }
+
             scene.add(mesh);
             otherPlayers[info.id] = mesh;
         }
@@ -474,7 +503,8 @@
                 car.add(new THREE.Mesh(new THREE.PlaneGeometry(10, 16), wGlass).rotateY(Math.PI/2).translateZ(7).translateY(9).translateX(-15));
                 
                 scene.add(car);
-                trains.push({ mesh: car, radius, angle: initAngle, speed: 0.04, state: 'moving', timer: 0, type: type, justDeparted: false });
+                // 速度を 0.04 から 0.08 にアップ
+                trains.push({ mesh: car, radius, angle: initAngle, speed: 0.08, state: 'moving', timer: 0, type: type, justDeparted: false });
             };
             
             spawnTrain(rInner, 0, 'inner'); spawnTrain(rInner, Math.PI, 'inner');
@@ -576,7 +606,7 @@
                     if(!t.justDeparted) {
                         const stops = [0, Math.PI/2, Math.PI, Math.PI*1.5];
                         for (let s of stops) {
-                            if (Math.abs(t.angle - s) < 0.015 || Math.abs(t.angle - (s + Math.PI*2)) < 0.015) {
+                            if (Math.abs(t.angle - s) < 0.02 || Math.abs(t.angle - (s + Math.PI*2)) < 0.02) {
                                 t.angle = s; t.state = 'stopped'; t.timer = 5.0; t.justDeparted = true; break;
                             }
                         }
@@ -609,7 +639,7 @@
             
             if (ridingDrone) {
                 promptText = "ドローンから降りる";
-                if (tryInteract) { ridingDrone = null; playerLocalPos.y += 2; }
+                if (tryInteract) { ridingDrone = null; playerLocalPos.y += 2; updateRidingState(); }
             } else if (ridingTrain) {
                 const pt = ridingTrain.mesh.position;
                 playerLocalPos.set(pt.x, pt.y + 2, pt.z); 
@@ -630,6 +660,7 @@
                         const dirZ = Math.sin(nearestStation.angle);
                         playerLocalPos.set(nearestStation.x + dirX*offset, 81.5, nearestStation.z + dirZ*offset);
                         ridingTrain = null;
+                        updateRidingState();
                     }
                 } else {
                     promptText = "走行中... (駅で降りられます)";
@@ -639,7 +670,7 @@
                 for (let t of trains) {
                     if (t.state === 'stopped' && Math.abs(playerLocalPos.y - t.mesh.position.y) < 15 && playerLocalPos.distanceTo(t.mesh.position) < 40) {
                         promptText = "列車に乗る"; 
-                        interactTarget = () => { ridingTrain = t; };
+                        interactTarget = () => { ridingTrain = t; updateRidingState(); };
                         foundInteract = true;
                         break;
                     }
@@ -664,8 +695,7 @@
                     for (let d of personalDrones) {
                         if (playerLocalPos.distanceTo(d.position) < 15 && Math.abs(playerLocalPos.y - d.position.y) < 10) {
                             promptText = "ドローンに乗る"; 
-                            // 拡大したドローンの高さに合わせてY座標を調整 (+4)
-                            interactTarget = () => { ridingDrone = d; playerLocalPos.copy(d.position); playerLocalPos.y += 4; }; 
+                            interactTarget = () => { ridingDrone = d; playerLocalPos.copy(d.position); playerLocalPos.y += 4; updateRidingState(); }; 
                             break;
                         }
                     }
@@ -777,6 +807,26 @@
                     }
                 }
             }
+
+            // --- マルチプレイヤーの乗車状態を画面に反映させる（同期ズレ・空中浮遊防止） ---
+            Object.values(otherPlayers).forEach(mesh => {
+                if (mesh.userData.ridingTrainIndex >= 0) {
+                    const t = trains[mesh.userData.ridingTrainIndex];
+                    if (t) {
+                        // その人が乗っている列車にピッタリくっつける
+                        mesh.position.set(t.mesh.position.x, t.mesh.position.y + 2, t.mesh.position.z);
+                        mesh.rotation.y = t.mesh.rotation.y;
+                    }
+                }
+                if (mesh.userData.ridingDroneIndex >= 0) {
+                    const d = personalDrones[mesh.userData.ridingDroneIndex];
+                    if (d) {
+                        // その人が乗っているドローンを足元に引き寄せる
+                        d.position.copy(mesh.position);
+                        d.position.y -= 4; 
+                    }
+                }
+            });
 
             // カメラの追従
             const camTarget = playerLocalPos.clone();
