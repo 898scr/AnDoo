@@ -741,7 +741,7 @@
                     let y = playerLocalPos.y;
                     
                     if (Math.abs(y - 1350) < 20) {
-                        // 展望台の壁
+                        // 展望台の壁 (半径245mで厳密に止める)
                         const dist = Math.hypot(nextPos.x, nextPos.z);
                         if (dist > 245) { 
                             const angle = Math.atan2(nextPos.z, nextPos.x);
