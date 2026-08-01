@@ -20,44 +20,30 @@
         #sidebar { display: none; position: absolute; top: 0; left: 0; width: 280px; height: 100vh; background: linear-gradient(180deg, rgba(10,10,25,0.9) 0%, rgba(0,0,0,0.8) 100%); border-right: 1px solid #00ffff; z-index: 10; padding: 20px; box-sizing: border-box; flex-direction: column; gap: 20px; box-shadow: 5px 0 20px rgba(0,255,255,0.1);}
         .sidebar-section { border-bottom: 1px solid rgba(0,255,255,0.3); padding-bottom: 15px; }
         .sidebar-section h3 { margin: 0 0 10px 0; font-size: 0.85rem; color: #ff00ff; text-transform: uppercase; letter-spacing: 1px;}
-        .user-email { font-size: 1.2rem; font-weight: bold; color: #fff; word-break: break-all; text-shadow: 0 0 5px #fff;}
+        .user-username { font-size: 1.2rem; font-weight: bold; color: #fff; word-break: break-all; text-shadow: 0 0 5px #fff;}
         .money { font-size: 1.8rem; color: #00ffff; font-weight: bold; margin-top: 5px; text-shadow: 0 0 10px #00ffff;}
-        .area-name { font-size: 1.1rem; color: #fff; font-weight: bold; display: flex; align-items: center; gap: 8px;}
         
         #minimap-container { position: absolute; bottom: 20px; right: 20px; z-index: 10; width: 200px; height: 200px; border-radius: 50%; border: 2px solid #00ffff; background: rgba(10, 10, 25, 0.8); box-shadow: 0 0 20px rgba(0,255,255,0.4); overflow: hidden; display: none; }
         #minimap { width: 100%; height: 100%; }
-        #minimap-label { position: absolute; top: 5px; width: 100%; text-align: center; font-size: 0.8rem; color: #00ffff; font-weight: bold; pointer-events: none; text-shadow: 0 0 5px #000; }
 
-        #interaction-prompt { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 25px; border-radius: 30px; color: #00ffff; font-weight: bold; font-size: 1.2rem; text-shadow: 0 0 10px #00ffff; box-shadow: 0 0 20px rgba(0,255,255,0.3); z-index: 20; display: none; pointer-events: none; transition: opacity 0.2s;}
+        /* マウスロック用UI */
+        #crosshair { display: none; position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(0, 255, 255, 0.8); border-radius: 50%; transform: translate(-50%, -50%); z-index: 30; pointer-events: none; box-shadow: 0 0 10px #00ffff; }
+        #lock-instruction { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); border: 1px solid #ff00ff; padding: 10px 20px; border-radius: 20px; color: #fff; font-weight: bold; z-index: 20; pointer-events: none; text-shadow: 0 0 5px #ff00ff; }
+
+        #interaction-prompt { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 25px; border-radius: 30px; color: #00ffff; font-weight: bold; font-size: 1.2rem; z-index: 20; display: none; pointer-events: none;}
         .key-btn { display: inline-block; background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; font-family: monospace;}
-        .key-hint { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.8); font-size: 0.9rem; z-index: 10; pointer-events: none; text-align: center; text-shadow: 0 0 5px #000;}
 
-        #chat-container { position: absolute; bottom: 20px; left: 300px; z-index: 10; width: 350px; background: rgba(10, 10, 25, 0.8); border-radius: 8px; border: 1px solid rgba(255,0,255,0.5); display: none; flex-direction: column; box-shadow: 0 0 15px rgba(255,0,255,0.2);}
-        #chat-header { background: rgba(255, 0, 255, 0.2); padding: 8px 12px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold; color: #ff00ff; font-size: 0.9rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,0,255,0.5);}
+        #chat-container { position: absolute; bottom: 20px; left: 300px; z-index: 10; width: 350px; background: rgba(10, 10, 25, 0.8); border-radius: 8px; border: 1px solid rgba(255,0,255,0.5); display: none; flex-direction: column;}
+        #chat-header { background: rgba(255, 0, 255, 0.2); padding: 8px 12px; font-weight: bold; color: #ff00ff; font-size: 0.9rem;}
         #chat-messages { height: 150px; overflow-y: auto; padding: 10px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px; }
-        .chat-msg { padding: 4px; border-radius: 4px; word-wrap: break-word; color: #ddd;}
+        .chat-msg { padding: 4px; color: #ddd;}
         .chat-msg .name { font-weight: bold; color: #00ffff; margin-right: 5px;}
-        .chat-msg.admin .name { color: #ff0055; text-shadow: 0 0 5px #ff0055;}
         #chat-input-area { display: flex; padding: 10px; border-top: 1px solid rgba(255,0,255,0.5); }
-        #chat-input { flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,255,255,0.3); background: rgba(0,0,0,0.5); color: white; outline: none;}
+        #chat-input { flex-grow: 1; padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(0,255,255,0.3);}
 
-        .chat-bubble { position: absolute; background: rgba(255,255,255,0.9); color: #000; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: bold; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); z-index: 20; opacity: 0; transition: opacity 0.2s;}
-        .chat-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: rgba(255,255,255,0.9) transparent transparent transparent; }
-
-        #boutique-panel { position: absolute; right: 240px; top: 20px; z-index: 10; background: rgba(10, 10, 25, 0.95); padding: 20px; border-radius: 12px; width: 260px; display: none; border: 1px solid #00ffff; box-shadow: 0 0 20px rgba(0,255,255,0.3); }
-        #boutique-panel h3 { color: #00ffff; margin-top: 0; text-transform: uppercase; text-shadow: 0 0 10px #00ffff;}
-        .color-picker-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem;}
-        .color-picker-group input[type="color"] { background: none; border: none; cursor: pointer; height: 30px; width: 40px; padding: 0;}
-        .accessory-select { width: 100%; padding: 8px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #00ffff; border-radius: 4px; outline: none; margin-top: 5px;}
-
-        #notification-container { position: absolute; top: 20px; right: 20px; z-index: 50; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { padding: 12px 20px; border-radius: 8px; font-weight: bold; background: rgba(10,10,25,0.9); border-left: 4px solid #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 3.5s forwards; opacity: 0; transform: translateX(100%); }
-        .toast.success { border-color: #00ffff; color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.2);}
-        .toast.error { border-color: #ff0055; color: #ff0055; box-shadow: 0 0 15px rgba(255,0,85,0.2);}
-        .toast.info { border-color: #ff00ff; color: #ff00ff; box-shadow: 0 0 15px rgba(255,0,255,0.2);}
-        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } } @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
-
-        #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1;}
+        .chat-bubble { position: absolute; background: rgba(255,255,255,0.9); color: #000; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: bold; pointer-events: none; transform: translate(-50%, -100%); z-index: 20; opacity: 0; transition: 0.2s;}
+        
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1;}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -77,526 +63,69 @@
     <div id="sidebar">
         <div class="sidebar-section">
             <h3>Identity</h3>
-            <div class="user-email" id="ui-username">---</div>
-            <div class="money">CREDIT: <span id="ui-money">0</span></div>
-            <div class="money" style="font-size:1.1rem; color:#fff; text-shadow: none;">STOCK: <span id="ui-stocks">0</span></div>
+            <div class="user-username" id="ui-username">---</div>
+            <div class="money">CR: <span id="ui-money">0</span></div>
         </div>
         <div class="sidebar-section">
-            <h3>Location</h3>
-            <div class="area-name" id="ui-area">📍 SECTOR-01</div>
-            <p style="font-size: 0.75rem; color:#888; margin-top:5px;">WASD: 移動 / マウス: 視点</p>
+            <h3>Controls</h3>
+            <p style="font-size: 0.8rem; color:#aaa; line-height:1.6;">
+                [Click] 画面ロック (視点操作)<br>
+                [W, A, S, D] 移動<br>
+                [V] FPS / TPS 切替<br>
+                [E] アクション・乗降<br>
+                [Space/Shift] ドローン上下<br>
+                [Esc] マウスロック解除
+            </p>
         </div>
     </div>
 
-    <div class="key-hint" id="drone-hint" style="display:none;">[Space] 上昇 / [Shift] 下降</div>
-
-    <div id="minimap-container">
-        <div id="minimap-label">RADAR</div>
-        <canvas id="minimap"></canvas>
-    </div>
-
+    <div id="lock-instruction">画面をクリックして視点操作を開始</div>
+    <div id="crosshair"></div>
+    <div id="minimap-container"><canvas id="minimap"></canvas></div>
     <div id="interaction-prompt"><span class="key-btn">E</span><span id="prompt-text">アクション</span></div>
 
     <div id="chat-container">
-        <div id="chat-header" onclick="toggleChat()"><span>💬 HAKUYARC COMMS</span><span id="chat-toggle-icon">▼</span></div>
+        <div id="chat-header">💬 HAKUYARC COMMS</div>
         <div id="chat-messages"></div>
-        <div id="chat-input-area"><input type="text" id="chat-input" placeholder="Message... (/admin)"></div>
+        <div id="chat-input-area"><input type="text" id="chat-input" placeholder="メッセージ (Enterで送信)"></div>
     </div>
 
-    <div id="boutique-panel">
-        <h3>Cyber Avatar</h3>
-        <div class="color-picker-group"><label>Suit</label><input type="color" id="color-body" value="#00ffff" onchange="updateAvatarConfig()"></div>
-        <div class="color-picker-group"><label>Skin</label><input type="color" id="color-skin" value="#ffcc99" onchange="updateAvatarConfig()"></div>
-        <div class="color-picker-group"><label>Visor</label><input type="color" id="color-visor" value="#ff00ff" onchange="updateAvatarConfig()"></div>
-        <div class="color-picker-group"><label>ID Color</label><input type="color" id="color-name" value="#ffffff" onchange="updateAvatarConfig()"></div>
-        <div style="margin-top: 10px;">
-            <label style="font-size:0.9rem;">Hardware</label>
-            <select id="select-accessory" class="accessory-select" onchange="updateAvatarConfig()">
-                <option value="none">None</option>
-                <option value="headphones">Audio Gear</option>
-                <option value="cyberGlasses">Holo Visor</option>
-                <option value="catEars">Neko Ears</option>
-                <option value="hat">Top Hat</option>
-            </select>
-        </div>
-    </div>
-
-    <div id="notification-container"></div>
     <div id="canvas-container"></div>
 
     <script>
-        let currentUsername = null, socket = null, adminSpeedMult = 1.0;
+        let currentUsername = null, socket = null;
         let scene, camera, renderer, clock;
         const otherPlayers = {}, chatBubbles = {};
         let localPlayerMesh = null, interactionTarget = null;
         
+        // カメラ・移動系
         const keysPressed = {};
-        let cameraYaw = 0, cameraPitch = 0, isDragging = false, prevMouse = { x: 0, y: 0 };
-        
-        const warps = [], trains = [], ambientDrones = [], personalDrones = [];
-        let stockChartTex = null, stockChartCtx = null, stockHistory = [];
-        let ridingTrain = null, ridingDrone = null;
+        let cameraYaw = 0, cameraPitch = 0, isLocked = false, isFPS = false;
         let playerLocalPos = new THREE.Vector3();
-
-        const RING_INNER = 600, RING_OUTER = 900;
-        const LANDMARK_DIST = 1200; // ランドマークをさらに外側へ
-        const landmarks = [
-            {x: LANDMARK_DIST*Math.cos(Math.PI/4), z: LANDMARK_DIST*Math.sin(Math.PI/4), type: 'mall', name: "Shopping Mall"},
-            {x: LANDMARK_DIST*Math.cos(3*Math.PI/4), z: LANDMARK_DIST*Math.sin(3*Math.PI/4), type: 'dome', name: "Entertainment Dome"},
-            {x: LANDMARK_DIST*Math.cos(-3*Math.PI/4), z: LANDMARK_DIST*Math.sin(-3*Math.PI/4), type: 'security', name: "Drone Port"},
-            {x: LANDMARK_DIST*Math.cos(-Math.PI/4), z: LANDMARK_DIST*Math.sin(-Math.PI/4), type: 'exchange', name: "Stock Exchange"}
-        ];
-
-        function isWalkable(x, z, y = 0) {
-            // ドローン搭乗中はすべてフリーパス
-            if (ridingDrone) return true;
-            // 室内マップはフリーパス
-            if (x > 3000) return true;
-
-            // 展望台 (y=150付近) - 拡張
-            if (y > 100) {
-                if (Math.hypot(x, z) < 180) return true;
-                return false; 
-            }
-
-            // モノレール駅ホーム (y=70付近)
-            if (y > 20) {
-                for(let i=0; i<8; i++) {
-                    let a = i * Math.PI/4;
-                    // 内周ホーム
-                    let dx = x - RING_INNER * Math.cos(a);
-                    let dz = z - RING_INNER * Math.sin(a);
-                    let lx = dx * Math.cos(a) + dz * Math.sin(a);
-                    let lz = -dx * Math.sin(a) + dz * Math.cos(a);
-                    if (Math.abs(lx) <= 12 && Math.abs(lz) <= 30) return true;
-                    // 外周ホーム
-                    dx = x - RING_OUTER * Math.cos(a);
-                    dz = z - RING_OUTER * Math.sin(a);
-                    lx = dx * Math.cos(a) + dz * Math.sin(a);
-                    lz = -dx * Math.sin(a) + dz * Math.cos(a);
-                    if (Math.abs(lx) <= 12 && Math.abs(lz) <= 30) return true;
-                }
-                return false; 
-            }
-
-            // 地上 (y < 20)
-            const r = Math.hypot(x, z);
-            const theta = Math.atan2(z, x);
-
-            if (r < 300) return true; // 中央広場
-
-            for(let lm of landmarks) {
-                if(Math.hypot(x - lm.x, z - lm.z) < 250) return true; // 各施設前の広場
-            }
-
-            // 放射状道路
-            let angleMod = Math.abs((theta % (Math.PI/4)) + (theta < 0 ? Math.PI/4 : 0)) % (Math.PI/4);
-            if (angleMod > Math.PI/8) angleMod = Math.PI/4 - angleMod; 
-            const distToRoad = r * Math.sin(angleMod); 
-            if (distToRoad < 45) return true; // 道幅を広く
-
-            // 環状道路
-            if (Math.abs(r - RING_INNER) < 45) return true;
-            if (Math.abs(r - RING_OUTER) < 45) return true;
-
-            return false; // それ以外（ビル群）はブロック
-        }
+        
+        // オブジェクト管理
+        const warps = [], trains = [], personalDrones = [];
+        let ridingTrain = null, ridingDrone = null;
+        const RING_INNER = 500, RING_OUTER = 800;
 
         async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const errorEl = document.getElementById('auth-error');
+            if (!username || !password) { errorEl.innerText = '入力してください'; return; }
             
-            if (!username || !password) {
-                errorEl.style.color = '#ff0055'; errorEl.innerText = 'ユーザー名とパスワードを入力してください'; return;
-            }
             try {
                 const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
                 const data = await res.json();
-                
                 if (data.success) {
                     if (endpoint === '/api/login') {
                         currentUsername = data.username;
                         document.getElementById('ui-username').innerText = currentUsername;
-                        document.getElementById('ui-money').innerText = data.money;
-                        document.getElementById('ui-stocks').innerText = data.stocks;
+                        document.getElementById('ui-money').innerText = data.money || 0;
                         startGame();
-                    } else {
-                        errorEl.style.color = '#00ffff'; errorEl.innerText = data.message;
-                    }
-                } else {
-                    errorEl.style.color = '#ff0055'; errorEl.innerText = data.message;
-                }
-            } catch(e) {
-                errorEl.style.color = '#ff0055'; errorEl.innerText = '通信エラーが発生しました';
-            }
-        }
-
-        function showNotification(type, text) {
-            const container = document.getElementById('notification-container');
-            const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.innerText = text;
-            container.appendChild(toast); setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
-        }
-
-        let chatVisible = true;
-        function toggleChat() {
-            chatVisible = !chatVisible;
-            document.getElementById('chat-messages').style.display = chatVisible ? 'flex' : 'none'; 
-            document.getElementById('chat-input-area').style.display = chatVisible ? 'flex' : 'none';
-            document.getElementById('chat-toggle-icon').innerText = chatVisible ? '▼' : '▲';
-        }
-
-        document.getElementById('chat-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') { const text = e.target.value.trim(); if (text) { socket.emit('chatMessage', text); e.target.value = ''; } }
-        });
-
-        function showBubble(playerId, text) {
-            if (!chatBubbles[playerId]) {
-                const b = document.createElement('div'); b.className = 'chat-bubble';
-                document.body.appendChild(b); chatBubbles[playerId] = { element: b, timer: null };
-            }
-            const bubble = chatBubbles[playerId];
-            bubble.element.innerText = text; bubble.element.style.opacity = '1';
-            if (bubble.timer) clearTimeout(bubble.timer);
-            bubble.timer = setTimeout(() => { bubble.element.style.opacity = '0'; }, 5000);
-        }
-
-        function createNameLabel(name, color) {
-            const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const ctx = cvs.getContext('2d');
-            ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.lineWidth = 6; ctx.strokeStyle = '#000000'; ctx.strokeText(name, 128, 32);
-            ctx.fillStyle = color; ctx.fillText(name, 128, 32);
-            const tex = new THREE.CanvasTexture(cvs);
-            const spriteMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.scale.set(3, 0.75, 1); sprite.position.y = 5.0; sprite.renderOrder = 999; 
-            return sprite;
-        }
-
-        function createAvatarMesh(config) {
-            const grp = new THREE.Group();
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), new THREE.MeshStandardMaterial({ color: config.body, metalness:0.3, roughness:0.7 })).translateY(1.0)); 
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: config.skin })).translateY(2.6)); 
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.4, 0.2), new THREE.MeshBasicMaterial({ color: config.visor })).translateY(2.7).translateZ(0.55)); 
-            
-            if (config.accessory === 'hat') {
-                grp.add(new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x111 })).translateY(3.3));
-                grp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x111 })).translateY(4.0));
-            } else if (config.accessory === 'catEars') {
-                const ear = new THREE.MeshStandardMaterial({ color: config.body }), geo = new THREE.ConeGeometry(0.3, 0.8, 4);
-                const e1 = new THREE.Mesh(geo, ear); e1.position.set(-0.4, 3.4, 0); e1.rotation.z = Math.PI/8;
-                const e2 = new THREE.Mesh(geo, ear); e2.position.set(0.4, 3.4, 0); e2.rotation.z = -Math.PI/8;
-                grp.add(e1, e2);
-            } else if (config.accessory === 'headphones') {
-                const hpMat = new THREE.MeshStandardMaterial({ color: 0x222, metalness:0.8 });
-                const pad = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16); pad.rotateZ(Math.PI/2);
-                const p1 = new THREE.Mesh(pad, hpMat); p1.position.set(0.65, 2.6, 0);
-                const p2 = new THREE.Mesh(pad, hpMat); p2.position.set(-0.65, 2.6, 0);
-                const band = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.1, 8, 16, Math.PI), hpMat); band.position.set(0, 2.6, 0);
-                grp.add(p1, p2, band);
-            } else if (config.accessory === 'cyberGlasses') {
-                const glassMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.7 });
-                const g = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 0.1), glassMat); g.position.set(0, 2.7, 0.65);
-                grp.add(g);
-            }
-            return grp;
-        }
-
-        function updateAvatarConfig() {
-            const cfg = { body: document.getElementById('color-body').value, skin: document.getElementById('color-skin').value, visor: document.getElementById('color-visor').value, nameColor: document.getElementById('color-name').value, accessory: document.getElementById('select-accessory').value };
-            socket.emit('changeAvatarConfig', cfg);
-        }
-
-        function addWarp(x, y, z, tx, ty, tz, label, color) {
-            const group = new THREE.Group();
-            const ring = new THREE.Mesh(new THREE.RingGeometry(4, 5, 32), new THREE.MeshBasicMaterial({color: color, side: THREE.DoubleSide, transparent:true, opacity:0.8}));
-            ring.rotation.x = Math.PI/2; group.add(ring);
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 20, 16, 1, true), new THREE.MeshBasicMaterial({color: color, transparent:true, opacity:0.2, side: THREE.DoubleSide, blending: THREE.AdditiveBlending}));
-            beam.position.y = 10; group.add(beam);
-            group.position.set(x, y+0.1, z); scene.add(group);
-            warps.push({x, y, z, tx, ty, tz, label});
-        }
-
-        // 乗れるパーソナルドローン
-        function createRideableDrone(x, y, z) {
-            const grp = new THREE.Group();
-            grp.add(new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 1, 16), new THREE.MeshStandardMaterial({color: 0x222233, metalness: 0.8})));
-            const guardMat = new THREE.MeshStandardMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity:0.5});
-            const positions = [[-4,0,-4], [4,0,-4], [-4,0,4], [4,0,4]];
-            positions.forEach(p => {
-                const g = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.5, 16), guardMat);
-                g.position.set(p[0], p[1], p[2]); grp.add(g);
-                const rotor = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.1, 0.5), new THREE.MeshBasicMaterial({color: 0xffffff}));
-                rotor.position.set(p[0], p[1], p[2]); grp.add(rotor);
-                grp.userData.rotors = grp.userData.rotors || []; grp.userData.rotors.push(rotor);
-            });
-            // 操縦席シールド
-            const shield = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.3}));
-            shield.position.set(0, 2, 0); grp.add(shield);
-            
-            grp.position.set(x, y, z);
-            scene.add(grp);
-            personalDrones.push({ mesh: grp });
-        }
-
-        THREE.Object3D.prototype.setPos = function(x,y,z){this.position.set(x,y,z); return this;};
-        THREE.Object3D.prototype.rotateX = function(r){this.rotation.x = r; return this;};
-        THREE.Object3D.prototype.rotateY = function(r){this.rotation.y = r; return this;};
-
-        function generateCyberCity() {
-            // 島とベース
-            const island = new THREE.Mesh(new THREE.ConeGeometry(2000, 800, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x050505, roughness: 1}));
-            island.position.y = -400; island.rotation.x = Math.PI; scene.add(island);
-            const ground = new THREE.Mesh(new THREE.CircleGeometry(2000, 64), new THREE.MeshStandardMaterial({color: 0x020205}));
-            ground.rotation.x = -Math.PI/2; scene.add(ground);
-            
-            // 道路用の明るいネオングリッド
-            const grid = new THREE.GridHelper(4000, 200, 0x004466, 0x001122);
-            grid.position.y = 0.1; scene.add(grid);
-
-            // 道を光らせるシアンメッシュ
-            const roadMat = new THREE.MeshBasicMaterial({color: 0x00aaff, transparent:true, opacity:0.15, blending: THREE.AdditiveBlending});
-            // 放射状
-            for(let i=0; i<4; i++) {
-                const rPlane = new THREE.Mesh(new THREE.PlaneGeometry(4000, 80), roadMat);
-                rPlane.rotation.x = -Math.PI/2; rPlane.rotation.z = i * Math.PI/4; rPlane.position.y = 0.2; scene.add(rPlane);
-            }
-            // 環状
-            scene.add(new THREE.Mesh(new THREE.RingGeometry(RING_INNER-40, RING_INNER+40, 64), roadMat).setRot(-Math.PI/2,0,0).setPos(0, 0.2, 0));
-            scene.add(new THREE.Mesh(new THREE.RingGeometry(RING_OUTER-40, RING_OUTER+40, 64), roadMat).setRot(-Math.PI/2,0,0).setPos(0, 0.2, 0));
-
-            // ビル群
-            const matDark = new THREE.MeshStandardMaterial({color: 0x0a0a1a, roughness: 0.8, metalness: 0.5});
-            const bGeo = new THREE.BoxGeometry(1, 1, 1);
-            const bData = [], nCyan = [], nPink = [], nYellow = [];
-
-            for (let r = 350; r < 1900; r += 70) {
-                const count = Math.floor(2 * Math.PI * r / 70);
-                for (let i = 0; i < count; i++) {
-                    const theta = (i / count) * 2 * Math.PI;
-                    const x = r * Math.cos(theta); const z = r * Math.sin(theta);
-                    
-                    if (!isWalkable(x, z, 0)) {
-                        let h = 60 + Math.random() * 200;
-                        if(r < 500) h += 150;
-                        bData.push({x: x, y: h/2, z: z, sx: 50, sy: h, sz: 50});
-                        
-                        if(Math.random() > 0.4 && h > 80) {
-                            const rnd = Math.random();
-                            const neonH = h * 0.9;
-                            if(rnd > 0.6) nCyan.push({x: x+25.1, y: h/2, z: z, sx: 1, sy: neonH, sz: 5});
-                            else if(rnd > 0.3) nPink.push({x: x, y: h/2, z: z+25.1, sx: 5, sy: neonH, sz: 1});
-                            else nYellow.push({x: x-25.1, y: h/2, z: z, sx: 1, sy: neonH, sz: 5});
-                        }
-                    }
-                }
-            }
-
-            const buildIMesh = (geo, mat, data) => {
-                if(data.length===0) return; const mesh = new THREE.InstancedMesh(geo, mat, data.length);
-                const dummy = new THREE.Object3D();
-                data.forEach((d, i) => { dummy.position.set(d.x, d.y, d.z); dummy.scale.set(d.sx, d.sy, d.sz); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
-                scene.add(mesh);
-            };
-            buildIMesh(bGeo, matDark, bData);
-            buildIMesh(bGeo, new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8}), nCyan);
-            buildIMesh(bGeo, new THREE.MeshBasicMaterial({color: 0xff00ff, transparent:true, opacity:0.8}), nPink);
-            buildIMesh(bGeo, new THREE.MeshBasicMaterial({color: 0xffff00, transparent:true, opacity:0.8}), nYellow);
-
-            // 超巨大 Central Tower
-            const cGroup = new THREE.Group();
-            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(200, 300, 300, 32), matDark).translateY(150)); 
-            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(100, 180, 500, 16), matDark).translateY(550)); 
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 6000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending}));
-            beam.position.y = 3000; cGroup.add(beam);
-            cGroup.add(new THREE.Mesh(new THREE.SphereGeometry(60, 32, 32), new THREE.MeshBasicMaterial({color: 0x00ffff})).translateY(800));
-            scene.add(cGroup);
-            
-            // 展望台ワープ（めり込まないよう手前に）
-            addWarp(280, 0, 0, 0, 201, 0, "展望台へ", 0x00ffff);
-            addWarp(0, 201, 40, 280, 0, -40, "地上へ", 0xff00ff);
-            
-            // 展望台フロア
-            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(180, 180, 2, 32), new THREE.MeshStandardMaterial({color: 0x222222})).translateY(200));
-            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(180, 180, 2, 32), new THREE.MeshStandardMaterial({color: 0x111111})).translateY(240)); 
-            scene.add(new THREE.Mesh(new THREE.CylinderGeometry(180, 180, 40, 32), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.1, side: THREE.DoubleSide})).translateY(220)); 
-
-            // 超巨大 Landmarks (4 Corners)
-            landmarks.forEach(lm => {
-                const g = new THREE.Group();
-                g.add(new THREE.Mesh(new THREE.BoxGeometry(400, 80, 400), matDark).translateY(40));
-                
-                // ワープ位置を入り口広場（手前）に設定
-                const wDir = new THREE.Vector3(lm.x, 0, lm.z).normalize().multiplyScalar(250); 
-                const wX = lm.x - wDir.x, wZ = lm.z - wDir.z;
-
-                if (lm.type === 'mall') {
-                    g.add(new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true})).translateY(80));
-                    addWarp(wX, 0, wZ, 5000, 2, 0, "モール内へ", 0xff00ff);
-                } else if (lm.type === 'exchange') {
-                    g.add(new THREE.Mesh(new THREE.BoxGeometry(250, 150, 250), matDark).translateY(155));
-                    addWarp(wX, 0, wZ, 6000, 2, 0, "取引所へ", 0xffff00);
-                } else if (lm.type === 'dome') {
-                    g.add(new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true})).translateY(80));
-                } else if (lm.type === 'security') {
-                    g.add(new THREE.Mesh(new THREE.BoxGeometry(450, 20, 450), matDark).translateY(250)); // 発着場
-                    // ドローンを大量に配置
-                    for(let i=0; i<4; i++) createRideableDrone(lm.x + (i-1.5)*30, 260, lm.z);
-                }
-                g.position.set(lm.x, 0, lm.z);
-                scene.add(g);
-            });
-
-            // 中央周辺にもドローン配置
-            createRideableDrone(200, 1, 200);
-            createRideableDrone(-200, 1, 200);
-
-            // Mall Interior
-            const mallInt = new THREE.Group();
-            mallInt.add(new THREE.Mesh(new THREE.BoxGeometry(300, 80, 300), new THREE.MeshStandardMaterial({color: 0x111, side: THREE.BackSide})).translateY(40));
-            mallInt.add(new THREE.Mesh(new THREE.PlaneGeometry(300,300), new THREE.MeshStandardMaterial({color: 0x222})).rotateX(-Math.PI/2));
-            mallInt.add(new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshBasicMaterial({color: 0x002244})).rotateX(-Math.PI/2).translateZ(0.1).translateY(80));
-            mallInt.position.set(5000, 0, 0); scene.add(mallInt);
-            // 帰りのワープ
-            const wDirMall = new THREE.Vector3(landmarks[0].x, 0, landmarks[0].z).normalize().multiplyScalar(280);
-            addWarp(5000, 2, 120, landmarks[0].x - wDirMall.x, 0, landmarks[0].z - wDirMall.z, "外へ", 0x00ffff);
-
-            // Exchange Interior
-            const exInt = new THREE.Group();
-            exInt.add(new THREE.Mesh(new THREE.BoxGeometry(200, 80, 200), new THREE.MeshStandardMaterial({color: 0x111, side: THREE.BackSide})).translateY(40));
-            exInt.add(new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color: 0x333})).rotateX(-Math.PI/2));
-            
-            stockChartTex = new THREE.CanvasTexture(document.createElement('canvas')); stockChartTex.image.width=512; stockChartTex.image.height=256; stockChartCtx = stockChartTex.image.getContext('2d');
-            exInt.add(new THREE.Mesh(new THREE.PlaneGeometry(120, 60), new THREE.MeshBasicMaterial({map: stockChartTex})).setPos(0, 40, -99));
-            exInt.add(new THREE.Mesh(new THREE.BoxGeometry(60, 5, 15), new THREE.MeshStandardMaterial({color: 0x444})).translateY(2.5).translateZ(-60));
-            exInt.position.set(6000, 0, 0); scene.add(exInt);
-            const wDirEx = new THREE.Vector3(landmarks[3].x, 0, landmarks[3].z).normalize().multiplyScalar(280);
-            addWarp(6000, 2, 80, landmarks[3].x - wDirEx.x, 0, landmarks[3].z - wDirEx.z, "外へ", 0x00ffff);
-        }
-
-        function createTrainMesh(color) {
-            const grp = new THREE.Group();
-            const matDark = new THREE.MeshStandardMaterial({color: 0x111, metalness:0.8});
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 34), matDark)); // floor
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 34), matDark).translateY(10)); // roof
-            
-            const glass = new THREE.MeshBasicMaterial({color: color, transparent: true, opacity: 0.3, side: THREE.DoubleSide});
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 34), glass).translateY(5).translateX(-4.8));
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(12));
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(-12));
-            // 乗り込み口（真ん中が空いている）
-            
-            const nose = new THREE.Mesh(new THREE.ConeGeometry(5, 8, 16), matDark); nose.rotation.x = Math.PI/2;
-            grp.add(nose.clone().translateZ(21).translateY(5));
-            grp.add(nose.clone().rotateX(Math.PI).translateZ(-21).translateY(5));
-            return grp;
-        }
-
-        function initTrains() {
-            const trackMat = new THREE.MeshStandardMaterial({color: 0x8899aa, metalness: 0.9});
-            // レールと発光ライン
-            const buildTrack = (r) => {
-                const trk = new THREE.Mesh(new THREE.TorusGeometry(r, 2, 8, 128), trackMat);
-                trk.rotation.x = Math.PI/2; trk.position.y = 68; scene.add(trk);
-                const neon = new THREE.Mesh(new THREE.TorusGeometry(r, 2.2, 4, 128), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe:true, transparent:true, opacity:0.3}));
-                neon.rotation.x = Math.PI/2; neon.position.y = 68; scene.add(neon);
-            };
-            buildTrack(RING_INNER);
-            buildTrack(RING_OUTER);
-
-            const trainConfigs = [
-                {r: RING_INNER, y: 70, angle: 0, speed: 0.15, c: 0x00ffff}, 
-                {r: RING_INNER, y: 70, angle: Math.PI, speed: 0.15, c: 0x00ffff},
-                {r: RING_OUTER, y: 70, angle: Math.PI/2, speed: -0.1, c: 0xff00ff}, 
-                {r: RING_OUTER, y: 70, angle: 3*Math.PI/2, speed: -0.1, c: 0xff00ff}
-            ];
-
-            trainConfigs.forEach(cfg => {
-                const mesh = createTrainMesh(cfg.c); scene.add(mesh);
-                trains.push({ r: cfg.r, y: cfg.y, angle: cfg.angle, speed: cfg.speed, state: 'moving', timer: 0, mesh: mesh, justDeparted: false });
-            });
-
-            // 独立した駅ホームの構築 (各線路8箇所)
-            for(let i=0; i<8; i++) {
-                let a = i * Math.PI/4;
-                let normal = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
-                
-                const buildPlatform = (radius, isInner) => {
-                    const plat = new THREE.Group();
-                    plat.add(new THREE.Mesh(new THREE.BoxGeometry(24, 2, 60), new THREE.MeshStandardMaterial({color: 0x222})).translateY(-2));
-                    
-                    // 落下防止ガラスフェンス
-                    const fenceMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.2, side: THREE.DoubleSide});
-                    plat.add(new THREE.Mesh(new THREE.BoxGeometry(1, 4, 60), fenceMat).translateX(isInner ? 11.5 : -11.5).translateY(1));
-                    plat.add(new THREE.Mesh(new THREE.BoxGeometry(24, 4, 1), fenceMat).translateZ(30).translateY(1));
-                    plat.add(new THREE.Mesh(new THREE.BoxGeometry(24, 4, 1), fenceMat).translateZ(-30).translateY(1));
-                    
-                    // 線路側はホームドアとして一部開ける
-                    plat.add(new THREE.Mesh(new THREE.BoxGeometry(1, 4, 20), fenceMat).translateX(isInner ? -11.5 : 11.5).translateZ(20).translateY(1));
-                    plat.add(new THREE.Mesh(new THREE.BoxGeometry(1, 4, 20), fenceMat).translateX(isInner ? -11.5 : 11.5).translateZ(-20).translateY(1));
-
-                    // 位置と回転（レールに沿わせる）
-                    let pWorld = new THREE.Vector3(radius * Math.cos(a), 70, radius * Math.sin(a));
-                    // 線路から少し離す
-                    pWorld.sub(normal.clone().multiplyScalar(isInner ? -14 : 14));
-                    
-                    plat.position.copy(pWorld);
-                    plat.rotation.y = -a; scene.add(plat);
-
-                    // ワープ位置（安全なホームの中央寄り）
-                    let wX = pWorld.x + normal.x * (isInner ? -5 : 5), wZ = pWorld.z + normal.z * (isInner ? -5 : 5);
-                    let gX = pWorld.x + normal.x * (isInner ? -30 : 30), gZ = pWorld.z + normal.z * (isInner ? -30 : 30);
-                    addWarp(gX, 0, gZ, wX, 70, wZ, "駅ホームへ", 0x00ffff);
-                    addWarp(wX, 70, wZ, gX, 0, gZ, "地上へ", 0xff00ff);
-                };
-                
-                buildPlatform(RING_INNER, true);
-                buildPlatform(RING_OUTER, false);
-            }
-        }
-
-        const minimapCanvas = document.getElementById('minimap');
-        const minimapCtx = minimapCanvas.getContext('2d');
-        minimapCanvas.width = 200; minimapCanvas.height = 200;
-
-        function updateMinimap() {
-            if(!localPlayerMesh) return;
-            minimapCtx.clearRect(0,0,200,200);
-            minimapCtx.fillStyle = 'rgba(10, 10, 25, 0.8)'; minimapCtx.fillRect(0,0,200,200);
-
-            const scale = 100 / 2000;
-            const cx = 100, cy = 100;
-            minimapCtx.save(); minimapCtx.translate(cx, cy);
-
-            // 地形
-            minimapCtx.beginPath(); minimapCtx.arc(0, 0, 300 * scale, 0, Math.PI*2);
-            minimapCtx.fillStyle = 'rgba(0, 255, 255, 0.1)'; minimapCtx.fill();
-            
-            minimapCtx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-            minimapCtx.beginPath(); minimapCtx.arc(0, 0, RING_INNER * scale, 0, Math.PI*2); minimapCtx.stroke();
-            minimapCtx.beginPath(); minimapCtx.arc(0, 0, RING_OUTER * scale, 0, Math.PI*2); minimapCtx.stroke();
-
-            landmarks.forEach(lm => { minimapCtx.fillStyle = 'rgba(255, 0, 255, 0.5)'; minimapCtx.fillRect(lm.x * scale - 4, lm.z * scale - 4, 8, 8); });
-
-            // 他人
-            minimapCtx.fillStyle = '#0088ff';
-            for(let id in otherPlayers) {
-                if(otherPlayers[id]) {
-                    minimapCtx.beginPath(); minimapCtx.arc(otherPlayers[id].position.x * scale, otherPlayers[id].position.z * scale, 2, 0, Math.PI*2); minimapCtx.fill();
-                }
-            }
-
-            // 自分
-            minimapCtx.fillStyle = '#ff0055';
-            minimapCtx.beginPath(); minimapCtx.arc(localPlayerMesh.position.x * scale, localPlayerMesh.position.z * scale, 4, 0, Math.PI*2); minimapCtx.fill();
-            
-            // 向き
-            minimapCtx.strokeStyle = '#fff'; minimapCtx.lineWidth = 2;
-            minimapCtx.beginPath(); minimapCtx.moveTo(localPlayerMesh.position.x * scale, localPlayerMesh.position.z * scale);
-            // カメラYaw基準で向きを描画
-            minimapCtx.lineTo(localPlayerMesh.position.x * scale + Math.sin(cameraYaw) * 10, localPlayerMesh.position.z * scale + Math.cos(cameraYaw) * 10);
-            minimapCtx.stroke();
-            minimapCtx.restore();
+                    } else { errorEl.style.color = '#00ffff'; errorEl.innerText = data.message; }
+                } else { errorEl.style.color = '#ff0055'; errorEl.innerText = data.message; }
+            } catch(e) { errorEl.innerText = '通信エラー'; }
         }
 
         function startGame() {
@@ -604,123 +133,210 @@
             document.getElementById('sidebar').style.display = 'flex';
             document.getElementById('chat-container').style.display = 'flex';
             document.getElementById('minimap-container').style.display = 'block';
+            document.getElementById('lock-instruction').style.display = 'block';
 
             socket = io({ auth: { username: currentUsername } });
             initThreeJS();
-            
-            socket.on('initData', (d) => {
-                updateStockChart(d.stockPrice);
-                Object.keys(d.players).forEach(id => {
-                    const info = d.players[id];
-                    if (id === socket.id) {
-                        localPlayerMesh = createAvatarMesh(info.avatar);
-                        localPlayerMesh.position.set(info.x, info.y, info.z);
-                        localPlayerMesh.add(createNameLabel(info.username, info.avatar.nameColor));
-                        scene.add(localPlayerMesh);
-                    } else {
-                        const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z);
-                        m.add(createNameLabel(info.username, info.avatar.nameColor)); scene.add(m); otherPlayers[id] = m;
-                    }
-                });
-            });
-            socket.on('newPlayer', (info) => {
-                const m = createAvatarMesh(info.avatar); m.position.set(info.x, info.y, info.z);
-                m.add(createNameLabel(info.username, info.avatar.nameColor)); scene.add(m); otherPlayers[info.id] = m;
-            });
-            socket.on('playerMoved', (i) => { if (otherPlayers[i.id]) { otherPlayers[i.id].position.set(i.x, i.y, i.z); otherPlayers[i.id].rotation.y = i.rotation; } });
-            socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; } });
-            socket.on('chatMessage', (msg) => {
-                const msgs = document.getElementById('chat-messages'); const div = document.createElement('div'); div.className = 'chat-msg' + (msg.isAdmin ? ' admin' : '');
-                div.innerHTML = `<span class="name">${msg.username}:</span> ${msg.text}`; msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight; showBubble(msg.id, msg.text);
-            });
-            socket.on('marketUpdate', p => updateStockChart(p));
-            socket.on('updateEconomy', d => { document.getElementById('ui-money').innerText = d.money; document.getElementById('ui-stocks').innerText = d.stocks; });
-            socket.on('speedUpdated', m => adminSpeedMult = m);
-            socket.on('notification', m => showNotification(m.type, m.text));
+            setupSocketEvents();
+            setupInputControls();
         }
 
-        function updateStockChart(price) {
-            if(!stockChartCtx) return;
-            stockHistory.push(price); if(stockHistory.length > 20) stockHistory.shift();
-            stockChartCtx.fillStyle = '#0a0a0f'; stockChartCtx.fillRect(0, 0, 512, 256);
-            stockChartCtx.strokeStyle = '#222'; stockChartCtx.lineWidth = 2; for(let i=0; i<5; i++) { stockChartCtx.beginPath(); stockChartCtx.moveTo(0, i*50+28); stockChartCtx.lineTo(512, i*50+28); stockChartCtx.stroke(); }
-            if(stockHistory.length > 1) {
-                stockChartCtx.strokeStyle = '#00ffff'; stockChartCtx.lineWidth = 4; stockChartCtx.beginPath();
-                const step = 512 / 19, maxP = Math.max(10, ...stockHistory) * 1.2;
-                stockHistory.forEach((p, i) => { const x = i * step, y = 256 - (p / maxP) * 200 - 20; if(i === 0) stockChartCtx.moveTo(x, y); else stockChartCtx.lineTo(x, y); });
-                stockChartCtx.stroke();
-            }
-            stockChartCtx.fillStyle = '#fff'; stockChartCtx.font = 'bold 36px sans-serif'; stockChartCtx.fillText(`CURRENT: ${price} CR`, 20, 50);
-            stockChartTex.needsUpdate = true;
+        function setupInputControls() {
+            const canvasEl = document.getElementById('canvas-container');
+            
+            // マウスロック
+            canvasEl.addEventListener('click', () => {
+                if (!document.pointerLockElement) document.body.requestPointerLock();
+            });
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = (document.pointerLockElement === document.body);
+                document.getElementById('lock-instruction').style.display = isLocked ? 'none' : 'block';
+                document.getElementById('crosshair').style.display = (isLocked && isFPS) ? 'block' : 'none';
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (isLocked) {
+                    cameraYaw -= e.movementX * 0.002;
+                    cameraPitch -= e.movementY * 0.002;
+                    // ピッチ（上下）の制限
+                    cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
+                }
+            });
+
+            // キーボード
+            window.addEventListener('keydown', e => { 
+                const key = e.key.toLowerCase();
+                keysPressed[key] = true; 
+                if(key === 'e') executeInteraction(); 
+                if(key === 'v') {
+                    isFPS = !isFPS;
+                    document.getElementById('crosshair').style.display = (isLocked && isFPS) ? 'block' : 'none';
+                    if(localPlayerMesh) localPlayerMesh.visible = !isFPS; // FPS時は自分を隠す
+                }
+                // チャット入力へのフォーカス
+                if(key === 't' && !isLocked) document.getElementById('chat-input').focus();
+            });
+            window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
+
+            document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.target.value.trim()) { 
+                    socket.emit('chatMessage', e.target.value.trim()); 
+                    e.target.value = ''; 
+                }
+            });
+        }
+
+        function createAvatarMesh(colorHex) {
+            const grp = new THREE.Group();
+            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), new THREE.MeshStandardMaterial({ color: colorHex })).translateY(1.0)); 
+            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0xffcc99 })).translateY(2.6)); 
+            return grp;
+        }
+
+        function createNameLabel(name) {
+            const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const ctx = cvs.getContext('2d');
+            ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffffff'; ctx.fillText(name, 128, 32);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cvs), transparent: true, depthTest: false }));
+            sprite.scale.set(3, 0.75, 1); sprite.position.y = 4.0; sprite.renderOrder = 999; 
+            return sprite;
+        }
+
+        function createRideableDrone(x, y, z) {
+            const grp = new THREE.Group();
+            grp.add(new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 1, 16), new THREE.MeshStandardMaterial({color: 0x222233})));
+            const shield = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.3}));
+            shield.position.set(0, 2, 0); grp.add(shield);
+            grp.position.set(x, y, z); scene.add(grp);
+            personalDrones.push({ mesh: grp });
+        }
+
+        function initTrains() {
+            const trainConfigs = [
+                {r: RING_INNER, y: 30, angle: 0, speed: 0.15, c: 0x00ffff}, 
+                {r: RING_OUTER, y: 30, angle: Math.PI, speed: -0.1, c: 0xff00ff}
+            ];
+
+            trainConfigs.forEach(cfg => {
+                const trk = new THREE.Mesh(new THREE.TorusGeometry(cfg.r, 2, 8, 128), new THREE.MeshStandardMaterial({color: 0x8899aa}));
+                trk.rotation.x = Math.PI/2; trk.position.y = cfg.y - 2; scene.add(trk);
+
+                const grp = new THREE.Group();
+                grp.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 34), new THREE.MeshStandardMaterial({color: 0x222})));
+                const glass = new THREE.MeshBasicMaterial({color: cfg.c, transparent:true, opacity:0.3, side: THREE.DoubleSide});
+                grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 34), glass).translateY(5).translateX(-4.8));
+                grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(12));
+                grp.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 9, 10), glass).translateY(5).translateX(4.8).translateZ(-12));
+                scene.add(grp);
+                trains.push({ r: cfg.r, y: cfg.y, angle: cfg.angle, speed: cfg.speed, state: 'moving', timer: 0, mesh: grp, justDeparted: false });
+            });
         }
 
         function initThreeJS() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a1a); 
-            scene.fog = new THREE.FogExp2(0x0a0a1a, 0.0008); 
+            scene.fog = new THREE.FogExp2(0x0a0a1a, 0.0015); 
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0x222233, 1.0));
-            const hemi = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.6); hemi.position.set(0, 500, 0); scene.add(hemi);
-            const dir = new THREE.DirectionalLight(0xffffff, 0.5); dir.position.set(1000, 2000, 1000); scene.add(dir);
+            scene.add(new THREE.AmbientLight(0x222233, 1.5));
+            const hemi = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8); hemi.position.set(0, 500, 0); scene.add(hemi);
 
-            // 星屑
-            const pts = new Float32Array(15000 * 3);
-            for(let i=0; i<45000; i++) pts[i] = (Math.random()-0.5)*4000;
-            const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-            scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({color: 0x00ffff, size: 3, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending})));
+            // 地面と都市
+            scene.add(new THREE.Mesh(new THREE.CircleGeometry(2000, 64), new THREE.MeshStandardMaterial({color: 0x050505})).rotateX(-Math.PI/2));
+            const grid = new THREE.GridHelper(4000, 100, 0x004466, 0x001122); grid.position.y = 0.1; scene.add(grid);
 
-            // アンビエントドローン
-            for(let i=0; i<50; i++) {
-                let d = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 6), new THREE.MeshBasicMaterial({color: 0x00ffff}));
-                d.position.set((Math.random()-0.5)*4000, 100+Math.random()*400, (Math.random()-0.5)*4000);
-                d.userData = { speed: 50 + Math.random()*100, angle: Math.random()*Math.PI*2 };
-                scene.add(d); ambientDrones.push(d);
+            // 放射状の道
+            const roadMat = new THREE.MeshBasicMaterial({color: 0x00aaff, transparent:true, opacity:0.2, blending: THREE.AdditiveBlending});
+            for(let i=0; i<4; i++) {
+                const rPlane = new THREE.Mesh(new THREE.PlaneGeometry(4000, 60), roadMat);
+                rPlane.rotation.x = -Math.PI/2; rPlane.rotation.z = i * Math.PI/4; rPlane.position.y = 0.2; scene.add(rPlane);
             }
+            scene.add(new THREE.Mesh(new THREE.RingGeometry(RING_INNER-30, RING_INNER+30, 64), roadMat).rotateX(-Math.PI/2).translateZ(0.2));
+            scene.add(new THREE.Mesh(new THREE.RingGeometry(RING_OUTER-30, RING_OUTER+30, 64), roadMat).rotateX(-Math.PI/2).translateZ(0.2));
 
-            generateCyberCity();
+            // 中央タワー
+            const cGroup = new THREE.Group();
+            cGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(150, 250, 400, 32), new THREE.MeshStandardMaterial({color: 0x111})).translateY(200)); 
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 4000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
+            beam.position.y = 2000; cGroup.add(beam);
+            scene.add(cGroup);
+
+            // 軽量化されたビル群（インスタンシング）
+            const bGeo = new THREE.BoxGeometry(1, 1, 1);
+            const bMat = new THREE.MeshStandardMaterial({color: 0x0f0f1f});
+            const bData = [];
+            for(let r=300; r<1800; r+=80) {
+                const count = Math.floor(2 * Math.PI * r / 80);
+                for(let i=0; i<count; i++) {
+                    const th = (i/count)*2*Math.PI;
+                    const x = r*Math.cos(th), z = r*Math.sin(th);
+                    // 道を避ける判定
+                    let aMod = Math.abs((th % (Math.PI/4)) + (th<0?Math.PI/4:0)) % (Math.PI/4);
+                    if (aMod > Math.PI/8) aMod = Math.PI/4 - aMod; 
+                    if (r * Math.sin(aMod) < 40) continue; 
+                    if (Math.abs(r - RING_INNER) < 40 || Math.abs(r - RING_OUTER) < 40) continue;
+                    
+                    bData.push({x, y: 100+Math.random()*150, z});
+                }
+            }
+            const iMesh = new THREE.InstancedMesh(bGeo, bMat, bData.length);
+            const dummy = new THREE.Object3D();
+            bData.forEach((d, i) => { dummy.position.set(d.x, d.y/2, d.z); dummy.scale.set(60, d.y, 60); dummy.updateMatrix(); iMesh.setMatrixAt(i, dummy.matrix); });
+            scene.add(iMesh);
+
             initTrains();
+            createRideableDrone(200, 1, 200);
+            createRideableDrone(-200, 1, 200);
 
             clock = new THREE.Clock();
-
-            window.addEventListener('keydown', e => { 
-                keysPressed[e.key.toLowerCase()] = true; 
-                if(e.key.toLowerCase()==='e') executeInteraction(); 
-            });
-            window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
-            
-            renderer.domElement.addEventListener('mousedown', () => isDragging = true);
-            renderer.domElement.addEventListener('mouseup', () => isDragging = false);
-            renderer.domElement.addEventListener('mousemove', (e) => {
-                if(isDragging) {
-                    cameraYaw -= (e.clientX - prevMouse.x) * 0.005;
-                    cameraPitch -= (e.clientY - prevMouse.y) * 0.005;
-                    cameraPitch = Math.max(-0.2, Math.min(Math.PI/2 - 0.1, cameraPitch)); 
-                }
-                prevMouse = {x: e.clientX, y: e.clientY};
-            });
             window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-
             animate();
+        }
+
+        function setupSocketEvents() {
+            socket.on('initData', (d) => {
+                Object.keys(d.players).forEach(id => {
+                    const info = d.players[id];
+                    if (id === socket.id) {
+                        localPlayerMesh = createAvatarMesh(0x00ffff);
+                        localPlayerMesh.position.set(info.x, info.y, info.z);
+                        localPlayerMesh.add(createNameLabel(info.username));
+                        scene.add(localPlayerMesh);
+                        if(isFPS) localPlayerMesh.visible = false;
+                    } else {
+                        const m = createAvatarMesh(0xff00ff); m.position.set(info.x, info.y, info.z);
+                        m.add(createNameLabel(info.username)); scene.add(m); otherPlayers[id] = m;
+                    }
+                });
+            });
+            socket.on('newPlayer', (info) => {
+                const m = createAvatarMesh(0xff00ff); m.position.set(info.x, info.y, info.z);
+                m.add(createNameLabel(info.username)); scene.add(m); otherPlayers[info.id] = m;
+            });
+            socket.on('playerMoved', (i) => { if (otherPlayers[i.id]) { otherPlayers[i.id].position.set(i.x, i.y, i.z); otherPlayers[i.id].rotation.y = i.rotation; } });
+            socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; } });
+            
+            socket.on('chatMessage', (msg) => {
+                const msgs = document.getElementById('chat-messages'); const div = document.createElement('div'); div.className = 'chat-msg';
+                div.innerHTML = `<span class="name">${msg.username}:</span> ${msg.text}`; msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
+                
+                // 吹き出し表示
+                if (!chatBubbles[msg.id]) { const b = document.createElement('div'); b.className = 'chat-bubble'; document.body.appendChild(b); chatBubbles[msg.id] = { el: b, t: null }; }
+                const bubble = chatBubbles[msg.id];
+                bubble.el.innerText = msg.text; bubble.el.style.opacity = '1';
+                if (bubble.t) clearTimeout(bubble.t);
+                bubble.t = setTimeout(() => { bubble.el.style.opacity = '0'; }, 5000);
+            });
         }
 
         function executeInteraction() {
             if(!interactionTarget || !localPlayerMesh) return;
-            if(interactionTarget.type === 'warp') {
-                localPlayerMesh.position.set(interactionTarget.data.tx, interactionTarget.data.ty, interactionTarget.data.tz);
-            } else if (interactionTarget.type === 'drone') {
-                if(ridingDrone) {
-                    ridingDrone = null;
-                    document.getElementById('drone-hint').style.display = 'none';
-                } else {
-                    ridingDrone = interactionTarget.data;
-                    playerLocalPos.set(0, 1.5, 0); // ドローン内の初期位置
-                    document.getElementById('drone-hint').style.display = 'block';
-                }
+            if (interactionTarget.type === 'drone') {
+                if(ridingDrone) ridingDrone = null;
+                else { ridingDrone = interactionTarget.data; playerLocalPos.set(0, 1.5, 0); }
             }
             interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
         }
@@ -728,164 +344,114 @@
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            const time = clock.getElapsedTime();
-
-            for(let d of ambientDrones) {
-                d.position.x += Math.cos(d.userData.angle) * d.userData.speed * delta; d.position.z += Math.sin(d.userData.angle) * d.userData.speed * delta;
-                d.rotation.y = -d.userData.angle; if(Math.hypot(d.position.x, d.position.z) > 2000) d.userData.angle += Math.PI;
-            }
-
-            for(let d of personalDrones) {
-                if(d.mesh.userData.rotors) {
-                    d.mesh.userData.rotors.forEach(r => r.rotation.y += 20 * delta);
-                }
-            }
 
             if (localPlayerMesh) {
-                // 列車の運行
-                for(let train of trains) {
-                    if(train.state === 'moving') {
-                        train.angle += train.speed * delta;
-                        let targetAngle = Math.round(train.angle / (Math.PI/4)) * (Math.PI/4);
-                        let diff = Math.abs(train.angle - targetAngle);
-                        
-                        if(diff < Math.abs(train.speed * delta) && !train.justDeparted) {
-                            train.angle = targetAngle; train.state = 'stopped'; train.timer = 5.0; train.justDeparted = true; 
-                        } else if (diff > 0.1) {
-                            train.justDeparted = false;
-                        }
-                    } else {
-                        train.timer -= delta; 
-                        if(train.timer <= 0) train.state = 'moving';
-                    }
-                    train.mesh.position.set(train.r * Math.cos(train.angle), train.y, train.r * Math.sin(train.angle)); 
-                    train.mesh.rotation.y = -train.angle; 
-                    train.mesh.updateMatrixWorld(); 
-                }
-
-                // プレイヤーの移動
-                const speed = (keysPressed['shift'] && !ridingDrone ? 45 : 15) * adminSpeedMult;
+                // カメラ基準の方向ベクトル
                 const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
                 const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
                 let move = new THREE.Vector3();
                 
-                if(keysPressed['w'] || keysPressed['arrowup']) move.add(forward);
-                if(keysPressed['s'] || keysPressed['arrowdown']) move.sub(forward);
-                if(keysPressed['a'] || keysPressed['arrowleft']) move.sub(right); // 左はマイナス
-                if(keysPressed['d'] || keysPressed['arrowright']) move.add(right); // 右はプラス
+                if(!isLocked && document.activeElement !== document.getElementById('chat-input')) {
+                    // 入力フォーカスがない時のWASD
+                    if(keysPressed['w'] || keysPressed['arrowup']) move.add(forward);
+                    if(keysPressed['s'] || keysPressed['arrowdown']) move.sub(forward);
+                    if(keysPressed['a'] || keysPressed['arrowleft']) move.add(right);
+                    if(keysPressed['d'] || keysPressed['arrowright']) move.sub(right);
+                } else if (isLocked) {
+                    if(keysPressed['w']) move.add(forward);
+                    if(keysPressed['s']) move.sub(forward);
+                    if(keysPressed['a']) move.add(right);
+                    if(keysPressed['d']) move.sub(right);
+                }
                 
+                const speed = keysPressed['shift'] ? 45 : 15;
+
                 if (ridingDrone) {
-                    // ドローン操縦
-                    if(move.lengthSq() > 0) {
-                        move.normalize();
-                        ridingDrone.mesh.position.x += move.x * 60 * delta;
-                        ridingDrone.mesh.position.z += move.z * 60 * delta;
-                        ridingDrone.mesh.rotation.y = Math.atan2(move.x, move.z);
-                    }
-                    if(keysPressed[' ']) ridingDrone.mesh.position.y += 30 * delta; // Space
-                    if(keysPressed['shift']) ridingDrone.mesh.position.y -= 30 * delta; // Shift
-                    // 下限
+                    if(move.lengthSq() > 0) { move.normalize(); ridingDrone.mesh.position.addScaledVector(move, 60 * delta); }
+                    if(keysPressed[' ']) ridingDrone.mesh.position.y += 30 * delta;
+                    if(keysPressed['shift']) ridingDrone.mesh.position.y -= 30 * delta;
                     if(ridingDrone.mesh.position.y < 2) ridingDrone.mesh.position.y = 2;
                     
-                    // アバターをドローンに同期
-                    const wp = playerLocalPos.clone().applyMatrix4(ridingDrone.mesh.matrixWorld);
-                    localPlayerMesh.position.copy(wp);
-                    localPlayerMesh.rotation.y = ridingDrone.mesh.rotation.y;
-                } else if (ridingTrain) {
-                    // 列車内移動
-                    if(move.lengthSq() > 0) {
-                        move.normalize();
-                        const localMove = move.clone().applyEuler(new THREE.Euler(0, -ridingTrain.mesh.rotation.y, 0));
-                        playerLocalPos.x += localMove.x * speed * delta;
-                        playerLocalPos.z += localMove.z * speed * delta;
-                        localPlayerMesh.rotation.y = Math.atan2(move.x, move.z);
-                    }
-                    const wp = playerLocalPos.clone().applyMatrix4(ridingTrain.mesh.matrixWorld);
-                    localPlayerMesh.position.copy(wp);
-                    // 降車判定
-                    if (Math.abs(playerLocalPos.x) > 6 || Math.abs(playerLocalPos.z) > 17 || Math.abs(playerLocalPos.y) > 5) {
-                        ridingTrain = null;
-                    }
+                    localPlayerMesh.position.copy(playerLocalPos.clone().applyMatrix4(ridingDrone.mesh.matrixWorld));
+                    localPlayerMesh.rotation.y = Math.atan2(forward.x, forward.z);
                 } else {
-                    // 通常歩行
                     if(move.lengthSq() > 0) {
                         move.normalize();
-                        let nextX = localPlayerMesh.position.x + move.x * speed * delta;
-                        let nextZ = localPlayerMesh.position.z + move.z * speed * delta;
-                        
-                        if(isWalkable(nextX, localPlayerMesh.position.z, localPlayerMesh.position.y)) localPlayerMesh.position.x = nextX;
-                        if(isWalkable(localPlayerMesh.position.x, nextZ, localPlayerMesh.position.y)) localPlayerMesh.position.z = nextZ;
-                        localPlayerMesh.rotation.y = Math.atan2(move.x, move.z);
+                        localPlayerMesh.position.addScaledVector(move, speed * delta);
+                        if(localPlayerMesh.position.y < 0) localPlayerMesh.position.y = 0;
+                        if(!isFPS) localPlayerMesh.rotation.y = Math.atan2(move.x, move.z); // TPS時は進行方向を向く
+                    } else if (isFPS) {
+                        localPlayerMesh.rotation.y = cameraYaw; // 止まっていてもカメラの方を向く
                     }
-                    
-                    // 乗車判定 (列車)
-                    for (let train of trains) {
-                        const pt = localPlayerMesh.position.clone();
-                        train.mesh.worldToLocal(pt);
-                        if (Math.abs(pt.x) <= 4.8 && Math.abs(pt.y) <= 5 && Math.abs(pt.z) <= 17) {
-                            ridingTrain = train; playerLocalPos.copy(pt); break;
-                        }
-                    }
-                }
-                
-                if (keysPressed['w'] || keysPressed['s'] || keysPressed['a'] || keysPressed['d'] || ridingTrain || ridingDrone) {
-                    socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
                 }
 
-                // インタラクションチェック (ワープ ＆ ドローン)
+                socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
+
+                // インタラクションチェック
                 interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
-                if(!ridingDrone) {
-                    for(let w of warps) {
-                        if(Math.hypot(localPlayerMesh.position.x - w.x, localPlayerMesh.position.z - w.z) < 8 && Math.abs(localPlayerMesh.position.y - w.y) < 5) {
-                            interactionTarget = { type: 'warp', data: w }; document.getElementById('prompt-text').innerText = w.label; document.getElementById('interaction-prompt').style.display = 'block'; break;
+                if(ridingDrone) {
+                    interactionTarget = { type: 'drone', data: ridingDrone }; 
+                    document.getElementById('prompt-text').innerText = "ドローンを降りる"; document.getElementById('interaction-prompt').style.display = 'block';
+                } else {
+                    for(let d of personalDrones) {
+                        if(localPlayerMesh.position.distanceTo(d.mesh.position) < 8) {
+                            interactionTarget = { type: 'drone', data: d }; document.getElementById('prompt-text').innerText = "ドローンに乗る"; document.getElementById('interaction-prompt').style.display = 'block'; break;
                         }
                     }
-                    if(!interactionTarget) {
-                        for(let d of personalDrones) {
-                            if(Math.hypot(localPlayerMesh.position.x - d.mesh.position.x, localPlayerMesh.position.z - d.mesh.position.z) < 8 && Math.abs(localPlayerMesh.position.y - d.mesh.position.y) < 5) {
-                                interactionTarget = { type: 'drone', data: d }; document.getElementById('prompt-text').innerText = "ドローンに乗る"; document.getElementById('interaction-prompt').style.display = 'block'; break;
-                            }
-                        }
-                    }
-                } else {
-                    // 乗車中
-                    interactionTarget = { type: 'drone', data: ridingDrone }; document.getElementById('prompt-text').innerText = "ドローンから降りる"; document.getElementById('interaction-prompt').style.display = 'block';
                 }
 
-                // UIゾーン判定
-                if (localPlayerMesh.position.x > 4900 && localPlayerMesh.position.x < 5100 && localPlayerMesh.position.z > -150 && localPlayerMesh.position.z < 150) {
-                    if(localPlayerMesh.position.z > 50) { document.getElementById('boutique-panel').style.display = 'block'; document.getElementById('ui-area').innerText = '📍 BOUTIQUE'; }
-                    else { document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 MALL INTERIOR'; }
-                } else if(localPlayerMesh.position.x > 5900) {
-                    document.getElementById('boutique-panel').style.display = 'none'; document.getElementById('ui-area').innerText = '📍 EXCHANGE';
+                // カメラ追従 (FPS / TPS)
+                if (isFPS) {
+                    camera.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y + 2.5, localPlayerMesh.position.z);
+                    camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
                 } else {
-                    document.getElementById('boutique-panel').style.display = 'none';
-                    let area = '📍 NEO-AETHERIA';
-                    if(Math.hypot(localPlayerMesh.position.x, localPlayerMesh.position.z) < 300) area = '📍 CYBERCORE';
-                    document.getElementById('ui-area').innerText = area;
+                    const dist = 25; const camY = localPlayerMesh.position.y + dist * Math.sin(cameraPitch) + 4;
+                    const xz = dist * Math.cos(cameraPitch); 
+                    const camX = localPlayerMesh.position.x - xz * Math.sin(cameraYaw); 
+                    const camZ = localPlayerMesh.position.z - xz * Math.cos(cameraYaw);
+                    
+                    camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.2); 
+                    camera.lookAt(localPlayerMesh.position.x, localPlayerMesh.position.y + 2, localPlayerMesh.position.z);
                 }
-
-                // カメラ追従
-                const dist = 30; const camY = localPlayerMesh.position.y + dist * Math.sin(cameraPitch) + 4;
-                const xz = dist * Math.cos(cameraPitch); const camX = localPlayerMesh.position.x - xz * Math.sin(cameraYaw); const camZ = localPlayerMesh.position.z - xz * Math.cos(cameraYaw);
-                camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.2); camera.lookAt(localPlayerMesh.position.x, localPlayerMesh.position.y + 4, localPlayerMesh.position.z);
                 
-                // ネームタグ等の追従
-                const updatePos = (id, pos) => {
-                    if (chatBubbles[id] && chatBubbles[id].element.style.opacity === '1') {
-                        const v = new THREE.Vector3(pos.x, pos.y + 6, pos.z); v.project(camera);
-                        if (v.z > 1) { chatBubbles[id].element.style.display = 'none'; return; }
-                        chatBubbles[id].element.style.display = 'block'; chatBubbles[id].element.style.left = `${(v.x * .5 + .5) * window.innerWidth}px`; chatBubbles[id].element.style.top = `${(v.y * -.5 + .5) * window.innerHeight - 20}px`;
+                // ミニマップと吹き出し更新
+                updateMinimap();
+                const updateBubble = (id, pos) => {
+                    if (chatBubbles[id] && chatBubbles[id].el.style.opacity === '1') {
+                        const v = new THREE.Vector3(pos.x, pos.y + 6, pos.z).project(camera);
+                        if (v.z > 1) { chatBubbles[id].el.style.display = 'none'; return; }
+                        chatBubbles[id].el.style.display = 'block'; chatBubbles[id].el.style.left = `${(v.x * .5 + .5) * window.innerWidth}px`; chatBubbles[id].el.style.top = `${(v.y * -.5 + .5) * window.innerHeight - 20}px`;
                     }
                 };
-                updatePos(socket.id, localPlayerMesh.position);
-                for(let id in otherPlayers) {
-                    if (otherPlayers[id]) updatePos(id, otherPlayers[id].position);
-                }
-                updateMinimap();
+                updateBubble(socket.id, localPlayerMesh.position);
+                for(let id in otherPlayers) if (otherPlayers[id]) updateBubble(id, otherPlayers[id].position);
+            }
+
+            // モノレールの運行
+            for(let train of trains) {
+                train.angle += train.speed * delta;
+                train.mesh.position.set(train.r * Math.cos(train.angle), train.y, train.r * Math.sin(train.angle)); 
+                train.mesh.rotation.y = -train.angle; 
             }
 
             renderer.render(scene, camera);
+        }
+
+        function updateMinimap() {
+            const cvs = document.getElementById('minimap'); const ctx = cvs.getContext('2d');
+            ctx.clearRect(0,0,200,200); ctx.fillStyle = 'rgba(10,10,25,0.8)'; ctx.fillRect(0,0,200,200);
+            if(!localPlayerMesh) return;
+            const scale = 100/2000; ctx.save(); ctx.translate(100, 100);
+            
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.beginPath(); ctx.arc(0, 0, RING_INNER * scale, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(0, 0, RING_OUTER * scale, 0, Math.PI*2); ctx.stroke();
+
+            for(let id in otherPlayers) { if(otherPlayers[id]) { ctx.fillStyle='#ff00ff'; ctx.beginPath(); ctx.arc(otherPlayers[id].position.x*scale, otherPlayers[id].position.z*scale, 2, 0, Math.PI*2); ctx.fill(); } }
+            
+            ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(localPlayerMesh.position.x*scale, localPlayerMesh.position.z*scale, 4, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(localPlayerMesh.position.x*scale, localPlayerMesh.position.z*scale); ctx.lineTo(localPlayerMesh.position.x*scale + Math.sin(cameraYaw)*10, localPlayerMesh.position.z*scale + Math.cos(cameraYaw)*10); ctx.stroke();
+            ctx.restore();
         }
     </script>
 </body>
