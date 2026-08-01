@@ -40,7 +40,6 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-
     <div id="login-screen">
         <div class="panel">
             <h2>HAKUYARC</h2>
@@ -83,16 +82,15 @@
     <script>
         let currentUsername = 'Guest', socket = null;
         let scene, camera, renderer, clock;
-        const MAP_RADIUS = 1500;
+        const MAP_RADIUS = 1800; // マップサイズを拡大
         
-        // プレイヤー状態
         const keysPressed = {};
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isDragging = false, isFPS = false;
-        let playerLocalPos = new THREE.Vector3(0, 1.5, 400); // 中央広場少し手前
+        let playerLocalPos = new THREE.Vector3(0, 1.5, 400); 
+        let playerVelocityY = 0; // 重力落下用
         
-        // システム管理
         const trains = [], personalDrones = [], warpPads = [], stationAreas = []; 
-        let ridingTrain = null, ridingDrone = null;
+        let ridingTrain = null, ridingDrone = null, localAvatar = null;
         let isWarping = false, fKeyWasPressed = false, vKeyWasPressed = false;
         let minimapCtx;
 
@@ -101,11 +99,9 @@
             if (uname) currentUsername = uname;
             document.getElementById('ui-username').innerText = currentUsername;
             
-            // UI切り替え
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block';
             
-            // 通信エラーを無視して強制起動
             try { if (typeof io !== 'undefined') socket = io({ auth: { username: currentUsername } }); } 
             catch(e) { console.warn("Socket connection skipped."); }
             
@@ -115,9 +111,8 @@
 
         function initThreeJS() {
             scene = new THREE.Scene(); 
-            // 昼間〜夕方の濃い水色
             scene.background = new THREE.Color(0x0a2a4a);
-            scene.fog = new THREE.FogExp2(0x0a2a4a, 0.0008);
+            scene.fog = new THREE.FogExp2(0x0a2a4a, 0.0006); // 霧を少し薄くして遠景を見せる
 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -133,6 +128,7 @@
             createLandmarkTower();
             createMonorails();
             createDrones();
+            createLocalAvatar();
 
             minimapCtx = document.getElementById('minimap').getContext('2d');
             clock = new THREE.Clock();
@@ -141,8 +137,26 @@
             animate();
         }
 
+        function createLocalAvatar() {
+            localAvatar = new THREE.Group();
+            
+            const bodyMat = new THREE.MeshStandardMaterial({color: 0x00ffff, roughness: 0.2, metalness: 0.8});
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), bodyMat);
+            body.position.y = 0.6;
+            
+            const headMat = new THREE.MeshStandardMaterial({color: 0xffcc99});
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
+            head.position.y = 1.5;
+            
+            const visorMat = new THREE.MeshBasicMaterial({color: 0x000000});
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.65), visorMat);
+            visor.position.y = 1.5;
+            
+            localAvatar.add(body, head, visor);
+            scene.add(localAvatar);
+        }
+
         function createEnvironment() {
-            // ベース地面（ダークアスファルト）
             const ground = new THREE.Mesh(new THREE.CircleGeometry(MAP_RADIUS, 64), new THREE.MeshStandardMaterial({ color: 0x0a0a0f, roughness: 0.9 }));
             ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
@@ -160,55 +174,60 @@
                 roadGrp.rotation.y = angle; scene.add(roadGrp);
             }
 
-            // 四隅の巨大施設モック
+            // 第3ルート（ピーナッツ型）に沿った地上道路
+            const curvePts = [];
+            for (let i = 0; i <= 128; i++) {
+                const a = (i / 128) * Math.PI * 2;
+                const r = 900 + 300 * Math.cos(2 * a);
+                curvePts.push(new THREE.Vector3(Math.cos(a) * r, 0.1, Math.sin(a) * r));
+            }
+            const roadSpline = new THREE.CatmullRomCurve3(curvePts, true);
+            const roadCurve = new THREE.Mesh(new THREE.TubeGeometry(roadSpline, 128, 40, 2, true), roadMat);
+            scene.add(roadCurve);
+            const neonCurve = new THREE.Mesh(new THREE.TubeGeometry(roadSpline, 128, 2, 2, true), lineMat);
+            neonCurve.position.y = 0.2;
+            scene.add(neonCurve);
+
             const corners = [
-                {x: 800, z: 800, col: 0x00ffff, name: "モール"}, {x: -800, z: 800, col: 0xff00ff, name: "ドーム"},
-                {x: 800, z: -800, col: 0xffff00, name: "証券所"}, {x: -800, z: -800, col: 0xff0000, name: "発着場"}
+                {x: 1000, z: 1000, col: 0x00ffff, name: "モール"}, {x: -1000, z: 1000, col: 0xff00ff, name: "ドーム"},
+                {x: 1000, z: -1000, col: 0xffff00, name: "証券所"}, {x: -1000, z: -1000, col: 0xff0000, name: "発着場"}
             ];
             corners.forEach(c => {
-                const b = new THREE.Mesh(new THREE.BoxGeometry(300, 200, 300), new THREE.MeshStandardMaterial({color: 0x111122, roughness: 0.2}));
-                b.position.set(c.x, 100, c.z);
-                const edge = new THREE.Mesh(new THREE.BoxGeometry(305, 205, 305), new THREE.MeshBasicMaterial({color: c.col, wireframe: true, transparent:true, opacity:0.3}));
-                edge.position.set(c.x, 100, c.z);
+                const b = new THREE.Mesh(new THREE.BoxGeometry(400, 250, 400), new THREE.MeshStandardMaterial({color: 0x111122, roughness: 0.2}));
+                b.position.set(c.x, 125, c.z);
+                const edge = new THREE.Mesh(new THREE.BoxGeometry(405, 255, 405), new THREE.MeshBasicMaterial({color: c.col, wireframe: true, transparent:true, opacity:0.3}));
+                edge.position.set(c.x, 125, c.z);
                 scene.add(b); scene.add(edge);
             });
         }
 
         function createLandmarkTower() {
             const towerGroup = new THREE.Group();
-            const TOWER_Y = 1350; // 展望台の高さ
+            const TOWER_Y = 1350; 
             
-            // 巨大タワー本体
             const tower = new THREE.Mesh(new THREE.CylinderGeometry(150, 300, TOWER_Y, 32), new THREE.MeshStandardMaterial({color: 0x0f172a, roughness: 0.4}));
             tower.position.y = TOWER_Y / 2; towerGroup.add(tower);
 
-            // 地上ワープ陣 (Z: 400 の広場に配置し、めり込まないようにする)
             createWarpPad(0, 0, 400, 0x00ffff, 0, TOWER_Y + 2, 100, "展望台へ昇る");
 
-            // --- 展望台 (Y = 1350) ---
             const obsRadius = 250;
-            // 展望台の床
             const floor = new THREE.Mesh(new THREE.CylinderGeometry(obsRadius, 150, 20, 32), new THREE.MeshStandardMaterial({color: 0x1e293b}));
             floor.position.y = TOWER_Y - 10; towerGroup.add(floor);
             const floorTop = new THREE.Mesh(new THREE.CircleGeometry(obsRadius, 32), new THREE.MeshStandardMaterial({color: 0x020617}));
             floorTop.rotation.x = -Math.PI/2; floorTop.position.y = TOWER_Y; towerGroup.add(floorTop);
 
-            // 全面ガラス張りドーム
             const glassMat = new THREE.MeshStandardMaterial({color: 0x00ffff, transparent: true, opacity: 0.15, roughness: 0.0, side: THREE.DoubleSide});
             const dome = new THREE.Mesh(new THREE.SphereGeometry(obsRadius, 32, 16, 0, Math.PI*2, 0, Math.PI/2), glassMat);
             dome.position.y = TOWER_Y; towerGroup.add(dome);
 
-            // 帰還ワープ
             createWarpPad(0, TOWER_Y, 150, 0xff00ff, 0, 1, 450, "地上へ戻る");
 
-            // ドーム上の巨大エネルギーコア
             const coreY = TOWER_Y + obsRadius + 100;
             const core = new THREE.Mesh(new THREE.SphereGeometry(80, 16, 16), new THREE.MeshBasicMaterial({color: 0xff4400}));
             core.position.y = coreY; towerGroup.add(core);
             const aura = new THREE.Mesh(new THREE.SphereGeometry(95, 16, 16), new THREE.MeshBasicMaterial({color: 0xff8800, transparent:true, opacity:0.4, wireframe: true}));
             aura.position.y = coreY; towerGroup.add(aura);
 
-            // 天を貫くビーム
             const beam = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 5000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
             beam.position.y = 2500; towerGroup.add(beam);
 
@@ -225,40 +244,52 @@
         }
 
         function createMonorails() {
-            const rInner = 600, rOuter = 900, trackY = 80;
+            const rInner = 600, rOuter = 1200, trackY = 80;
             const railMat = new THREE.MeshBasicMaterial({color: 0xcccccc});
-            const neonMat = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity:0.4});
+            const neonMatCyan = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity:0.4});
+            const neonMatPink = new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true, transparent:true, opacity:0.4});
+            const neonMatOrange = new THREE.MeshBasicMaterial({color: 0xffaa00, wireframe: true, transparent:true, opacity:0.4});
             
-            // 真円の軌道
-            const drawTrack = (radius) => {
+            // 真円軌道 (内周と外周)
+            const drawTrack = (radius, isOuter) => {
                 const grp = new THREE.Group();
                 grp.add(new THREE.Mesh(new THREE.TorusGeometry(radius, 2, 8, 128), railMat).rotateX(Math.PI/2));
-                grp.add(new THREE.Mesh(new THREE.TorusGeometry(radius+1, 3, 4, 128), neonMat).rotateX(Math.PI/2));
+                grp.add(new THREE.Mesh(new THREE.TorusGeometry(radius+1, 3, 4, 128), isOuter ? neonMatPink : neonMatCyan).rotateX(Math.PI/2));
                 grp.position.y = trackY; scene.add(grp);
             };
-            drawTrack(rInner); drawTrack(rOuter);
+            drawTrack(rInner, false); drawTrack(rOuter, true);
 
-            // 独立駅生成
+            // 第3の軌道 (ピーナッツ型: 内外を行き来する)
+            const curvePts = [];
+            for (let i = 0; i <= 128; i++) {
+                const a = (i / 128) * Math.PI * 2;
+                const r = 900 + 300 * Math.cos(2 * a);
+                curvePts.push(new THREE.Vector3(Math.cos(a) * r, trackY, Math.sin(a) * r));
+            }
+            const curveSpline = new THREE.CatmullRomCurve3(curvePts, true);
+            const curveGeo = new THREE.TubeGeometry(curveSpline, 128, 2, 8, true);
+            const curveNeonGeo = new THREE.TubeGeometry(curveSpline, 128, 3, 4, true);
+            scene.add(new THREE.Mesh(curveGeo, railMat));
+            scene.add(new THREE.Mesh(curveNeonGeo, neonMatOrange));
+
+            // 駅生成 (内周と外周それぞれに独立して配置)
             const addStation = (radius, angle) => {
                 const rotY = -angle; 
                 const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
                 const group = new THREE.Group();
                 const pWidth = 40, pDepth = 150;
                 
-                // ホームと屋根
                 group.add(new THREE.Mesh(new THREE.BoxGeometry(pWidth, 2, pDepth), new THREE.MeshStandardMaterial({color: 0x334455})).translateY(-1));
                 group.add(new THREE.Mesh(new THREE.BoxGeometry(pWidth, 2, pDepth), new THREE.MeshStandardMaterial({color: 0x222233})).translateY(20));
                 
-                // ガラスフェンス (落下防止)
                 const glass = new THREE.MeshStandardMaterial({color: 0x00ffff, transparent:true, opacity:0.3, side:THREE.DoubleSide});
                 group.add(new THREE.Mesh(new THREE.PlaneGeometry(pDepth, 15), glass).rotateY(Math.PI/2).translateZ(-pWidth/2).translateY(7.5));
                 group.add(new THREE.Mesh(new THREE.PlaneGeometry(pDepth, 15), glass).rotateY(Math.PI/2).translateZ(pWidth/2).translateY(7.5));
 
                 group.position.set(x, trackY, z); group.rotation.y = rotY; scene.add(group);
 
-                // ワープ配置
                 const dirX = Math.cos(angle), dirZ = Math.sin(angle);
-                const offset = (radius === rInner) ? -25 : 25; // 線路の反対側にワープ
+                const offset = (radius === rInner) ? -25 : 25;
                 createWarpPad(x + dirX*offset, trackY, z + dirZ*offset, 0xff00ff, x + dirX*30, 1, z + dirZ*30, "地上へ");
                 createWarpPad(x + dirX*30, 1, z + dirZ*30, 0x00ffff, x + dirX*offset, trackY+1, z + dirZ*offset, "駅ホームへ");
 
@@ -270,24 +301,29 @@
                 addStation(rOuter, i * Math.PI/2);
             }
 
-            // ホバー列車
-            const spawnTrain = (radius, initAngle) => {
+            // ホバー列車生成 (type属性で色と軌道を分ける)
+            const spawnTrain = (radius, initAngle, type) => {
+                const carColor = type === 'curve' ? 0xffaa00 : (type === 'outer' ? 0xff00ff : 0x00ffff);
                 const car = new THREE.Group();
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(14, 2, 40), new THREE.MeshStandardMaterial({color: 0x111122})));
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(14, 2, 40), new THREE.MeshStandardMaterial({color: 0x111122})).translateY(18));
-                const wGlass = new THREE.MeshStandardMaterial({color: 0x00ffff, transparent:true, opacity:0.2, side:THREE.DoubleSide});
+                
+                const wGlass = new THREE.MeshStandardMaterial({color: carColor, transparent:true, opacity:0.3, side:THREE.DoubleSide});
                 car.add(new THREE.Mesh(new THREE.PlaneGeometry(40, 16), wGlass).rotateY(Math.PI/2).translateZ(-7).translateY(9));
                 car.add(new THREE.Mesh(new THREE.PlaneGeometry(10, 16), wGlass).rotateY(Math.PI/2).translateZ(7).translateY(9).translateX(15));
                 car.add(new THREE.Mesh(new THREE.PlaneGeometry(10, 16), wGlass).rotateY(Math.PI/2).translateZ(7).translateY(9).translateX(-15));
+                
                 scene.add(car);
-                trains.push({ mesh: car, radius, angle: initAngle, speed: radius === rInner ? 0.05 : 0.03, state: 'moving', timer: 0 });
+                trains.push({ mesh: car, radius, angle: initAngle, speed: 0.04, state: 'moving', timer: 0, type: type, justDeparted: false });
             };
-            spawnTrain(rInner, 0); spawnTrain(rInner, Math.PI);
-            spawnTrain(rOuter, Math.PI/2); spawnTrain(rOuter, Math.PI*1.5);
+            
+            spawnTrain(rInner, 0, 'inner'); spawnTrain(rInner, Math.PI, 'inner');
+            spawnTrain(rOuter, Math.PI/2, 'outer'); spawnTrain(rOuter, Math.PI*1.5, 'outer');
+            spawnTrain(null, Math.PI/4, 'curve'); spawnTrain(null, Math.PI*1.25, 'curve'); // 第3ルート用
         }
 
         function createDrones() {
-            const positions = [ {x: 100, z: 350}, {x: -100, z: 350}, {x: 800, z: 700} ];
+            const positions = [ {x: 100, z: 350}, {x: -100, z: 350}, {x: 1100, z: 900} ];
             positions.forEach(pos => {
                 const grp = new THREE.Group();
                 grp.add(new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 2, 8), new THREE.MeshStandardMaterial({color: 0x222222})));
@@ -300,8 +336,6 @@
         function setupInputHandlers() {
             window.addEventListener('keydown', e => {
                 const chatInput = document.getElementById('chat-input');
-                
-                // Enterキーでチャットの切り替え
                 if (e.key === 'Enter') {
                     if (document.activeElement === chatInput) {
                         if (chatInput.value.trim() !== '') {
@@ -311,17 +345,13 @@
                             chatInput.value = '';
                             document.getElementById('chat-messages').scrollTop = 9999;
                         }
-                        chatInput.blur(); // 入力終了、移動可能に
+                        chatInput.blur(); 
                     } else {
-                        chatInput.focus(); // 入力開始
+                        chatInput.focus(); 
                     }
                     return; 
                 }
-
-                // チャット中以外は移動キーを記録
-                if (document.activeElement !== chatInput) {
-                    keysPressed[e.key.toLowerCase()] = true;
-                }
+                if (document.activeElement !== chatInput) keysPressed[e.key.toLowerCase()] = true;
             });
 
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
@@ -341,42 +371,16 @@
             window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
         }
 
-        function isWalkable(nextX, nextY, nextZ) {
-            if (ridingDrone) return true; 
-            if (nextY < 10) return true; // 地上
-            
-            // 展望台 (半径245以内に制限。ドームの外に出さない)
-            if (Math.abs(nextY - 1350) < 20) {
-                return Math.hypot(nextX, nextZ) < 245;
-            }
-
-            // 駅ホーム (フェンスの外に出さない)
-            if (Math.abs(nextY - 80) < 20) {
-                if (ridingTrain) return true; 
-                for (let st of stationAreas) {
-                    const dx = nextX - st.x, dz = nextZ - st.z;
-                    const cos = Math.cos(-st.angle), sin = Math.sin(-st.angle);
-                    const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
-                    // ホームの幅と奥行き内に完全制限
-                    if (Math.abs(lx) < (st.width/2 - 2) && Math.abs(lz) < (st.depth/2 - 2)) return true;
-                }
-            }
-            return false;
-        }
-
         function updateMinimap() {
             if (!minimapCtx) return;
             const ctx = minimapCtx;
             ctx.clearRect(0, 0, 200, 200);
             
-            // タワー
             ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(100, 100, 6, 0, Math.PI*2); ctx.fill();
-            // レール
             ctx.strokeStyle = 'rgba(136, 204, 255, 0.4)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.arc(100, 100, (600/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(100, 100, (900/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(100, 100, (1200/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
 
-            // プレイヤー位置と向き
             const px = 100 + (playerLocalPos.x / MAP_RADIUS) * 100;
             const py = 100 + (playerLocalPos.z / MAP_RADIUS) * 100;
             ctx.fillStyle = '#ff0055'; ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
@@ -405,13 +409,11 @@
                     if(!t.justDeparted) {
                         const stops = [0, Math.PI/2, Math.PI, Math.PI*1.5];
                         for (let s of stops) {
-                            // 厳密な停車判定
                             if (Math.abs(t.angle - s) < 0.015 || Math.abs(t.angle - (s + Math.PI*2)) < 0.015) {
                                 t.angle = s; t.state = 'stopped'; t.timer = 5.0; t.justDeparted = true; break;
                             }
                         }
                     } else {
-                        // 少し進んだらフラグ解除
                         if(Math.abs(Math.sin(t.angle * 4)) > 0.5) t.justDeparted = false; 
                     }
                 } else if (t.state === 'stopped') {
@@ -419,30 +421,44 @@
                     if(t.timer <= 0) t.state = 'moving';
                 }
 
-                const pt = new THREE.Vector3(Math.cos(t.angle)*t.radius, 80, Math.sin(t.angle)*t.radius);
-                const rot = -(t.angle + Math.PI/2);
+                // 軌道ごとの半径と接線（向き）の計算
+                let r = t.radius;
+                let dr = 0;
+                if (t.type === 'curve') {
+                    r = 900 + 300 * Math.cos(2 * t.angle);
+                    dr = -600 * Math.sin(2 * t.angle);
+                    t.radius = r; // 保存
+                }
+                const pt = new THREE.Vector3(Math.cos(t.angle) * r, 80, Math.sin(t.angle) * r);
+                
+                // 接線ベクトルを用いた正確な車両回転
+                const dx = dr * Math.cos(t.angle) - r * Math.sin(t.angle);
+                const dz = dr * Math.sin(t.angle) + r * Math.cos(t.angle);
+                const rot = Math.atan2(dx, dz);
+
                 t.mesh.position.copy(pt); t.mesh.rotation.y = rot;
 
-                // 乗車・追従システム (振り落とし防止)
+                // 物理追従乗車システム
                 if (!ridingDrone && Math.abs(playerLocalPos.y - pt.y) < 15) {
-                    const dx = playerLocalPos.x - pt.x, dz = playerLocalPos.z - pt.z;
+                    const pdx = playerLocalPos.x - pt.x, pdz = playerLocalPos.z - pt.z;
                     const cos = Math.cos(-rot), sin = Math.sin(-rot);
-                    const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
+                    const lx = pdx * cos - pdz * sin, lz = pdx * sin + pdz * cos;
                     
                     if (Math.abs(lx) < 7 && Math.abs(lz) < 20) {
                         ridingTrain = t;
-                        if (t.prevAngle !== undefined) {
-                            const dRot = -(t.angle - t.prevAngle);
+                        if (t.prevRot !== undefined) {
+                            const dRot = rot - t.prevRot;
                             const nCos = Math.cos(dRot), nSin = Math.sin(dRot);
-                            playerLocalPos.x = pt.x + (dx * nCos - dz * nSin);
-                            playerLocalPos.z = pt.z + (dx * nSin + dz * nCos);
+                            playerLocalPos.x = pt.x + (pdx * nCos - pdz * nSin);
+                            playerLocalPos.z = pt.z + (pdx * nSin + pdz * nCos);
                             cameraYaw -= dRot;
                         }
                     }
                 }
-                t.prevAngle = t.angle;
+                t.prevRot = rot;
             });
 
+            // インタラクション判定
             let promptText = "", interactTarget = null;
             if (ridingDrone) {
                 promptText = "ドローンから降りる";
@@ -467,11 +483,14 @@
             if (promptText) { document.getElementById('prompt-text').innerText = promptText; promptEl.style.display = 'block'; }
             else promptEl.style.display = 'none';
 
-            // WASDカニ歩き移動
+            // WASDカニ歩き移動（カメラ方向ベースに完全修正）
             if (!isWarping && document.activeElement !== document.getElementById('chat-input')) {
                 const speed = (keysPressed['shift'] ? 100 : 40) * delta;
-                const fwd = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-                const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                
+                const fwd = new THREE.Vector3();
+                camera.getWorldDirection(fwd);
+                fwd.y = 0; fwd.normalize();
+                const right = new THREE.Vector3().crossVectors(fwd, camera.up).normalize();
                 
                 let mv = new THREE.Vector3();
                 if (keysPressed['w']) mv.add(fwd);
@@ -482,21 +501,70 @@
 
                 let nextX = playerLocalPos.x + mv.x;
                 let nextZ = playerLocalPos.z + mv.z;
-                let nextY = playerLocalPos.y;
-
+                
                 if (ridingDrone) {
-                    if (keysPressed['e']) nextY += 50 * delta; // ドローン上昇
-                    if (keysPressed['q']) nextY -= 50 * delta; // ドローン下降
+                    let nextY = playerLocalPos.y;
+                    if (keysPressed['e']) nextY += 50 * delta; 
+                    if (keysPressed['q']) nextY -= 50 * delta; 
                     nextY = Math.max(1, nextY);
                     playerLocalPos.set(nextX, nextY, nextZ);
                     ridingDrone.position.copy(playerLocalPos); ridingDrone.position.y -= 3;
                 } else {
-                    if (isWalkable(nextX, nextY, nextZ)) {
-                        playerLocalPos.x = nextX; playerLocalPos.z = nextZ;
+                    playerLocalPos.x = nextX; playerLocalPos.z = nextZ;
+                }
+            }
+
+            // 重力と落下処理（壁抜け対策）
+            if (!ridingDrone && !ridingTrain && !isWarping) {
+                let groundY = 1.5; 
+                
+                if (Math.abs(playerLocalPos.y - 1350) < 20 && Math.hypot(playerLocalPos.x, playerLocalPos.z) < 245) {
+                    groundY = 1350;
+                } else if (Math.abs(playerLocalPos.y - 80) < 20) {
+                    let onStation = false;
+                    for (let st of stationAreas) {
+                        const dx = playerLocalPos.x - st.x, dz = playerLocalPos.z - st.z;
+                        const cos = Math.cos(-st.angle), sin = Math.sin(-st.angle);
+                        const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
+                        if (Math.abs(lx) < (st.width/2 - 2) && Math.abs(lz) < (st.depth/2 - 2)) {
+                            onStation = true; break;
+                        }
+                    }
+                    if (onStation) groundY = 80;
+                }
+
+                if (playerLocalPos.y > groundY + 0.1) {
+                    playerVelocityY -= 40 * delta; 
+                    playerLocalPos.y += playerVelocityY * delta;
+                    if (playerLocalPos.y <= groundY) {
+                        playerLocalPos.y = groundY;
+                        playerVelocityY = 0;
+                    }
+                } else {
+                    playerLocalPos.y = groundY;
+                    playerVelocityY = 0;
+                }
+            }
+
+            // 自キャラアバターの更新
+            if (localAvatar) {
+                localAvatar.position.copy(playerLocalPos);
+                localAvatar.visible = !isFPS;
+                
+                if (!isWarping && !ridingDrone && !ridingTrain && document.activeElement !== document.getElementById('chat-input')) {
+                    if (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d']) {
+                        let targetYaw = cameraYaw;
+                        if (keysPressed['s']) targetYaw += Math.PI;
+                        else if (keysPressed['a']) targetYaw += Math.PI/2;
+                        else if (keysPressed['d']) targetYaw -= Math.PI/2;
+                        localAvatar.rotation.y = targetYaw;
+                    } else {
+                        localAvatar.rotation.y = cameraYaw;
                     }
                 }
             }
 
+            // カメラの追従
             const camTarget = playerLocalPos.clone();
             if (isFPS) {
                 camera.position.copy(camTarget); camera.position.y += 1.6;
@@ -505,7 +573,6 @@
                 camera.position.copy(camTarget).add(offset);
                 camTarget.y += 2;
             }
-            
             const lookDir = new THREE.Vector3(-Math.sin(cameraYaw) * Math.cos(cameraPitch), Math.sin(cameraPitch), -Math.cos(cameraYaw) * Math.cos(cameraPitch));
             camera.lookAt(camera.position.clone().add(lookDir));
 
