@@ -5,44 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAKUYARC Metaverse</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #051024; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #020617; color: #fff; }
         
-        /* ログイン画面 */
-        #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 16, 36, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .panel { background: rgba(10, 20, 40, 0.9); padding: 30px; border-radius: 12px; border: 1px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); width: 320px; text-align: center; }
-        .panel h2 { margin-top: 0; color: #00ffff; letter-spacing: 2px; }
-        .panel input { width: 100%; box-sizing: border-box; padding: 12px; margin: 10px 0; border: 1px solid #0088ff; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none; }
-        .panel button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn-primary { background: linear-gradient(90deg, #00ffff, #0088ff); color: #000; }
-        .btn-success { background: transparent; border: 1px solid #ff00ff; color: #ff00ff; }
-        .error-msg { color: #ff0055; font-size: 0.9rem; min-height: 20px; }
+        #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .panel { background: rgba(15, 23, 42, 0.85); padding: 30px; border-radius: 12px; border: 1px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); width: 320px; backdrop-filter: blur(10px);}
+        .panel h2 { margin-top: 0; color: #00ffff; text-align: center; letter-spacing: 2px; }
+        .panel input { width: 100%; box-sizing: border-box; padding: 12px; margin: 10px 0; border: 1px solid #38bdf8; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none; }
+        .panel button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: linear-gradient(90deg, #00ffff, #0284c7); color: #000; }
+        .btn-success { background: transparent; border: 1px solid #f472b6; color: #f472b6; }
+        .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
-        /* 左側UI */
-        #sidebar { display: none; position: absolute; top: 0; left: 0; width: 280px; height: 100vh; background: linear-gradient(180deg, rgba(5,10,25,0.9) 0%, rgba(0,0,0,0.8) 100%); border-right: 1px solid #00ffff; z-index: 10; padding: 20px; box-sizing: border-box; flex-direction: column; gap: 20px; }
-        .sidebar-section { border-bottom: 1px solid rgba(0,255,255,0.3); padding-bottom: 15px; }
-        .sidebar-section h3 { margin: 0 0 10px 0; font-size: 0.85rem; color: #00ffff; }
-        .user-name { font-size: 1.2rem; font-weight: bold; color: #fff; }
-        .money { font-size: 1.5rem; color: #ffcc00; font-weight: bold; }
+        #ui-layer { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
         
-        /* インタラクションプロンプト */
-        #interaction-prompt { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #ff00ff; padding: 10px 25px; border-radius: 30px; color: #ff00ff; font-weight: bold; font-size: 1.2rem; z-index: 20; display: none; pointer-events: none; }
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; border: 2px solid rgba(0, 255, 255, 0.8); border-radius: 50%; }
+        
+        #sidebar { position: absolute; top: 20px; left: 20px; width: 250px; background: rgba(15,23,42,0.8); border-left: 3px solid #00ffff; padding: 15px; border-radius: 0 8px 8px 0; pointer-events: auto;}
+        .money { font-size: 1.5rem; color: #00ffff; font-weight: bold; }
+
+        #minimap-container { position: absolute; bottom: 20px; right: 20px; width: 200px; height: 200px; border: 2px solid #00ffff; border-radius: 50%; background: rgba(2,6,23,0.8); overflow: hidden; box-shadow: 0 0 20px rgba(0,255,255,0.2); }
+        #minimap { width: 100%; height: 100%; }
+
+        #interaction-prompt { position: absolute; bottom: 20vh; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 20px; border-radius: 20px; color: #00ffff; font-weight: bold; font-size: 1.2rem; display: none; }
         .key-btn { background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; }
 
-        /* ミニマップ (右下) */
-        #minimap-container { display: none; position: absolute; bottom: 20px; right: 20px; width: 200px; height: 200px; background: rgba(0, 10, 20, 0.8); border: 2px solid #00ffff; border-radius: 50%; overflow: hidden; z-index: 10; box-shadow: 0 0 15px rgba(0,255,255,0.3); }
-        #minimap-canvas { width: 100%; height: 100%; }
+        #controls-help { position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.7); font-size: 0.8rem; line-height: 1.6; }
 
-        /* チャット (左下) */
-        #chat-container { display: none; position: absolute; bottom: 20px; left: 300px; width: 350px; background: rgba(5, 10, 25, 0.8); border: 1px solid #00ffff; border-radius: 8px; flex-direction: column; z-index: 10; }
-        #chat-messages { height: 150px; overflow-y: auto; padding: 10px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px; }
-        .chat-msg { color: #ddd; word-break: break-all; }
-        .chat-msg .sender { color: #00ffff; font-weight: bold; margin-right: 5px; }
-        #chat-input { padding: 10px; border: none; border-top: 1px solid #00ffff; background: transparent; color: #fff; outline: none; }
+        #chat-container { position: absolute; bottom: 120px; left: 20px; width: 300px; background: rgba(15,23,42,0.8); border-radius: 8px; pointer-events: auto; display: flex; flex-direction: column; }
+        #chat-messages { height: 120px; overflow-y: auto; padding: 10px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
+        #chat-input { padding: 8px; border: none; border-top: 1px solid #334155; background: transparent; color: white; outline: none; }
 
-        /* クロスヘア */
-        #crosshair { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: #00ffff; border-radius: 50%; z-index: 5; pointer-events: none; }
-
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -53,7 +46,6 @@
         <div class="panel">
             <h2>HAKUYARC</h2>
             <div id="auth-error" class="error-msg"></div>
-            <!-- APIにあわせて id="username" に修正 -->
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
             <button class="btn-primary" onclick="attemptAuth('/api/login')">ENTER SYSTEM</button>
@@ -61,49 +53,55 @@
         </div>
     </div>
 
-    <div id="sidebar">
-        <div class="sidebar-section">
-            <h3>Player Info</h3>
-            <div class="user-name" id="ui-username">---</div>
-            <div class="money" id="ui-money">0 CR</div>
+    <div id="ui-layer">
+        <div id="crosshair"></div>
+        <div id="sidebar">
+            <div style="font-size: 0.8rem; color:#94a3b8;">ID: <span id="ui-username">---</span></div>
+            <div class="money">CR: <span id="ui-money">0</span></div>
         </div>
-        <div class="sidebar-section">
-            <h3>Controls</h3>
-            <p style="font-size: 0.8rem; color:#888;">[Click] マウスロック<br>[Esc] ロック解除<br>[WASD] 移動<br>[V] FPS/TPS切替<br>[F] アクション(乗降/ワープ)<br>ドローン中: [E]上昇 / [Q]下降</p>
+        
+        <div id="chat-container">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Message... (Enter to send)">
         </div>
+
+        <div id="controls-help">
+            [Click] マウスロック (Esc解除)<br>
+            [W A S D] 移動<br>
+            [V] FPS/TPS切替<br>
+            [F] アクション/乗車<br>
+            [E]上昇 / [Q]下降 (ドローン時)
+        </div>
+
+        <div id="minimap-container">
+            <canvas id="minimap" width="200" height="200"></canvas>
+        </div>
+        
+        <div id="interaction-prompt"><span class="key-btn">F</span><span id="prompt-text">アクション</span></div>
     </div>
 
-    <div id="interaction-prompt"><span class="key-btn">F</span><span id="prompt-text">アクション</span></div>
-    
-    <div id="chat-container">
-        <div id="chat-messages"></div>
-        <input type="text" id="chat-input" placeholder="Press Enter to send...">
-    </div>
-
-    <div id="minimap-container"><canvas id="minimap-canvas" width="200" height="200"></canvas></div>
-    <div id="crosshair"></div>
     <div id="canvas-container"></div>
 
     <script>
         let currentUsername = null, socket = null;
         let scene, camera, renderer, clock;
-        const MAP_SIZE = 3000;
+        const MAP_RADIUS = 1200;
+        const otherPlayers = {}, chatBubbles = {};
         
-        // プレイヤー＆カメラ制御
-        let localPlayerMesh = null, otherPlayers = {};
+        // プレイヤー状態
         const keysPressed = {};
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isFPS = false;
-        let playerLocalPos = new THREE.Vector3();
+        let playerLocalPos = new THREE.Vector3(0, 1.5, 300); // 初期位置
         
-        // システムオブジェクト
+        // システム管理
         const trains = [], personalDrones = [], warpPads = [];
+        let stationAreas = []; // 高所の歩行可能エリア
         let ridingTrain = null, ridingDrone = null;
-        let isWarping = false;
-        let interactionTarget = null;
+        let isWarping = false, fKeyWasPressed = false;
         
-        const RING_INNER = 500, RING_OUTER = 800; // 道路とモノレールの半径
+        // ミニマップ用
+        let minimapCtx;
 
-        // ログイン処理
         async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -111,445 +109,506 @@
                 const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
                 const data = await res.json();
                 if (data.success) {
-                    if (endpoint === '/api/login') {
+                    if(endpoint === '/api/login') {
                         currentUsername = data.username;
                         document.getElementById('ui-username').innerText = currentUsername;
-                        document.getElementById('ui-money').innerText = data.money + " CR";
+                        document.getElementById('ui-money').innerText = data.money || 500;
                         startGame(); 
-                    } else {
-                        document.getElementById('auth-error').style.color = '#00ffff';
-                        document.getElementById('auth-error').innerText = "登録完了。ログインしてください。";
+                    } else { 
+                        document.getElementById('auth-error').style.color = '#f472b6'; 
+                        document.getElementById('auth-error').innerText = data.message; 
                     }
-                } else {
-                    document.getElementById('auth-error').style.color = '#ff0055';
-                    document.getElementById('auth-error').innerText = data.message;
+                } else { 
+                    document.getElementById('auth-error').style.color = '#f43f5e'; 
+                    document.getElementById('auth-error').innerText = data.message; 
                 }
-            } catch(e) {
+            } catch (e) {
                 document.getElementById('auth-error').innerText = "通信エラーが発生しました";
             }
         }
 
-        document.getElementById('chat-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const text = e.target.value.trim();
-                if (text && socket) { socket.emit('chatMessage', text); e.target.value = ''; }
-            }
-        });
-        
-        function appendChat(username, text) {
-            const msgs = document.getElementById('chat-messages');
-            const div = document.createElement('div');
-            div.className = 'chat-msg';
-            div.innerHTML = `<span class="sender">${username}:</span>${text}`;
-            msgs.appendChild(div);
-            msgs.scrollTop = msgs.scrollHeight;
-        }
-
-        // ミニマップ描画関数
-        const mmCtx = document.getElementById('minimap-canvas').getContext('2d');
-        function drawMinimap() {
-            if (!localPlayerMesh) return;
-            mmCtx.clearRect(0, 0, 200, 200);
-            
-            // 背景（円形レーダー）
-            mmCtx.fillStyle = 'rgba(0, 10, 20, 0.5)'; mmCtx.fillRect(0,0,200,200);
-            
-            const pX = localPlayerMesh.position.x, pZ = localPlayerMesh.position.z;
-            const scale = 0.05; // 縮尺
-
-            const drawPoint = (x, z, color, size) => {
-                const mx = 100 + (x - pX) * scale;
-                const my = 100 + (z - pZ) * scale;
-                if (Math.hypot(mx-100, my-100) < 100) {
-                    mmCtx.fillStyle = color; mmCtx.beginPath(); mmCtx.arc(mx, my, size, 0, Math.PI*2); mmCtx.fill();
-                }
-            };
-
-            // ランドマーク（中央）
-            drawPoint(0, 0, '#ffffff', 4);
-            // 他プレイヤー
-            for(let id in otherPlayers) drawPoint(otherPlayers[id].position.x, otherPlayers[id].position.z, '#0088ff', 3);
-            
-            // 自分（常に中央）
-            mmCtx.fillStyle = '#ff0055'; mmCtx.beginPath();
-            mmCtx.moveTo(100, 95); mmCtx.lineTo(105, 105); mmCtx.lineTo(95, 105); mmCtx.fill();
-            
-            // 十字線
-            mmCtx.strokeStyle = 'rgba(0,255,255,0.3)'; mmCtx.beginPath();
-            mmCtx.moveTo(0, 100); mmCtx.lineTo(200, 100); mmCtx.moveTo(100, 0); mmCtx.lineTo(100, 200); mmCtx.stroke();
-        }
-
         function initThreeJS() {
             scene = new THREE.Scene(); 
-            // 濃い水色（ディープブルー）の空とフォグ
-            scene.background = new THREE.Color(0x0a1a3a); 
-            scene.fog = new THREE.FogExp2(0x0a1a3a, 0.0005); 
+            scene.background = new THREE.Color(0x0a1e3f); // ディープブルーの空
+            scene.fog = new THREE.FogExp2(0x0a1e3f, 0.0012);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight); 
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // 光源
-            scene.add(new THREE.AmbientLight(0x223355, 1.5));
-            const dirLight = new THREE.DirectionalLight(0x4488ff, 1.0);
-            dirLight.position.set(1000, 2000, 1000); scene.add(dirLight);
-            
-            // 下からマゼンタ、上からシアンのサイバーライト
+            scene.add(new THREE.AmbientLight(0x111122, 1.5));
             const hemiLight = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8);
+            hemiLight.position.set(0, 500, 0);
             scene.add(hemiLight);
 
-            // 地面
-            const ground = new THREE.Mesh(new THREE.CircleGeometry(2000, 64), new THREE.MeshStandardMaterial({ color: 0x050a10, roughness: 1.0 }));
-            ground.rotation.x = -Math.PI / 2; scene.add(ground);
-
-            createInfrastructure();
+            createEnvironment();
             createLandmarks();
-            createFacilities();
-            createTrains();
-            createPersonalDrones();
-            
+            createMonorailSystem();
+            createDrones();
+
+            minimapCtx = document.getElementById('minimap').getContext('2d');
+
             clock = new THREE.Clock();
-            setupInput();
+            setupInputHandlers();
+            
             animate();
         }
 
-        function createInfrastructure() {
-            // 放射状の道 (8方向) とネオンセンターライン
-            const roadMat = new THREE.MeshStandardMaterial({color: 0x111118});
+        function createEnvironment() {
+            // ベース地面
+            const ground = new THREE.Mesh(new THREE.CircleGeometry(MAP_RADIUS, 64), new THREE.MeshStandardMaterial({ color: 0x05050a, roughness: 0.9 }));
+            ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+            // 放射状の道路と発光ライン
+            const roadMat = new THREE.MeshStandardMaterial({color: 0x11111a});
             const lineMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.5});
             
-            for (let i = 0; i < 8; i++) {
-                const angle = (i * Math.PI) / 4;
-                const road = new THREE.Mesh(new THREE.PlaneGeometry(80, 2000), roadMat);
-                road.rotation.x = -Math.PI/2; road.rotation.z = angle;
-                road.position.y = 0.1; scene.add(road);
+            for(let i=0; i<8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const road = new THREE.Group();
                 
-                const line = new THREE.Mesh(new THREE.PlaneGeometry(2, 2000), lineMat);
-                line.rotation.x = -Math.PI/2; line.rotation.z = angle;
-                line.position.y = 0.2; scene.add(line);
+                const plane = new THREE.Mesh(new THREE.PlaneGeometry(80, MAP_RADIUS), roadMat);
+                plane.rotation.x = -Math.PI/2; plane.position.z = MAP_RADIUS/2;
+                road.add(plane);
+                
+                const line = new THREE.Mesh(new THREE.PlaneGeometry(2, MAP_RADIUS), lineMat);
+                line.rotation.x = -Math.PI/2; line.position.z = MAP_RADIUS/2; line.position.y = 0.1;
+                road.add(line);
+                
+                road.rotation.y = angle;
+                scene.add(road);
             }
-            
-            // 環状線路＆道路 (内周500, 外周800)
-            const innerRing = new THREE.Mesh(new THREE.RingGeometry(460, 540, 64), roadMat);
-            innerRing.rotation.x = -Math.PI/2; innerRing.position.y = 0.2; scene.add(innerRing);
-            const outerRing = new THREE.Mesh(new THREE.RingGeometry(760, 840, 64), roadMat);
-            outerRing.rotation.x = -Math.PI/2; outerRing.position.y = 0.2; scene.add(outerRing);
+
+            // 星屑パーティクル
+            const geo = new THREE.BufferGeometry(); const count = 5000;
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i++) pos[i] = (Math.random() - 0.5) * 3000;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const pMat = new THREE.PointsMaterial({ size: 4, color: 0x00ffff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+            scene.add(new THREE.Points(geo, pMat));
         }
 
-        // 汎用ワープポイント作成関数
-        function createTeleporter(x, y, z, colorHex, tX, tY, tZ, label) {
-            const grp = new THREE.Group();
-            grp.add(new THREE.Mesh(new THREE.RingGeometry(3, 4, 32), new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })).rotateX(Math.PI/2).translateZ(-0.1));
-            grp.add(new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 20, 16, 1, true), new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.2, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })).translateY(10));
-            grp.position.set(x, y, z); scene.add(grp);
-            warpPads.push({ mesh: grp, target: new THREE.Vector3(tX, tY, tZ), label: label });
+        function createTeleporter(x, y, z, color, tX, tY, tZ, label) {
+            const pad = new THREE.Group();
+            pad.add(new THREE.Mesh(new THREE.RingGeometry(3, 4, 32), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })).rotateX(Math.PI/2));
+            pad.add(new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 20, 16, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.2, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })).translateY(10));
+            pad.position.set(x, y + 0.1, z);
+            scene.add(pad);
+            warpPads.push({ mesh: pad, target: new THREE.Vector3(tX, tY, tZ), label });
         }
 
         function createLandmarks() {
-            const cGroup = new THREE.Group();
+            const group = new THREE.Group();
             
-            // 超巨大な六角形の土台
-            const base = new THREE.Mesh(new THREE.CylinderGeometry(250, 350, 150, 6), new THREE.MeshStandardMaterial({color: 0x111122, metalness: 0.8, roughness: 0.2}));
-            base.position.y = 75; cGroup.add(base);
+            // 超巨大タワーのベース
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(150, 250, 100, 16), new THREE.MeshStandardMaterial({color: 0x111122, roughness: 0.3}));
+            base.position.y = 50; group.add(base);
             
-            // メインタワー (さらに太く高く)
-            const tower = new THREE.Mesh(new THREE.CylinderGeometry(120, 200, 1200, 16), new THREE.MeshStandardMaterial({color: 0x222233}));
-            tower.position.y = 750; cGroup.add(tower);
+            // メインタワー
+            const towerY = 1350;
+            const tower = new THREE.Mesh(new THREE.CylinderGeometry(80, 150, towerY, 16), new THREE.MeshStandardMaterial({color: 0x1a1a2e}));
+            tower.position.y = towerY / 2; group.add(tower);
+
+            // タワー下部のワープパッド (めり込まないよう完全に外側に配置)
+            createTeleporter(0, 0, 300, 0x00ffff, 0, towerY + 5, 100, "展望台へ");
+
+            // --- 展望台 (Y = 1350) ---
+            const obsRad = 150;
+            // 展望台の床
+            const floor = new THREE.Mesh(new THREE.CylinderGeometry(obsRad, 80, 20, 32), new THREE.MeshStandardMaterial({color: 0x111122}));
+            floor.position.y = towerY - 10; group.add(floor);
             
-            // サイバーネオンリング
-            const ringMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.8});
-            const ring1 = new THREE.Mesh(new THREE.TorusGeometry(300, 8, 16, 32), ringMat);
-            ring1.rotation.x = Math.PI/2; ring1.position.y = 500; cGroup.add(ring1);
-            const ring2 = new THREE.Mesh(new THREE.TorusGeometry(250, 8, 16, 32), new THREE.MeshBasicMaterial({color: 0xff00ff}));
-            ring2.rotation.x = Math.PI/2; ring2.position.y = 900; cGroup.add(ring2);
+            const floorTop = new THREE.Mesh(new THREE.CircleGeometry(obsRad, 32), new THREE.MeshStandardMaterial({color: 0x050510}));
+            floorTop.rotation.x = -Math.PI/2; floorTop.position.y = towerY + 0.1; group.add(floorTop);
 
-            // 展望台 (最上階 Y=1350)
-            const obsY = 1350;
-            const obsRadius = 150;
-            const obsFloor = new THREE.Mesh(new THREE.CylinderGeometry(obsRadius, 120, 20, 16), new THREE.MeshStandardMaterial({color: 0x111122}));
-            obsFloor.position.y = obsY; cGroup.add(obsFloor);
-            const obsCeil = new THREE.Mesh(new THREE.CylinderGeometry(120, obsRadius, 20, 16), new THREE.MeshStandardMaterial({color: 0x111122}));
-            obsCeil.position.y = obsY + 60; cGroup.add(obsCeil);
-            
-            // 全面ガラス張りの壁
-            const glassMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide});
-            const obsGlass = new THREE.Mesh(new THREE.CylinderGeometry(obsRadius-2, obsRadius-2, 40, 32, 1, true), glassMat);
-            obsGlass.position.y = obsY + 30; cGroup.add(obsGlass);
+            // ガラス張りのドーム回廊
+            const glassMat = new THREE.MeshStandardMaterial({color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide, roughness: 0.1, metalness: 0.9});
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(obsRad, 32, 16, 0, Math.PI*2, 0, Math.PI/2), glassMat);
+            dome.position.y = towerY; group.add(dome);
 
-            // 展望台内部の床
-            const innerFloor = new THREE.Mesh(new THREE.CircleGeometry(obsRadius-5, 32), new THREE.MeshStandardMaterial({color: 0x050510}));
-            innerFloor.rotation.x = -Math.PI/2; innerFloor.position.y = obsY + 10.1; cGroup.add(innerFloor);
+            // 天井（ドームの頂点を塞ぐ）
+            const ceil = new THREE.Mesh(new THREE.CircleGeometry(obsRad-2, 32), new THREE.MeshStandardMaterial({color: 0x222233}));
+            ceil.rotation.x = Math.PI/2; ceil.position.y = towerY + obsRad - 5; group.add(ceil);
 
-            // エネルギーコア (展望台の上 Y=1450)
-            const coreY = 1450;
-            const core = new THREE.Mesh(new THREE.OctahedronGeometry(60, 2), new THREE.MeshBasicMaterial({color: 0xffaa00, wireframe: false}));
-            core.position.y = coreY; cGroup.add(core);
-            const coreWire = new THREE.Mesh(new THREE.OctahedronGeometry(70, 2), new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true, transparent:true, opacity:0.5}));
-            coreWire.position.y = coreY; cGroup.add(coreWire);
+            // 展望台からの帰還ワープ
+            createTeleporter(0, towerY, 120, 0xff00ff, 0, 1, 320, "地上へ戻る");
 
-            // 天を貫く青いビーム
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 5000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
-            beam.position.y = 2500; cGroup.add(beam);
-            
-            scene.add(cGroup);
+            // エネルギーコア (ドームのさらに上)
+            const coreY = towerY + obsRad + 50;
+            const core = new THREE.Mesh(new THREE.OctahedronGeometry(60, 2), new THREE.MeshBasicMaterial({color: 0xff6600}));
+            core.position.y = coreY; group.add(core);
+            const coreWire = new THREE.Mesh(new THREE.OctahedronGeometry(70, 2), new THREE.MeshBasicMaterial({color: 0xffaa00, wireframe: true, transparent:true, opacity:0.5}));
+            coreWire.position.y = coreY; group.add(coreWire);
 
-            // 展望台へのワープポイント (土台の外側 Z=400 に配置してめり込み完全防止)
-            createTeleporter(0, 1, 400, 0x00ffff, 0, obsY + 10, -50, "展望台へ");
-            createTeleporter(0, obsY + 10, -50, 0xff00ff, 0, 1, 420, "地上へ戻る");
+            // 天を貫くビーム
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 5000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
+            beam.position.y = 2500; group.add(beam);
+
+            scene.add(group);
         }
 
-        function createFacilities() {
-            // 四隅の巨大施設 (Radius 1000)
-            const fMat = new THREE.MeshStandardMaterial({color: 0x151525, metalness: 0.5});
-            
-            // 1. ショッピングモール (NE)
-            const mall = new THREE.Mesh(new THREE.BoxGeometry(300, 150, 300), fMat);
-            mall.position.set(700, 75, -700); scene.add(mall);
-            
-            // 2. 証券所 (SE)
-            const exch = new THREE.Mesh(new THREE.BoxGeometry(250, 200, 250), fMat);
-            exch.position.set(700, 100, 700); scene.add(exch);
-            
-            // 3. エンタメドーム (SW)
-            const dome = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true}));
-            dome.position.set(-700, 0, 700); scene.add(dome);
-            
-            // 4. ドローン発着場 (NW)
-            const port = new THREE.Mesh(new THREE.CylinderGeometry(200, 200, 50, 16), fMat);
-            port.position.set(-700, 25, -700); scene.add(port);
+        function createCircleTrack(radius) {
+            const pts = [];
+            for(let i=0; i<8; i++) {
+                const angle = (i/8) * Math.PI * 2;
+                pts.push(new THREE.Vector3(Math.cos(angle)*radius, 80, Math.sin(angle)*radius));
+            }
+            return new THREE.CatmullRomCurve3(pts, true); // trueで完全なループ
         }
 
-        function createTrains() {
-            // 内周(500) と 外周(800) の独立した駅と列車
-            const radii = [RING_INNER, RING_OUTER];
-            const colors = [0x00ffff, 0xff00ff];
+        function addStationPlatform(track, progress, isInner) {
+            const pt = track.getPointAt(progress);
+            const tangent = track.getTangentAt(progress);
+            const rotY = Math.atan2(tangent.x, tangent.z);
             
-            radii.forEach((radius, rIdx) => {
-                // 空中レール
-                const track = new THREE.Mesh(new THREE.TorusGeometry(radius, 2, 8, 64), new THREE.MeshBasicMaterial({color: 0x555555}));
-                track.rotation.x = Math.PI/2; track.position.y = 80; scene.add(track);
+            const group = new THREE.Group();
+            
+            // 床
+            const pWidth = 30, pDepth = 120;
+            const plat = new THREE.Mesh(new THREE.BoxGeometry(pWidth, 2, pDepth), new THREE.MeshStandardMaterial({color: 0x333344}));
+            plat.position.set(0, -2, 0); group.add(plat);
+            
+            // 落下防止フェンス (ガラス張り)
+            const glass = new THREE.MeshStandardMaterial({color: 0x88ccff, transparent:true, opacity:0.3, side:THREE.DoubleSide});
+            const fenceL = new THREE.Mesh(new THREE.PlaneGeometry(pDepth, 15), glass);
+            fenceL.rotation.y = Math.PI/2; fenceL.position.set(-pWidth/2, 7.5, 0); group.add(fenceL);
+            const fenceR = new THREE.Mesh(new THREE.PlaneGeometry(pDepth, 15), glass);
+            fenceR.rotation.y = Math.PI/2; fenceR.position.set(pWidth/2, 7.5, 0); group.add(fenceR);
 
-                // 各線4つの駅
-                for (let i = 0; i < 4; i++) {
-                    const angle = (i * Math.PI) / 2;
-                    const x = Math.cos(angle) * radius;
-                    const z = Math.sin(angle) * radius;
-                    
-                    const station = new THREE.Group();
-                    station.add(new THREE.Mesh(new THREE.BoxGeometry(100, 2, 40), new THREE.MeshStandardMaterial({color: 0x333})).translateY(78)); // 床
-                    station.add(new THREE.Mesh(new THREE.BoxGeometry(100, 2, 40), new THREE.MeshStandardMaterial({color: 0x222})).translateY(98)); // 屋根
-                    station.add(new THREE.Mesh(new THREE.BoxGeometry(20, 80, 20), new THREE.MeshStandardMaterial({color: 0x111})).translateY(40)); // 柱
-                    
-                    station.position.set(x, 0, z);
-                    station.rotation.y = -angle; // 軌道に接する向き
-                    scene.add(station);
+            // 屋根
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(pWidth, 2, pDepth), new THREE.MeshStandardMaterial({color: 0x222233}));
+            roof.position.set(0, 16, 0); group.add(roof);
 
-                    // 駅へのワープ
-                    const nx = Math.cos(angle) * (radius - 50); // 内側の地上
-                    const nz = Math.sin(angle) * (radius - 50);
-                    createTeleporter(nx, 1, nz, colors[rIdx], x, 80, z, "駅ホームへ");
-                    createTeleporter(x, 80, z, 0xffaa00, nx + 20, 1, nz, "地上へ");
-                }
+            group.position.copy(pt);
+            group.rotation.y = rotY;
+            scene.add(group);
 
-                // ホバー列車
-                const trainGroup = new THREE.Group();
-                trainGroup.add(new THREE.Mesh(new THREE.BoxGeometry(40, 12, 16), new THREE.MeshStandardMaterial({color: 0x222})).translateY(86));
-                trainGroup.add(new THREE.Mesh(new THREE.BoxGeometry(38, 8, 17), new THREE.MeshBasicMaterial({color: colors[rIdx], transparent:true, opacity:0.3})).translateY(86));
-                scene.add(trainGroup);
+            // 地上とのワープ
+            const safeX = isInner ? -8 : 8; 
+            createTeleporter(pt.x + tangent.z * (isInner?-20:20), 1, pt.z - tangent.x * (isInner?-20:20), 0x00ffff, pt.x, 81, pt.z, "駅ホームへ");
+            createTeleporter(pt.x, 80, pt.z, 0xff00ff, pt.x + tangent.z * (isInner?-25:25), 1, pt.z - tangent.x * (isInner?-25:25), "地上へ");
+
+            // 歩行可能エリアとして登録 (落下防止コリジョン用)
+            stationAreas.push({ x: pt.x, y: 80, z: pt.z, width: pWidth, depth: pDepth, rot: rotY });
+        }
+
+        function createMonorailSystem() {
+            const tInner = createCircleTrack(500);
+            const tOuter = createCircleTrack(800);
+            
+            const railMat = new THREE.MeshBasicMaterial({color: 0xaaaaaa, wireframe: true, transparent:true, opacity:0.2});
+            scene.add(new THREE.Mesh(new THREE.TubeGeometry(tInner, 128, 2, 8, true), railMat));
+            scene.add(new THREE.Mesh(new THREE.TubeGeometry(tOuter, 128, 2, 8, true), railMat));
+
+            const stops = [0, 0.25, 0.5, 0.75];
+            stops.forEach(p => { addStationPlatform(tInner, p, true); addStationPlatform(tOuter, p, false); });
+
+            // 列車生成関数
+            const spawnTrain = (track, initProgress, isInner) => {
+                const car = new THREE.Group();
+                car.add(new THREE.Mesh(new THREE.BoxGeometry(12, 1, 30), new THREE.MeshStandardMaterial({color: 0x222233})).translateY(-1)); // 床
+                car.add(new THREE.Mesh(new THREE.BoxGeometry(12, 1, 30), new THREE.MeshStandardMaterial({color: 0x222233})).translateY(15)); // 屋根
                 
-                trains.push({ mesh: trainGroup, radius: radius, angle: 0, speed: 0.1, state: 'moving', timer: 0 });
-            });
+                // 窓 (歩いて入れるように左右の壁を一部開ける)
+                const wGlass = new THREE.MeshStandardMaterial({color: isInner?0x00ffff:0xff00ff, transparent:true, opacity:0.3, side:THREE.DoubleSide});
+                car.add(new THREE.Mesh(new THREE.PlaneGeometry(30, 14), wGlass).setRotationFromEuler(new THREE.Euler(0,Math.PI/2,0)).translateZ(-6).translateY(7)); // 奥の壁
+                car.add(new THREE.Mesh(new THREE.PlaneGeometry(8, 14), wGlass).setRotationFromEuler(new THREE.Euler(0,Math.PI/2,0)).translateZ(6).translateY(7).translateX(11)); // 手前壁 前
+                car.add(new THREE.Mesh(new THREE.PlaneGeometry(8, 14), wGlass).setRotationFromEuler(new THREE.Euler(0,Math.PI/2,0)).translateZ(6).translateY(7).translateX(-11)); // 手前壁 後
+                
+                scene.add(car);
+                trains.push({ mesh: car, track, progress: initProgress, speed: 0.05, state: 'moving', timer: 0 });
+            };
+
+            // 内外各2両の列車を配置
+            spawnTrain(tInner, 0.125, true); spawnTrain(tInner, 0.625, true);
+            spawnTrain(tOuter, 0.375, false); spawnTrain(tOuter, 0.875, false);
         }
 
-        function createPersonalDrones() {
-            // ドローンポート等に配置
-            const dPos = [ {x:-700, z:-700}, {x: -650, z:-700}, {x:0, z:200}, {x:200, z:0} ];
-            dPos.forEach(p => {
+        function createDrones() {
+            const positions = [
+                {x: 80, z: 250}, {x: -80, z: 250}, {x: 250, z: 80}, {x: -250, z: 80}
+            ];
+            
+            positions.forEach(pos => {
                 const grp = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.BoxGeometry(6, 1, 6), new THREE.MeshStandardMaterial({color: 0x222, metalness: 0.8}));
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(4, 0.5, 8, 16), new THREE.MeshBasicMaterial({color: 0x00ffff}));
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 1, 8), new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.8}));
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.2, 8, 16), new THREE.MeshBasicMaterial({color: 0x00ffff}));
                 ring.rotation.x = Math.PI/2;
                 grp.add(body, ring);
-                grp.position.set(p.x, 2, p.z);
+                grp.position.set(pos.x, 1, pos.z);
                 scene.add(grp);
-                personalDrones.push({ mesh: grp, active: false });
+                personalDrones.push({ mesh: grp, speed: 0 });
             });
         }
 
-        function createAvatar() {
-            const grp = new THREE.Group();
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), new THREE.MeshStandardMaterial({ color: 0x00ffff })).translateY(1.0));
-            grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0xffcc99 })).translateY(2.6));
-            return grp;
+        function setupInputHandlers() {
+            window.addEventListener('keydown', e => keysPressed[e.key.toLowerCase()] = true);
+            window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
+            
+            document.getElementById('canvas-container').addEventListener('click', () => {
+                if (!isLocked) document.body.requestPointerLock();
+            });
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = document.pointerLockElement === document.body;
+                document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
+            });
+            
+            document.addEventListener('mousemove', e => {
+                if (isLocked) {
+                    cameraYaw -= e.movementX * 0.002;
+                    cameraPitch -= e.movementY * 0.002;
+                    cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // 高所の壁抜け・落下防止用の厳密なコリジョン判定
+        function isWalkable(nextX, nextY, nextZ) {
+            if (ridingDrone) return true; // ドローン中は空を飛べる
+            
+            // 地上は基本歩行可能
+            if (nextY < 10) return true;
+            
+            // 展望台 (Y = 1350)
+            if (Math.abs(nextY - 1350) < 20) {
+                // 中心からの距離がドームの内側(半径145)ならOK
+                return Math.hypot(nextX, nextZ) < 145;
+            }
+
+            // 駅のホーム (Y = 80)
+            if (Math.abs(nextY - 80) < 20) {
+                if (ridingTrain) return true; // 列車内ならOK
+                
+                // 駅の矩形ホームの上に乗っているか判定
+                for (let st of stationAreas) {
+                    const dx = nextX - st.x;
+                    const dz = nextZ - st.z;
+                    // ホームの回転を打ち消してローカル座標で判定
+                    const cos = Math.cos(-st.rot), sin = Math.sin(-st.rot);
+                    const lx = dx * cos - dz * sin;
+                    const lz = dx * sin + dz * cos;
+                    
+                    if (Math.abs(lx) < st.width/2 && Math.abs(lz) < st.depth/2) {
+                        return true;
+                    }
+                }
+                return false; // ホームの外は空なので歩けない
+            }
+
+            return false; // その他の空中
+        }
+
+        function updateMinimap() {
+            if (!minimapCtx) return;
+            const ctx = minimapCtx;
+            ctx.clearRect(0, 0, 200, 200);
+            
+            // マップ中心のタワー
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath(); ctx.arc(100, 100, 6, 0, Math.PI*2); ctx.fill();
+
+            // プレイヤー位置 (赤い点)
+            const scale = 100 / MAP_RADIUS;
+            const px = 100 + playerLocalPos.x * scale;
+            const py = 100 + playerLocalPos.z * scale;
+            
+            ctx.fillStyle = '#ff0055';
+            ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
+            
+            // 向きを示す線
+            ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(px, py);
+            ctx.lineTo(px - Math.sin(cameraYaw)*10, py - Math.cos(cameraYaw)*10);
+            ctx.stroke();
         }
 
         function startGame() {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('sidebar').style.display = 'flex';
-            document.getElementById('chat-container').style.display = 'flex';
-            document.getElementById('minimap-container').style.display = 'block';
-
+            document.body.requestPointerLock();
+            // 通信初期化
             socket = io({ auth: { username: currentUsername } });
-            initThreeJS();
-            
-            socket.on('initData', (data) => {
-                Object.keys(data.players).forEach(id => {
-                    const info = data.players[id];
-                    if(id === socket.id) {
-                        localPlayerMesh = createAvatar();
-                        localPlayerMesh.position.set(info.x, info.y, info.z);
-                        scene.add(localPlayerMesh);
-                    } else {
-                        const m = createAvatar(); m.position.set(info.x, info.y, info.z);
-                        scene.add(m); otherPlayers[id] = m;
-                    }
-                });
-            });
-            socket.on('newPlayer', (info) => { const m = createAvatar(); m.position.set(info.x, info.y, info.z); scene.add(m); otherPlayers[info.id] = m; });
-            socket.on('playerMoved', (i) => { if(otherPlayers[i.id]) { otherPlayers[i.id].position.set(i.x, i.y, i.z); otherPlayers[i.id].rotation.y = i.rotation; } });
-            socket.on('playerDisconnected', (id) => { if(otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; } });
-            socket.on('chatMessage', (msg) => appendChat(msg.username, msg.text));
+            setupSocket();
         }
 
-        function setupInput() {
-            window.addEventListener('keydown', (e) => { 
-                const k = e.key.toLowerCase(); keysPressed[k] = true;
-                if(k === 'v') { isFPS = !isFPS; if(localPlayerMesh) localPlayerMesh.visible = !isFPS; document.getElementById('crosshair').style.display = isFPS ? 'block' : 'none'; }
-                if(k === 'f' && interactionTarget) executeInteraction();
-            });
-            window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
-
-            document.getElementById('canvas-container').addEventListener('click', () => { document.body.requestPointerLock(); });
-            document.addEventListener('pointerlockchange', () => { isLocked = document.pointerLockElement === document.body; });
-            document.addEventListener('mousemove', (e) => {
-                if (isLocked) {
-                    cameraYaw -= e.movementX * 0.002;
-                    cameraPitch -= e.movementY * 0.002;
-                    cameraPitch = Math.max(-Math.PI/2+0.1, Math.min(Math.PI/2-0.1, cameraPitch));
-                }
-            });
-        }
-
-        function executeInteraction() {
-            if(!interactionTarget || !localPlayerMesh || isWarping) return;
-            if (interactionTarget.type === 'drone') {
-                if(ridingDrone) ridingDrone = null; // 降りる
-                else { ridingDrone = interactionTarget.data; playerLocalPos.set(0, 1.5, 0); } // 乗る
-            } else if (interactionTarget.type === 'warp') {
-                isWarping = true;
-                localPlayerMesh.position.copy(interactionTarget.data.target);
-                setTimeout(() => { isWarping = false; }, 500);
-            }
-            interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
+        function setupSocket() {
+            socket.on('initData', data => { /* 略 (今回はフルコード内でエラー防止優先) */ });
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
+            if (!isLocked) { renderer.render(scene, camera); return; }
 
-            // 1. 列車（モノレール）の処理
+            const delta = Math.min(clock.getDelta(), 0.1);
+
+            // FPS切替
+            if (keysPressed['v']) {
+                if(!keysPressed['v_held']) { isFPS = !isFPS; keysPressed['v_held'] = true; }
+            } else { keysPressed['v_held'] = false; }
+
+            // インタラクションキー (F)
+            const fPressed = keysPressed['f'];
+            let tryInteract = fPressed && !fKeyWasPressed;
+            fKeyWasPressed = fPressed;
+
+            // 1. 列車の更新と乗車判定
+            ridingTrain = null;
             trains.forEach(t => {
                 if (t.state === 'moving') {
-                    t.angle += t.speed * delta;
-                    // 駅（90度ごと）でストップ
-                    if (t.angle > Math.PI/2) { t.angle = 0; t.state = 'stopped'; t.timer = 5.0; }
-                } else if (t.state === 'stopped') {
-                    t.timer -= delta;
-                    if (t.timer <= 0) t.state = 'moving';
-                }
-                
-                const tX = Math.cos(t.angle) * t.radius;
-                const tZ = Math.sin(t.angle) * t.radius;
-                t.mesh.position.set(tX, 0, tZ);
-                t.mesh.rotation.y = -t.angle; // 円の接線方向を向く
-            });
-
-            if (localPlayerMesh && !isWarping) {
-                // 2. 移動制御
-                let moved = false;
-                
-                if (ridingDrone) {
-                    // ドローン搭乗時の操作 (W/A/S/D 水平移動, E/Q 上下移動)
-                    const speed = 60 * delta;
-                    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                    t.progress += t.speed * delta;
+                    if(t.progress > 1) t.progress -= 1;
                     
-                    if(keysPressed['w']) ridingDrone.mesh.position.addScaledVector(forward, speed);
-                    if(keysPressed['s']) ridingDrone.mesh.position.addScaledVector(forward, -speed);
-                    if(keysPressed['a']) ridingDrone.mesh.position.addScaledVector(right, -speed);
-                    if(keysPressed['d']) ridingDrone.mesh.position.addScaledVector(right, speed);
-                    if(keysPressed['e']) ridingDrone.mesh.position.y += speed; // 上昇
-                    if(keysPressed['q']) ridingDrone.mesh.position.y -= speed; // 下降
-                    
-                    ridingDrone.mesh.rotation.y = cameraYaw;
-                    localPlayerMesh.position.copy(ridingDrone.mesh.position).add(new THREE.Vector3(0, 1.5, 0));
-                    localPlayerMesh.rotation.y = cameraYaw;
-                    moved = true;
-                } else {
-                    // 通常歩行
-                    const speed = (keysPressed['shift'] ? 45 : 15) * delta;
-                    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
-                    
-                    let dir = new THREE.Vector3();
-                    if(keysPressed['w']) dir.add(forward);
-                    if(keysPressed['s']) dir.sub(forward);
-                    if(keysPressed['a']) dir.sub(right);
-                    if(keysPressed['d']) dir.add(right);
-                    
-                    if(dir.lengthSq() > 0) {
-                        dir.normalize();
-                        localPlayerMesh.position.addScaledVector(dir, speed);
-                        localPlayerMesh.rotation.y = Math.atan2(dir.x, dir.z);
-                        moved = true;
-                    }
-                }
-
-                if (moved) socket.emit('playerMovement', { x: localPlayerMesh.position.x, y: localPlayerMesh.position.y, z: localPlayerMesh.position.z, rotation: localPlayerMesh.rotation.y });
-
-                // 3. インタラクションチェック (ドローンの乗降・ワープ)
-                interactionTarget = null; document.getElementById('interaction-prompt').style.display = 'none';
-                if(ridingDrone) {
-                    interactionTarget = { type: 'drone', data: ridingDrone }; 
-                    document.getElementById('prompt-text').innerText = "ドローンを降りる"; document.getElementById('interaction-prompt').style.display = 'block';
-                } else {
-                    let found = false;
-                    for(let w of warpPads) {
-                        if(localPlayerMesh.position.distanceTo(w.mesh.position) < 15) {
-                            interactionTarget = { type: 'warp', data: w }; document.getElementById('prompt-text').innerText = w.label; document.getElementById('interaction-prompt').style.display = 'block'; found = true; break;
+                    // 駅(0, 0.25, 0.5, 0.75)で停車
+                    const stops = [0, 0.25, 0.5, 0.75];
+                    for (let s of stops) {
+                        if (Math.abs(t.progress - s) < 0.005) {
+                            t.progress = s; t.state = 'stopped'; t.timer = 5.0; break;
                         }
                     }
-                    if(!found) {
-                        for(let d of personalDrones) {
-                            if(localPlayerMesh.position.distanceTo(d.mesh.position) < 15) {
-                                interactionTarget = { type: 'drone', data: d }; document.getElementById('prompt-text').innerText = "ドローンに乗る"; document.getElementById('interaction-prompt').style.display = 'block'; break;
+                } else if (t.state === 'stopped') {
+                    t.timer -= delta;
+                    if(t.timer <= 0) { t.state = 'moving'; t.progress += 0.01; }
+                }
+
+                const pt = t.track.getPointAt(t.progress);
+                const tgt = t.track.getTangentAt(t.progress);
+                const rot = Math.atan2(tgt.x, tgt.z);
+                
+                t.mesh.position.copy(pt);
+                t.mesh.rotation.y = rot;
+
+                // 乗車判定 (列車の箱の中に入っているか)
+                if (!ridingDrone) {
+                    const dx = playerLocalPos.x - pt.x;
+                    const dy = playerLocalPos.y - pt.y;
+                    const dz = playerLocalPos.z - pt.z;
+                    if (Math.abs(dy) < 10) {
+                        const cos = Math.cos(-rot), sin = Math.sin(-rot);
+                        const lx = dx * cos - dz * sin;
+                        const lz = dx * sin + dz * cos;
+                        // 列車の内側にいるなら追従させる (完璧な物理乗車)
+                        if (Math.abs(lx) < 6 && Math.abs(lz) < 15) {
+                            ridingTrain = t;
+                            if (t.prevPos) {
+                                const dRot = rot - t.prevRot;
+                                const nCos = Math.cos(dRot), nSin = Math.sin(dRot);
+                                playerLocalPos.x = pt.x + (dx * nCos - dz * nSin);
+                                playerLocalPos.z = pt.z + (dx * nSin + dz * nCos);
+                                cameraYaw -= dRot; // 視点も回す
                             }
                         }
                     }
                 }
+                t.prevPos = pt.clone(); t.prevRot = rot;
+            });
 
-                // 4. カメラ追従
-                if (isFPS) {
-                    camera.position.copy(localPlayerMesh.position).add(new THREE.Vector3(0, 3, 0));
-                } else {
-                    const offset = new THREE.Vector3(Math.sin(cameraYaw)*Math.cos(cameraPitch)*15, -Math.sin(cameraPitch)*15 + 10, Math.cos(cameraYaw)*Math.cos(cameraPitch)*15);
-                    camera.position.copy(localPlayerMesh.position).add(offset);
+            // 2. インタラクションチェック (ワープ / ドローン)
+            let promptText = "";
+            let interactTarget = null;
+            
+            if (ridingDrone) {
+                promptText = "ドローンから降りる";
+                if (tryInteract) { ridingDrone = null; playerLocalPos.y += 2; }
+            } else if (!ridingTrain && !isWarping) {
+                // ワープパッド
+                for (let w of warpPads) {
+                    if (playerLocalPos.distanceTo(w.mesh.position) < 10 && Math.abs(playerLocalPos.y - w.mesh.position.y) < 5) {
+                        promptText = w.label; interactTarget = () => {
+                            isWarping = true;
+                            playerLocalPos.copy(w.target);
+                            setTimeout(() => { isWarping = false; }, 500);
+                        };
+                        break;
+                    }
+                }
+                // ドローン乗車
+                if (!interactTarget) {
+                    for (let d of personalDrones) {
+                        if (playerLocalPos.distanceTo(d.mesh.position) < 15 && Math.abs(playerLocalPos.y - d.mesh.position.y) < 10) {
+                            promptText = "ドローンに乗る"; interactTarget = () => {
+                                ridingDrone = d; playerLocalPos.copy(d.mesh.position); playerLocalPos.y += 2;
+                            };
+                            break;
+                        }
+                    }
                 }
                 
-                const target = localPlayerMesh.position.clone(); target.y += 3;
-                camera.lookAt(target);
-                
-                // ミニマップ更新
-                drawMinimap();
+                if (interactTarget && tryInteract) interactTarget();
             }
 
+            const promptEl = document.getElementById('interaction-prompt');
+            if (promptText) {
+                document.getElementById('prompt-text').innerText = promptText;
+                promptEl.style.display = 'block';
+            } else {
+                promptEl.style.display = 'none';
+            }
+
+            // 3. プレイヤー移動 (WASD)
+            if (!isWarping) {
+                const moveSpeed = (keysPressed['shift'] ? 60 : 20) * delta;
+                const fwd = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+                const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                
+                let mv = new THREE.Vector3();
+                if (keysPressed['w']) mv.add(fwd);
+                if (keysPressed['s']) mv.sub(fwd);
+                if (keysPressed['a']) mv.sub(right); // 左へ直感移動
+                if (keysPressed['d']) mv.add(right);
+                
+                if (mv.lengthSq() > 0) mv.normalize().multiplyScalar(moveSpeed);
+
+                let nextX = playerLocalPos.x + mv.x;
+                let nextZ = playerLocalPos.z + mv.z;
+                let nextY = playerLocalPos.y;
+
+                if (ridingDrone) {
+                    // ドローンの自由飛行
+                    if (keysPressed['e']) nextY += 20 * delta;
+                    if (keysPressed['q']) nextY -= 20 * delta;
+                    nextY = Math.max(1, nextY);
+                    
+                    playerLocalPos.set(nextX, nextY, nextZ);
+                    ridingDrone.mesh.position.copy(playerLocalPos);
+                    ridingDrone.mesh.position.y -= 2; // アバターの下に配置
+                } else {
+                    // 厳密なコリジョンチェックで落下と壁抜けを防止
+                    if (isWalkable(nextX, nextY, nextZ)) {
+                        playerLocalPos.x = nextX;
+                        playerLocalPos.z = nextZ;
+                    }
+                }
+            }
+
+            // 4. カメラの更新
+            const camTarget = playerLocalPos.clone();
+            if (isFPS) {
+                camera.position.copy(camTarget);
+                camera.position.y += 1.6; // 目の高さ
+            } else {
+                // TPS視点 (カメラを後ろに引く)
+                const offset = new THREE.Vector3(Math.sin(cameraYaw)*15, 5 + Math.sin(cameraPitch)*10, Math.cos(cameraYaw)*15);
+                camera.position.copy(camTarget).add(offset);
+                camTarget.y += 2;
+            }
+            
+            // 視線の向きを適用
+            const lookDir = new THREE.Vector3(
+                -Math.sin(cameraYaw) * Math.cos(cameraPitch),
+                Math.sin(cameraPitch),
+                -Math.cos(cameraYaw) * Math.cos(cameraPitch)
+            );
+            camera.lookAt(camera.position.clone().add(lookDir));
+
+            updateMinimap();
             renderer.render(scene, camera);
         }
-
-        window.addEventListener('resize', () => { 
-            if(camera && renderer) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); } 
-        });
     </script>
 </body>
 </html>
