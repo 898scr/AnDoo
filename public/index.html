@@ -341,15 +341,70 @@
             }
 
             const corners = [
-                {x: 1000, z: 1000, col: 0x00ffff, name: "モール"}, {x: -1000, z: 1000, col: 0xff00ff, name: "ドーム"},
-                {x: 1000, z: -1000, col: 0xffff00, name: "証券所"}, {x: -1000, z: -1000, col: 0xff0000, name: "発着場"}
+                {x: 1000, z: 1000, col: 0x00ffff, name: "モール", type: 'box'}, 
+                {x: -1000, z: 1000, col: 0xff00ff, name: "ドーム", type: 'box'},
+                {x: 1000, z: -1000, col: 0xffff00, name: "証券所", type: 'box'}, 
+                {x: -1000, z: -1000, col: 0xff0000, name: "ドローン基地", type: 'port'} // 南西をドローン基地に変更
             ];
+            
             corners.forEach(c => {
-                const b = new THREE.Mesh(new THREE.BoxGeometry(400, 250, 400), new THREE.MeshStandardMaterial({color: 0x111122, roughness: 0.2}));
-                b.position.set(c.x, 125, c.z);
-                const edge = new THREE.Mesh(new THREE.BoxGeometry(405, 255, 405), new THREE.MeshBasicMaterial({color: c.col, wireframe: true, transparent:true, opacity:0.3}));
-                edge.position.set(c.x, 125, c.z);
-                scene.add(b); scene.add(edge);
+                if (c.type === 'box') {
+                    // 通常の箱
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(400, 250, 400), new THREE.MeshStandardMaterial({color: 0x111122, roughness: 0.2}));
+                    b.position.set(c.x, 125, c.z);
+                    const edge = new THREE.Mesh(new THREE.BoxGeometry(405, 255, 405), new THREE.MeshBasicMaterial({color: c.col, wireframe: true, transparent:true, opacity:0.3}));
+                    edge.position.set(c.x, 125, c.z);
+                    scene.add(b); scene.add(edge);
+                } else if (c.type === 'port') {
+                    // 大改装されたドローンステーション
+                    const portGrp = new THREE.Group();
+                    
+                    // ベースの六角形プラットフォーム
+                    const baseGeo = new THREE.CylinderGeometry(250, 280, 50, 6);
+                    const baseMat = new THREE.MeshStandardMaterial({color: 0x221111, roughness: 0.5, metalness: 0.6});
+                    const base = new THREE.Mesh(baseGeo, baseMat);
+                    base.position.y = 25;
+                    portGrp.add(base);
+
+                    // 巨大な発着パッド（光るリング）
+                    const ringGeo = new THREE.TorusGeometry(200, 5, 16, 64);
+                    const ringMat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent:true, opacity:0.8});
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI/2;
+                    ring.position.y = 52;
+                    portGrp.add(ring);
+                    
+                    // 中心を貫くレーダータワー
+                    const radar = new THREE.Mesh(new THREE.CylinderGeometry(20, 40, 300, 8), new THREE.MeshStandardMaterial({color: 0x111111}));
+                    radar.position.y = 150;
+                    portGrp.add(radar);
+                    
+                    // 空中に浮かぶサブ発着パッド（4つ）
+                    for(let i=0; i<4; i++) {
+                        const angle = i * Math.PI/2;
+                        const padX = Math.cos(angle) * 160;
+                        const padZ = Math.sin(angle) * 160;
+                        
+                        const subPad = new THREE.Mesh(new THREE.CylinderGeometry(40, 30, 10, 16), new THREE.MeshStandardMaterial({color: 0x331111}));
+                        subPad.position.set(padX, 80, padZ);
+                        portGrp.add(subPad);
+                        
+                        const subRing = new THREE.Mesh(new THREE.RingGeometry(25, 35, 32), new THREE.MeshBasicMaterial({color: 0xff4400, side: THREE.DoubleSide}));
+                        subRing.rotation.x = Math.PI/2;
+                        subRing.position.set(padX, 85.1, padZ);
+                        portGrp.add(subRing);
+                        
+                        // 斜めの支柱
+                        const strut = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 100, 8), new THREE.MeshStandardMaterial({color: 0x442222}));
+                        strut.position.set(padX/2, 65, padZ/2);
+                        strut.lookAt(new THREE.Vector3(padX, 80, padZ));
+                        strut.rotateX(Math.PI/2);
+                        portGrp.add(strut);
+                    }
+
+                    portGrp.position.set(c.x, 0, c.z);
+                    scene.add(portGrp);
+                }
             });
         }
 
@@ -361,53 +416,35 @@
             const frameMat = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.2});
             const neonMat = new THREE.MeshBasicMaterial({color: 0x00ffff});
             
-            // --- 修正: 脚の結合 ---
-            const legHeight = 450; // 脚を少し長くする
-            const towerRadius = 70; // メインタワー底部の半径
-            const legRadiusBase = 150; // 脚の配置半径（根元）
-            
+            const legHeight = 400;
             for(let i=0; i<4; i++) {
                 const angle = i * Math.PI/2 + Math.PI/4; 
                 
                 const legGrp = new THREE.Group();
-                // 脚を上に向かって細くする（上底を小さく）
-                const legGeo = new THREE.CylinderGeometry(20, 40, legHeight, 8); 
+                const legGeo = new THREE.CylinderGeometry(15, 40, legHeight, 8); 
                 const leg = new THREE.Mesh(legGeo, legMat);
                 const legFrame = new THREE.Mesh(legGeo, frameMat); 
-                
-                // 中心を少し上にずらして配置
-                leg.position.y = legHeight / 2;
-                legFrame.position.y = legHeight / 2;
-                
-                // タワー本体に向けて傾ける角度の計算
-                // (底辺の半径 - 上底がくっつくタワーの半径) と 高さ から角度を求める
-                const tiltAngle = Math.atan((legRadiusBase - towerRadius) / legHeight);
-                
-                leg.rotation.x = -tiltAngle;
-                legFrame.rotation.x = -tiltAngle;
+                leg.position.y = legHeight/2;
+                legFrame.position.y = legHeight/2;
+                leg.rotation.x = -Math.PI/10;
+                legFrame.rotation.x = -Math.PI/10;
                 legGrp.add(leg, legFrame);
 
-                // 脚の配置
-                legGrp.position.set(Math.cos(angle)*legRadiusBase, 0, Math.sin(angle)*legRadiusBase);
-                // 中心を向かせる
+                const radius = 140; 
+                legGrp.position.set(Math.cos(angle)*radius, 0, Math.sin(angle)*radius);
                 legGrp.rotation.y = -angle - Math.PI/2;
                 towerGroup.add(legGrp);
             }
 
-            // メインタワー（脚の先端から上に伸びるようにY座標を調整）
-            // TOWER_Y - legHeight にすると上端が少しはみ出るので、微調整
-            const towerBodyHeight = TOWER_Y - legHeight + 50; 
-            const towerGeo = new THREE.CylinderGeometry(30, towerRadius, towerBodyHeight, 16);
+            const towerGeo = new THREE.CylinderGeometry(30, 70, TOWER_Y - legHeight, 16);
             const tower = new THREE.Mesh(towerGeo, legMat);
             const towerFrame = new THREE.Mesh(towerGeo, frameMat);
-            // 脚と少し重なるようにY座標を設定
-            tower.position.y = legHeight - 20 + towerBodyHeight / 2; 
-            towerFrame.position.y = legHeight - 20 + towerBodyHeight / 2;
+            tower.position.y = legHeight + (TOWER_Y - legHeight) / 2;
+            towerFrame.position.y = legHeight + (TOWER_Y - legHeight) / 2;
             towerGroup.add(tower, towerFrame);
 
             for(let i=0; i<6; i++) {
                 const ring = new THREE.Mesh(new THREE.TorusGeometry(80 - i*10, 3, 8, 32), neonMat);
-                // リングの位置もタワー本体に合わせて調整
                 ring.position.y = legHeight + i * 180;
                 ring.rotation.x = Math.PI/2;
                 towerGroup.add(ring);
@@ -442,11 +479,8 @@
             const aura = new THREE.Mesh(new THREE.SphereGeometry(95, 16, 16), new THREE.MeshBasicMaterial({color: 0xff8800, transparent:true, opacity:0.4, wireframe: true}));
             aura.position.y = coreY; towerGroup.add(aura);
 
-            // --- 修正: 光の柱（ビーム） ---
-            // タワーの真下から天を貫くように長さを変更し、Y座標を調整
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 6000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
-            beam.position.y = 3000; // 下から上まで届くように
-            towerGroup.add(beam);
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 5000, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending}));
+            beam.position.y = 2500; towerGroup.add(beam);
 
             scene.add(towerGroup);
         }
