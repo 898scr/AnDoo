@@ -390,7 +390,7 @@
                         group.add(hGrp);
                     }
 
-                    // エントランスゲート
+                    // エントランスゲート (コリジョン外側へ)
                     const gateGroup = new THREE.Group();
                     const gateLeg1 = new THREE.Mesh(new THREE.BoxGeometry(10, 50, 10), new THREE.MeshStandardMaterial({color: 0x333333}));
                     gateLeg1.position.set(-40, 25, 0);
@@ -399,7 +399,7 @@
                     const gateTop = new THREE.Mesh(new THREE.BoxGeometry(90, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}));
                     gateTop.position.set(0, 55, 0);
                     gateGroup.add(gateLeg1, gateLeg2, gateTop);
-                    gateGroup.position.set(0, 0, 280); 
+                    gateGroup.position.set(0, 0, 280); // 半径250より外
                     group.add(gateGroup);
                     
                 } else if (c.type === 'ent_dome') {
@@ -411,16 +411,16 @@
                     const wireDome = new THREE.Mesh(new THREE.SphereGeometry(255, 16, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: 0xffff00, wireframe: true, transparent:true, opacity:0.3}));
                     group.add(wireDome);
 
-                    // 道に面した入り口
+                    // 道に面した入り口 (コリジョン外側へ)
                     const gateGroup = new THREE.Group();
                     const gateArch = new THREE.Mesh(new THREE.TorusGeometry(50, 5, 16, 32, Math.PI), new THREE.MeshBasicMaterial({color: 0xffff00}));
                     gateArch.position.set(0, 0, 0);
                     gateGroup.add(gateArch);
-                    gateGroup.position.set(0, 0, 255);
+                    gateGroup.position.set(0, 0, 255); // 半径250より外
                     group.add(gateGroup);
 
                     // エンタメ空間へのワープ
-                    createWarpPad(c.x + Math.sin(lookAngle)*230, 0, c.z + Math.cos(lookAngle)*230, 0xffff00, 5000, 1.5, -5000, "エンタメ空間へ");
+                    createWarpPad(c.x + Math.sin(lookAngle)*280, 0, c.z + Math.cos(lookAngle)*280, 0xffff00, 5000, 1.5, -5000, "エンタメ空間へ");
                     
                 } else {
                     // モールなど
@@ -433,7 +433,7 @@
                     // 回転を考慮したBoxコリジョンは複雑なため、簡略化して円形コリジョンとする
                     colliders.push({ type: 'circle', x: c.x, z: c.z, radius: 200 });
 
-                    // エントランス
+                    // エントランス (コリジョン外側へ)
                     const gateGroup = new THREE.Group();
                     const gateMat = new THREE.MeshBasicMaterial({color: c.color});
                     const gate1 = new THREE.Mesh(new THREE.BoxGeometry(10, 60, 10), gateMat);
@@ -443,7 +443,7 @@
                     const gate3 = new THREE.Mesh(new THREE.BoxGeometry(90, 10, 10), gateMat);
                     gate3.position.set(0, 65, 0);
                     gateGroup.add(gate1, gate2, gate3);
-                    gateGroup.position.set(0, 0, 205);
+                    gateGroup.position.set(0, 0, 205); // 半径200より外
                     group.add(gateGroup);
                 }
 
@@ -460,36 +460,38 @@
             const frameMat = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.2});
             const neonMat = new THREE.MeshBasicMaterial({color: 0x00ffff});
             
-            // 脚の修復と結合
-            const legHeight = 500; // 脚をさらに長く
+            // 修正版：内側にすぼまる極太の脚
+            const legHeight = 500; // 脚を少し長く
             for(let i=0; i<4; i++) {
                 const angle = i * Math.PI/2 + Math.PI/4; 
                 
                 const legGrp = new THREE.Group();
-                const legGeo = new THREE.CylinderGeometry(30, 80, legHeight, 8); // 太く
+                // 下が太く、上が細い円錐台
+                const legGeo = new THREE.CylinderGeometry(20, 60, legHeight, 8); 
                 const leg = new THREE.Mesh(legGeo, legMat);
                 const legFrame = new THREE.Mesh(legGeo, frameMat); 
                 leg.position.y = legHeight/2;
                 legFrame.position.y = legHeight/2;
                 
                 // 角度をつけて中央に倒れ込ませる
-                leg.rotation.x = -Math.PI/12;
+                leg.rotation.x = -Math.PI/12; // 約15度
                 legFrame.rotation.x = -Math.PI/12;
                 legGrp.add(leg, legFrame);
 
-                const radius = 120; // 中心の寄せ具合
+                // 脚の根本の配置半径。タワー底面に向かって収束するように
+                const radius = 120; 
                 const px = Math.cos(angle)*radius;
                 const pz = Math.sin(angle)*radius;
                 legGrp.position.set(px, 0, pz);
                 legGrp.rotation.y = -angle - Math.PI/2;
                 towerGroup.add(legGrp);
                 
-                // 脚のコリジョン
+                // 脚のコリジョン追加 (簡易的に円柱とする)
                 colliders.push({ type: 'circle', x: px, z: pz, radius: 40 });
             }
 
-            // メインタワー（脚の先端からガッチリ始まるように高さを調整）
-            // legHeight(500) * cos(PI/12) ≒ 480。タワー底部をこの辺りにする
+            // メインタワー（脚の先端とガッチリ結合するように高さを調整）
+            // legHeight * cos(PI/12) ≒ 480。タワー底部をこれより少し下げて食い込ませる
             const towerBottomY = 460;
             const towerGeo = new THREE.CylinderGeometry(40, 80, TOWER_Y - towerBottomY + 50, 16);
             const tower = new THREE.Mesh(towerGeo, legMat);
@@ -508,11 +510,12 @@
             createWarpPad(0, 0, 0, 0x00ffff, 0, TOWER_Y + 2, 100, "展望台へ昇る");
 
             const obsRadius = 250;
+            // 内側の床
             const floorInner = new THREE.Mesh(new THREE.CylinderGeometry(150, 150, 20, 32), new THREE.MeshStandardMaterial({color: 0x1e293b, roughness: 0.1, metalness: 0.8}));
             floorInner.position.y = TOWER_Y - 10; towerGroup.add(floorInner);
 
-            // 外周のガラス床
-            const floorOuter = new THREE.Mesh(new THREE.RingGeometry(150, 250, 32), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide}));
+            // 外周のガラス床 (透明な発光素材に変更)
+            const floorOuter = new THREE.Mesh(new THREE.RingGeometry(150, obsRadius, 32), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide}));
             floorOuter.rotation.x = -Math.PI/2; 
             floorOuter.position.y = TOWER_Y;
             towerGroup.add(floorOuter);
@@ -557,7 +560,7 @@
             
             scene.add(grp);
             // 帰り道
-            createWarpPad(5000, 0, -4900, 0x00ffff, 1000 - Math.sin(Math.PI/4)*250, 1.5, -1000 - Math.cos(Math.PI/4)*250, "地上へ戻る");
+            createWarpPad(5000, 0, -4900, 0x00ffff, 1000 - Math.sin(Math.PI/4)*280, 1.5, -1000 - Math.cos(Math.PI/4)*280, "地上へ戻る");
         }
 
         function createWarpPad(x, y, z, color, tX, tY, tZ, label) {
@@ -637,7 +640,7 @@
                 car.add(new THREE.Mesh(new THREE.PlaneGeometry(10, 16), wGlass).rotateY(Math.PI/2).translateZ(7).translateY(9).translateX(-15));
                 
                 scene.add(car);
-                trains.push({ mesh: car, radius, angle: initAngle, speed: 0.08, state: 'moving', timer: 0, type: type, justDeparted: false });
+                trains.push({ mesh: car, radius, initialAngle: initAngle, angle: initAngle, state: 'moving', type: type });
             };
             
             spawnTrain(rInner, 0, 'inner'); spawnTrain(rInner, Math.PI, 'inner');
