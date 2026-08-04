@@ -55,6 +55,13 @@
             <h2>HAKUYARC</h2>
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password (Optional)">
+            
+            <!-- アドミン専用セクション -->
+            <div id="admin-login-section" style="display: none; border-top: 1px solid #334155; margin-top: 15px; padding-top: 15px;">
+                <div style="color: #ff00ff; font-size: 0.8rem; margin-bottom: 5px; font-weight: bold;">[ADMIN MODE AVAILABLE]</div>
+                <input type="password" id="admin-password" placeholder="Admin Password" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ff00ff; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none;">
+            </div>
+
             <button class="btn-primary" onclick="attemptAuth()">ENTER SYSTEM</button>
         </div>
     </div>
@@ -88,6 +95,34 @@
             <div class="money">CR: <span id="ui-money">500</span></div>
             <div style="font-size: 0.8rem; color:#94a3b8; margin-top:5px;">株: <span id="ui-stocks">0</span> 株</div>
         </div>
+
+        <!-- アドミンコントロールパネル -->
+        <div id="admin-panel" style="display:none; position: absolute; top: 20px; right: 20px; background: rgba(15,23,42,0.9); border: 2px solid #ff00ff; padding: 15px; border-radius: 8px; pointer-events: auto; z-index: 50; width: 220px; box-shadow: 0 0 15px rgba(255,0,255,0.4);">
+            <h3 style="color:#ff00ff; margin-top:0; font-size:1.1rem;">ADMIN CONTROL</h3>
+            <div style="margin-bottom: 10px;">
+                <label style="color:#cbd5e1; font-size:0.8rem; display:block;">SPEED MULTIPLIER</label>
+                <input type="number" id="admin-speed" value="3.0" step="0.5" style="width: 100%; box-sizing: border-box; padding:5px; background:rgba(0,0,0,0.5); color:white; border:1px solid #ff00ff;">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label style="color:#cbd5e1; font-size:0.8rem; display:block;">SET CR</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="number" id="admin-cr" value="10000" style="width: 70%; padding:5px; background:rgba(0,0,0,0.5); color:white; border:1px solid #ff00ff;">
+                    <button onclick="setAdminCR()" style="width: 30%; background:#ff00ff; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">SET</button>
+                </div>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label style="color:#cbd5e1; font-size:0.8rem; display:block;">BAN USER</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="admin-ban-id" placeholder="Username" style="width: 70%; padding:5px; background:rgba(0,0,0,0.5); color:white; border:1px solid #ff00ff;">
+                    <button onclick="adminBan()" style="width: 30%; background:#f43f5e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">BAN</button>
+                </div>
+            </div>
+            <div>
+                <label style="color:#cbd5e1; font-size:0.9rem; cursor:pointer;">
+                    <input type="checkbox" id="admin-fly" checked style="accent-color: #ff00ff;"> FLY MODE (E/Q)
+                </label>
+            </div>
+        </div>
         
         <div id="chat-container">
             <div id="chat-messages"></div>
@@ -115,8 +150,9 @@
 
     <script>
         let currentUsername = 'Guest', socket = null;
+        let isAdmin = false;
         let scene, camera, renderer, clock;
-        const MAP_RADIUS = 2000; // 島を縮小
+        const MAP_RADIUS = 2000; 
         
         const keysPressed = {};
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isDragging = false, isFPS = false;
@@ -162,8 +198,47 @@
 
         const TRAIN_BASE_SPEED = 0.12; 
         const TRAIN_STOP_TIME = 4.0; 
-        
         const returnPads = {};
+
+        // --- アドミンモード用リスナー ---
+        document.getElementById('username').addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (val === '898scr' || val === '898sct') {
+                document.getElementById('admin-login-section').style.display = 'block';
+            } else {
+                document.getElementById('admin-login-section').style.display = 'none';
+            }
+        });
+
+        document.getElementById('admin-speed').addEventListener('input', (e) => {
+            if (isAdmin) playerSpeedMult = parseFloat(e.target.value) || 1.0;
+        });
+
+        function setAdminCR() {
+            if (!isAdmin) return;
+            const cr = parseInt(document.getElementById('admin-cr').value);
+            if (!isNaN(cr)) {
+                currentCR = cr;
+                document.getElementById('ui-money').innerText = currentCR;
+                localStorage.setItem('haku_cr', currentCR);
+                addChatMessage('SYSTEM', `[ADMIN] 所持金を ${currentCR} CR に変更しました。`);
+            }
+        }
+
+        function adminBan() {
+            if (!isAdmin) return;
+            const target = document.getElementById('admin-ban-id').value;
+            if (target) {
+                if (socket) socket.emit('chatMessage', `/ban ${target}`);
+                addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' をBANしました。`);
+                for(let id in otherPlayers) {
+                    if (otherPlayers[id].userData.username === target) {
+                        scene.remove(otherPlayers[id]);
+                        delete otherPlayers[id];
+                    }
+                }
+            }
+        }
 
         function updateCR(amt) {
             currentCR += amt;
@@ -181,7 +256,19 @@
         async function attemptAuth() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value || 'nopass';
+            const adminPassword = document.getElementById('admin-password').value;
             if (!username) return alert("Usernameを入力してください");
+
+            isAdmin = false;
+            if ((username === '898scr' || username === '898sct') && document.getElementById('admin-login-section').style.display === 'block') {
+                if (adminPassword === 'admin') {
+                    isAdmin = true;
+                } else if (adminPassword !== '') {
+                    return alert("Admin Passwordが違います (pass: admin)");
+                } else {
+                    return alert("Admin Passwordを入力してください");
+                }
+            }
 
             try {
                 let res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
@@ -196,7 +283,6 @@
 
                 if (data.success) {
                     currentUsername = data.username;
-                    // サーバーから取得したデータよりローカルを優先（ソロ用調整）
                     document.getElementById('ui-username').innerText = currentUsername;
                     document.getElementById('ui-money').innerText = currentCR;
                     document.getElementById('ui-stocks').innerText = currentStocks;
@@ -204,23 +290,34 @@
                     document.getElementById('login-screen').style.display = 'none';
                     document.getElementById('ui-layer').style.display = 'block';
                     
+                    if(isAdmin) activateAdminMode();
+
                     try { if (typeof io !== 'undefined') { socket = io({ auth: { username: currentUsername } }); setupSocketEvents(); } } catch(e) { console.warn("Socket skip"); }
                     try { document.body.requestPointerLock(); } catch(e) {}
                     initThreeJS();
                 } else alert("ログイン失敗");
             } catch (err) {
+                // サーバー無しフォールバック
                 currentUsername = username;
                 document.getElementById('ui-username').innerText = currentUsername;
                 document.getElementById('ui-money').innerText = currentCR;
                 document.getElementById('ui-stocks').innerText = currentStocks;
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('ui-layer').style.display = 'block';
+                
+                if(isAdmin) activateAdminMode();
+
                 try { document.body.requestPointerLock(); } catch(e) {}
                 initThreeJS();
             }
         }
 
-        // --- アバター編集ロジック ---
+        function activateAdminMode() {
+            document.getElementById('admin-panel').style.display = 'block';
+            playerSpeedMult = parseFloat(document.getElementById('admin-speed').value) || 3.0;
+            addChatMessage("SYSTEM", `[ADMIN] ${currentUsername} としてログインしました。`);
+        }
+
         function openAvatarEditor() {
             try { document.exitPointerLock(); } catch(e){}
             document.getElementById('ui-layer').style.display = 'none';
@@ -242,7 +339,6 @@
             document.getElementById('ui-layer').style.display = 'block';
             try { document.body.requestPointerLock(); } catch(e){}
 
-            // アバター再生成
             if (localAvatar) {
                 scene.remove(localAvatar);
                 localAvatar = createAvatarMesh(playerColor, null, playerBodyParams);
@@ -253,7 +349,6 @@
 
         function updateAvatarAppearance() {
             if (!localAvatar) return;
-            // 0番目＝胴体、1番目＝頭、2番目＝バイザー
             if(localAvatar.children[0]) localAvatar.children[0].material.color.setHex(playerColor);
             
             localAvatar.children.forEach(child => {
@@ -299,7 +394,6 @@
                     mesh.userData.ridingDroneIndex = data.avatar.ridingDroneIndex !== undefined ? data.avatar.ridingDroneIndex : -1;
                     if (data.avatar.color && mesh.children[0]) mesh.children[0].material.color.setHex(data.avatar.color);
                     
-                    // ※本当はparamsも反映すべきだが、今回はローカルのみの簡易処理に留める
                     if (data.avatar.accessory) {
                         mesh.children.forEach(child => {
                             if (child.userData.isAccessory) child.visible = (child.userData.accType === data.avatar.accessory);
@@ -312,17 +406,16 @@
         function initThreeJS() {
             scene = new THREE.Scene(); 
             scene.background = new THREE.Color(0x02081a);
-            scene.fog = new THREE.FogExp2(0x02081a, 0.0003); // よりクリアに
+            scene.fog = new THREE.FogExp2(0x02081a, 0.0003); 
 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 8000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight); 
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.5; // さらに明るく
+            renderer.toneMappingExposure = 1.5; 
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // 光量アップ
             scene.add(new THREE.AmbientLight(0x556688, 3.0));
             const hemiLight = new THREE.HemisphereLight(0x44ffff, 0xff44ff, 2.0);
             hemiLight.position.set(0, 1000, 0);
@@ -353,7 +446,6 @@
             animate();
         }
 
-        // params を受け取れるように変更
         function createAvatarMesh(colorHex = 0x00ffff, username = null, params = {w:0.8, h:1.2, d:0.5}) {
             const group = new THREE.Group();
             const s = 2.5; 
@@ -414,6 +506,8 @@
             const mesh = createAvatarMesh(0x0284c7, info.username, {w:0.8, h:1.2, d:0.5}); 
             mesh.position.set(info.x, info.y, info.z);
             mesh.rotation.y = info.rotation;
+            mesh.userData.username = info.username; // BAN用に保存
+            
             if (info.avatar) {
                 mesh.userData.ridingTrainIndex = info.avatar.ridingTrainIndex !== undefined ? info.avatar.ridingTrainIndex : -1;
                 mesh.userData.ridingDroneIndex = info.avatar.ridingDroneIndex !== undefined ? info.avatar.ridingDroneIndex : -1;
@@ -429,7 +523,6 @@
         }
 
         function createEnvironment() {
-            // 島を半径2000に縮小
             const ground = new THREE.Mesh(new THREE.CircleGeometry(MAP_RADIUS, 64), new THREE.MeshStandardMaterial({ color: 0x050a15, roughness: 0.9 }));
             ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
@@ -437,13 +530,13 @@
             gridHelper.position.y = 0.1; gridHelper.material.transparent = true; gridHelper.material.opacity = 0.2;
             scene.add(gridHelper);
 
-            // エネルギーバリア (島全体を覆う)
+            // エネルギーバリア
             const barrierGeo = new THREE.SphereGeometry(MAP_RADIUS + 50, 64, 32, 0, Math.PI*2, 0, Math.PI/2);
             const barrierMat = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity: 0.05});
             const barrier = new THREE.Mesh(barrierGeo, barrierMat);
             scene.add(barrier);
 
-            // 降ってくるサイバーキューブエフェクト
+            // サイバーキューブエフェクト
             const pGeo = new THREE.BufferGeometry();
             const pCount = 500;
             const pPos = new Float32Array(pCount * 3);
@@ -454,7 +547,6 @@
             }
             pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
             
-            // 四角いテクスチャを自作
             const pCan = document.createElement('canvas'); pCan.width=32; pCan.height=32;
             const pCtx = pCan.getContext('2d');
             pCtx.fillStyle = 'white'; pCtx.fillRect(8, 8, 16, 16);
@@ -463,8 +555,6 @@
             const pMat = new THREE.PointsMaterial({ map: pTex, size: 20, color: 0x00ffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
             const particles = new THREE.Points(pGeo, pMat);
             scene.add(particles);
-            
-            // パーティクルアニメーション用のフック
             clock.particles = particles;
 
             const roadMat = new THREE.MeshStandardMaterial({color: 0x1a1a24});
@@ -480,7 +570,6 @@
                 roadGrp.rotation.y = angle; scene.add(roadGrp);
             }
 
-            // 施設の距離を島の端 (1600) に配置
             const dist = 1600;
             const corners = [
                 {x: Math.cos(Math.PI/4)*dist, z: Math.sin(Math.PI/4)*dist, col: 0x00ffff, name: "mall", label: "モールへ入る", target: new THREE.Vector3(0, -998.5, 5000)}, 
@@ -491,7 +580,6 @@
 
             corners.forEach(c => {
                 const group = new THREE.Group();
-                // 中心を向く角度
                 const lookAngle = Math.atan2(-c.x, -c.z); 
                 
                 if (c.name === "drone") {
@@ -540,7 +628,6 @@
                     stationAreas.push({ type: 'circle', x: c.x, z: c.z, radius: 320, y: 65 });
 
                     for(let i=0; i<8; i++) {
-                        // 絶対座標を維持
                         const pa = i * Math.PI/4 + lookAngle + Math.PI;
                         const px = c.x + Math.cos(pa) * 200;
                         const pz = c.z + Math.sin(pa) * 200;
@@ -558,7 +645,6 @@
                     }
                 }
 
-                // ゲートの生成
                 const gateGroup = new THREE.Group();
                 const gateMat = new THREE.MeshStandardMaterial({color: 0x333333});
                 const gL = new THREE.Mesh(new THREE.BoxGeometry(15, 80, 15), gateMat); gL.position.set(-60, 40, 0);
@@ -570,7 +656,6 @@
                 gateGroup.position.set(0, 0, gateRadius);
                 group.add(gateGroup);
 
-                // ワープパッド絶対座標
                 const padX = c.x + Math.sin(lookAngle) * (gateRadius + 50);
                 const padZ = c.z + Math.cos(lookAngle) * (gateRadius + 50);
                 
@@ -589,38 +674,31 @@
         }
 
         function createUndergroundRooms() {
-            // 地下1000m に完全隠蔽
             const BASE_Y = -1000;
 
-            // --- モールルーム大拡張 (0, -1000, 5000) ---
+            // --- モールルーム ---
             const mallGrp = new THREE.Group();
             mallGrp.position.set(0, BASE_Y, 5000);
             
-            // 床
             mallGrp.add(new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x0a1520, roughness: 0.3})).rotateX(-Math.PI/2));
             
-            // 2階の床 (中央が吹き抜け)
             const floor2 = new THREE.Mesh(new THREE.RingGeometry(150, 600, 64), new THREE.MeshStandardMaterial({color: 0x0a1a2a, roughness: 0.3, transparent:true, opacity:0.9}));
             floor2.rotation.x = -Math.PI/2; floor2.position.y = 60;
             mallGrp.add(floor2);
-            // 2階の落下防止柵
             const fence = new THREE.Mesh(new THREE.CylinderGeometry(150, 150, 10, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x00ffff, transparent:true, opacity:0.2, side: THREE.DoubleSide}));
             fence.position.y = 65;
             mallGrp.add(fence);
 
-            // 天井と壁
             const mallCeiling = new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x051a24}));
             mallCeiling.rotation.x = Math.PI/2; mallCeiling.position.y = 150;
             const mallWall = new THREE.Mesh(new THREE.CylinderGeometry(600, 600, 150, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x0a2a4a, side: THREE.BackSide}));
             mallWall.position.y = 75;
             mallGrp.add(mallCeiling, mallWall);
             
-            // 照明
             const mallLight = new THREE.PointLight(0x00ffff, 1, 1000);
             mallLight.position.set(0, 100, 0);
             mallGrp.add(mallLight);
 
-            // 魔法陣 (アバター再編集)
             const editPad = new THREE.Group();
             editPad.add(new THREE.Mesh(new THREE.CircleGeometry(20, 32), new THREE.MeshBasicMaterial({color: 0xff00ff, transparent:true, opacity:0.5})).rotateX(-Math.PI/2));
             editPad.position.set(-200, 0.1, 0); mallGrp.add(editPad);
@@ -628,7 +706,6 @@
                 openAvatarEditor();
             }});
 
-            // 商品棚カウンターとディスプレイ
             const createDisplayArea = (x, z, yLevel, label) => {
                 const area = new THREE.Group();
                 area.position.set(x, yLevel === 1.5 ? 0 : 60, z);
@@ -636,7 +713,6 @@
                 const counter = new THREE.Mesh(new THREE.BoxGeometry(200, 5, 40), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.9}));
                 counter.position.set(0, 2.5, 0);
                 
-                // 商品を目立たせる光る土台
                 for(let i=0; i<3; i++) {
                     const px = -60 + i*60;
                     const base = new THREE.Mesh(new THREE.CylinderGeometry(15, 20, 2, 16), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x005555}));
@@ -655,14 +731,13 @@
             mallGrp.add(speedArea);
 
             const addShopItem = (x, z, yLevel, color, name, price, type, val, areaGrp, displayIndex) => {
-                const itemY = 15; // アイテムの表示高さを低く
+                const itemY = 15; 
                 const item = new THREE.Mesh(new THREE.OctahedronGeometry(8), new THREE.MeshBasicMaterial({color, wireframe: true}));
                 item.position.set(-60 + displayIndex*60, itemY, 0); 
                 areaGrp.add(item);
                 const stand = new THREE.Mesh(new THREE.CylinderGeometry(10, 15, 10), new THREE.MeshStandardMaterial({color:0x222222}));
                 stand.position.set(x, yLevel === 1.5 ? 5 : 65, z); mallGrp.add(stand);
                 
-                // インタラクト用はグローバル座標で計算
                 interactables.push({ pos: new THREE.Vector3(x, BASE_Y + yLevel, 5000 + z), radius: 30, label: `購入: ${name} (${price}CR)`, action: () => {
                     if (currentCR < price) return addChatMessage("SYSTEM", "CRが足りません");
                     updateCR(-price);
@@ -674,31 +749,26 @@
                 }});
             };
             
-            // 1階：色変更
             addShopItem(0 - 60, -150, 1.5, 0xff0000, "レッドカラー", 50, 'color', 0xff0000, colorArea, 0);
             addShopItem(0, -150, 1.5, 0xff00ff, "マゼンタカラー", 50, 'color', 0xff00ff, colorArea, 1);
             addShopItem(0 + 60, -150, 1.5, 0xffff00, "イエローカラー", 50, 'color', 0xffff00, colorArea, 2);
 
-            // 2階：アクセサリ
             addShopItem(0 - 60, 0, 61.5, 0xffa500, "猫耳アクセサリ", 100, 'acc', 'cat_ears', accArea, 0);
             addShopItem(0, 0, 61.5, 0x00ff00, "シルクハット", 100, 'acc', 'hat', accArea, 1);
             addShopItem(0 + 60, 0, 61.5, 0x00ffff, "ヘッドホン", 100, 'acc', 'headphone', accArea, 2);
 
-            // 2階：強化アイテム
             addShopItem(0 - 60, 150, 61.5, 0xffffff, "スピード x1.2", 200, 'speed', 1.2, speedArea, 0);
             addShopItem(0, 150, 61.5, 0xffffff, "スピード x1.5", 300, 'speed', 1.5, speedArea, 1);
             addShopItem(0 + 60, 150, 61.5, 0xffffff, "スピード x2.0", 500, 'speed', 2.0, speedArea, 2);
 
-            // 階層エレベーターワープ
             createWarpPad(0, BASE_Y, 5200, 0x00ff00, 0, BASE_Y + 61.5, 5200, "2階へ昇る");
             createWarpPad(0, BASE_Y + 60, 5250, 0xff0000, 0, BASE_Y + 1.5, 5250, "1階へ降りる");
 
-            // 出口ワープ
             const retPadX = Math.cos(Math.PI/4)*1600 - 350;
             createWarpPad(0, BASE_Y, 5300, 0x00ffff, returnPads.mall.x, 1.5, returnPads.mall.z, "地上へ戻る");
             scene.add(mallGrp);
 
-            // --- カジノルーム (0, -1000, -5000) ---
+            // --- カジノルーム ---
             const casinoGrp = new THREE.Group();
             casinoGrp.position.set(0, BASE_Y, -5000);
             casinoGrp.add(new THREE.Mesh(new THREE.CircleGeometry(500, 64), new THREE.MeshStandardMaterial({color: 0x150510})).rotateX(-Math.PI/2));
@@ -724,7 +794,7 @@
 
             // 【クレーンゲーム機】
             const ufoGrp = new THREE.Group();
-            ufoGrp.position.set(-150, 0, 150); // カジノ内空きスペース
+            ufoGrp.position.set(-150, 0, 150); 
             
             const ufoBase = new THREE.Mesh(new THREE.BoxGeometry(40, 20, 30), new THREE.MeshStandardMaterial({color: 0xff00ff}));
             ufoBase.position.y = 10;
@@ -754,10 +824,9 @@
                 ufoGame.active = true; ufoGame.state = 'moving';
                 ufoGame.targetX = -15; ufoGame.armMesh.position.x = -15; ufoGame.armMesh.position.y = 40;
                 
-                // カメラのフォーカス制御
                 focusCameraTarget = {
-                    pos: new THREE.Vector3(-150, BASE_Y + 35, -4780), // カメラ位置
-                    lookAt: new THREE.Vector3(-150, BASE_Y + 32.5, -4850) // 見る場所
+                    pos: new THREE.Vector3(-150, BASE_Y + 35, -4780),
+                    lookAt: new THREE.Vector3(-150, BASE_Y + 32.5, -4850)
                 };
                 document.getElementById('ufo-ui').style.display = 'block';
             }});
@@ -797,7 +866,7 @@
             interactables.push({ pos: new THREE.Vector3(250, BASE_Y + 1.5, -5000), radius: 80, label: "ホッケーを打つ (対人専用)", action: () => {
                 let hasOpponent = false;
                 Object.values(otherPlayers).forEach(p => { if (p.position.distanceTo(new THREE.Vector3(250, BASE_Y + 1.5, -5000)) < 150) hasOpponent = true; });
-                if (!hasOpponent) return addChatMessage("SYSTEM", "対戦相手がいません。");
+                if (!hasOpponent && !isAdmin) return addChatMessage("SYSTEM", "対戦相手がいません。"); // Adminは1人でも打てるように
                 
                 const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
                 hockeyPuckVel.copy(dir.multiplyScalar(250)); 
@@ -835,10 +904,10 @@
                 }});
             });
 
-            scene.add(casinoGrp);
             createWarpPad(0, BASE_Y, -4700, 0xff00ff, returnPads.dome.x, 1.5, returnPads.dome.z, "地上へ戻る");
+            scene.add(casinoGrp);
 
-            // --- 証券所ルーム (5000, -1000, 0) ---
+            // --- 証券所ルーム ---
             const stockGrp = new THREE.Group();
             stockGrp.position.set(5000, BASE_Y, 0);
             stockGrp.add(new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshStandardMaterial({color: 0x052405})).rotateX(-Math.PI/2));
@@ -872,8 +941,8 @@
                 }
             }});
 
-            scene.add(stockGrp);
             createWarpPad(5000, BASE_Y, 150, 0x00ff00, returnPads.stock.x, 1.5, returnPads.stock.z, "地上へ戻る");
+            scene.add(stockGrp);
         }
 
         function updateStockChart() {
@@ -932,7 +1001,6 @@
             towerFrame.position.y = 400 + (TOWER_Y - 400) / 2;
             towerGroup.add(tower, towerFrame);
 
-            // エネルギーリング (中腹)
             const midRingGeo = new THREE.TorusGeometry(120, 5, 16, 64);
             const midRingMat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.8});
             const midRing = new THREE.Mesh(midRingGeo, midRingMat);
@@ -953,7 +1021,6 @@
             const dome = new THREE.Mesh(new THREE.SphereGeometry(obsRadius, 64, 32, 0, Math.PI*2, 0, Math.PI/2), domeMat);
             dome.position.y = TOWER_Y; towerGroup.add(dome);
 
-            // 展望台の中央エネルギーコア
             const coreGeo = new THREE.OctahedronGeometry(30, 2);
             const coreMat = new THREE.MeshBasicMaterial({color: 0xffaa00, wireframe: true});
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
@@ -986,7 +1053,6 @@
         }
 
         function createMonorails() {
-            // 回転バグ修正：逆回転していた角度判定を修正するため、stationAreasのangleを正確に。
             const rInner = 600, rOuter = 1200, trackY = 80;
             const railMat = new THREE.MeshBasicMaterial({color: 0xcccccc});
             const neonMatCyan = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity:0.4});
@@ -1012,12 +1078,11 @@
             scene.add(new THREE.Mesh(new THREE.TubeGeometry(curveSpline, 256, 3, 4, true), neonMatOrange));
 
             const addStation = (radius, angle) => {
-                // ここが原因でした：回転角はそのままangle
                 const rotY = angle; 
                 const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
                 const group = new THREE.Group();
                 
-                const pWidth = 150, pDepth = 60; // 向きが変わったので幅と奥行きを入れ替え
+                const pWidth = 150, pDepth = 60;
                 group.add(new THREE.Mesh(new THREE.BoxGeometry(pWidth, 2, pDepth), new THREE.MeshStandardMaterial({color: 0x334455})).translateY(-1));
                 group.add(new THREE.Mesh(new THREE.BoxGeometry(pWidth, 2, pDepth), new THREE.MeshStandardMaterial({color: 0x222233})).translateY(20));
                 
@@ -1025,7 +1090,7 @@
                 group.add(new THREE.Mesh(new THREE.PlaneGeometry(pWidth, 15), glass).translateZ(-pDepth/2).translateY(7.5));
                 group.add(new THREE.Mesh(new THREE.PlaneGeometry(pWidth, 15), glass).translateZ(pDepth/2).translateY(7.5));
 
-                group.position.set(x, trackY, z); group.rotation.y = -rotY; // 見た目は -rotY で正解
+                group.position.set(x, trackY, z); group.rotation.y = -rotY;
                 scene.add(group);
 
                 const dirX = Math.cos(angle), dirZ = Math.sin(angle);
@@ -1035,7 +1100,6 @@
                 createWarpPad(x + dirX*offset, trackY, z + dirZ*offset, 0xff00ff, x + dirX*groundOffset, 1.5, z + dirZ*groundOffset, "地上へ");
                 createWarpPad(x + dirX*groundOffset, 1, z + dirZ*groundOffset, 0x00ffff, x + dirX*offset, trackY+1.5, z + dirZ*offset, "駅ホームへ");
 
-                // 当たり判定用も入れ替えて登録
                 stationAreas.push({ type: 'rect', x, z, angle: -rotY, width: pWidth, depth: pDepth, y: trackY });
             };
 
@@ -1083,7 +1147,7 @@
                 grp.add(new THREE.Mesh(new THREE.TorusGeometry(10, 1, 8, 16), new THREE.MeshBasicMaterial({color: 0x00ffff})).rotateX(Math.PI/2));
                 
                 grp.position.set(px, 68.5, pz); scene.add(grp);
-                personalDrones.push({ mesh: grp, initialPos: new THREE.Vector3(px, 68.5, pz), idleTime: 0 });
+                personalDrones.push({ mesh: grp, initialPos: new THREE.Vector3(px, 68.5, pz) });
             }
         }
 
@@ -1134,7 +1198,6 @@
             ctx.beginPath(); ctx.arc(100, 100, (600/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
             ctx.beginPath(); ctx.arc(100, 100, (1200/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
             
-            // バリアの円
             ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(100, 100, 100, 0, Math.PI*2); ctx.stroke();
 
@@ -1158,7 +1221,6 @@
 
             let tryInteract = fPressed && !fKeyWasPressed;
 
-            // --- クレーンゲームのロジック ---
             if (ufoGame.active) {
                 tryInteract = false; 
                 if (ufoGame.state === 'moving') {
@@ -1196,7 +1258,6 @@
                 }
             }
 
-            // --- 新・絶対時間 列車同期アルゴリズム ---
             trains.forEach(t => {
                 const stopInterval = (Math.PI * 2) / t.numStops;
                 const moveTime = stopInterval / TRAIN_BASE_SPEED;
@@ -1212,7 +1273,7 @@
                 let easeProgress = 0;
                 if (timeInSection < moveTime) {
                     const p = timeInSection / moveTime;
-                    easeProgress = (1 - Math.cos(p * Math.PI)) / 2; // サイン波による滑らかな加減速
+                    easeProgress = (1 - Math.cos(p * Math.PI)) / 2;
                     t.state = 'moving';
                 } else {
                     easeProgress = 1.0; 
@@ -1237,7 +1298,6 @@
                 t.mesh.position.copy(pt); t.mesh.rotation.y = rot;
             });
 
-            // キューブエフェクトのアニメーション
             if (clock.particles) {
                 const pPos = clock.particles.geometry.attributes.position.array;
                 for(let i=1; i<pPos.length; i+=3) {
@@ -1285,16 +1345,17 @@
                 
                 if (!isOccupied) {
                     if (d.mesh.position.distanceTo(d.initialPos) > 1) {
+                        if (d.idleTime === undefined) d.idleTime = 0;
                         d.idleTime += delta;
                         if (d.idleTime > 30) {
-                            let targetY = 800; // 障害物回避のため上空を経由する
+                            let targetY = 800; 
                             let dx = d.initialPos.x - d.mesh.position.x;
                             let dz = d.initialPos.z - d.mesh.position.z;
                             let dist2D = Math.hypot(dx, dz);
                             
                             if (dist2D > 5) {
                                 if (d.mesh.position.y < targetY - 10) {
-                                    d.mesh.position.y += 200 * delta; // 上昇
+                                    d.mesh.position.y += 200 * delta; 
                                 } else {
                                     let speed = 300 * delta;
                                     d.mesh.position.x += (dx / dist2D) * speed;
@@ -1302,7 +1363,7 @@
                                 }
                             } else {
                                 if (d.mesh.position.y > d.initialPos.y + 5) {
-                                    d.mesh.position.y -= 200 * delta; // 下降
+                                    d.mesh.position.y -= 200 * delta; 
                                     d.mesh.position.x = d.initialPos.x;
                                     d.mesh.position.z = d.initialPos.z;
                                 } else {
@@ -1338,7 +1399,7 @@
                     promptText = "駅で降りる";
                     if (tryInteract) {
                         const isOuter = nearestStation.x * nearestStation.x + nearestStation.z * nearestStation.z > 1000 * 1000;
-                        const offset = isOuter ? -20 : -20; // どちらも軌道の内側に降りる
+                        const offset = isOuter ? -20 : -20; 
                         const dirX = Math.cos(nearestStation.angle), dirZ = Math.sin(nearestStation.angle);
                         playerLocalPos.set(nearestStation.x + dirX*offset, 81.5, nearestStation.z + dirZ*offset);
                         ridingTrain = null; updateAvatarAppearance();
@@ -1380,7 +1441,7 @@
                 if (interactTarget && tryInteract) interactTarget();
             }
 
-            fKeyWasPressed = fPressed; // 状態を保存
+            fKeyWasPressed = fPressed; 
 
             const promptEl = document.getElementById('interaction-prompt');
             if (promptText) { document.getElementById('prompt-text').innerText = promptText; promptEl.style.display = 'block'; }
@@ -1401,10 +1462,11 @@
 
                 let nextPos = new THREE.Vector3(playerLocalPos.x + mv.x, playerLocalPos.y, playerLocalPos.z + mv.z);
 
-                if (!ridingDrone && !ridingTrain && !isWarping) {
+                const isFlyMode = isAdmin && document.getElementById('admin-fly').checked;
+
+                if (!isFlyMode) {
                     let y = playerLocalPos.y;
                     
-                    // 展望台の壁 (半径250の床に対して、落ちないよう248で制限)
                     if (Math.abs(y - 1350) < 20) {
                         const dist = Math.hypot(nextPos.x, nextPos.z);
                         if (dist > 248) { 
@@ -1412,7 +1474,6 @@
                             nextPos.x = Math.cos(angle) * 248; nextPos.z = Math.sin(angle) * 248;
                         }
                     } 
-                    // 駅ホームの壁
                     else if (Math.abs(y - 80) < 20) {
                         let currentSt = null;
                         for (let st of stationAreas) {
@@ -1434,7 +1495,6 @@
                         }
                     }
                     
-                    // ドローン発着デッキの壁 (デッキ半径320)
                     if (Math.abs(y - 60) < 20) {
                         let nearDeck = false;
                         let deckCenter = null;
@@ -1456,7 +1516,6 @@
                         }
                     }
 
-                    // 大施設の壁（高さ制限を追加し、ドローンによる上空移動時の干渉を防ぐ）
                     for (let st of stationAreas) {
                         if (st.type === 'wall' && y >= 0 && y < (st.height || 300)) {
                             if (Math.hypot(nextPos.x - st.x, nextPos.z - st.z) < st.radius + 2) {
@@ -1467,7 +1526,6 @@
                         }
                     }
 
-                    // 地下空間の壁制限
                     if (Math.abs(y - (-1000)) < 150) {
                         if (Math.hypot(nextPos.x, nextPos.z - 5000) > 590 && Math.hypot(nextPos.x, nextPos.z - 5000) < 1000) {
                             const ang = Math.atan2(nextPos.z - 5000, nextPos.x);
@@ -1491,58 +1549,66 @@
                     nextY = Math.max(1, nextY);
                     playerLocalPos.set(nextPos.x, nextY, nextPos.z);
                     ridingDrone.mesh.position.copy(playerLocalPos); ridingDrone.mesh.position.y -= 4;
+                } else if (isAdmin && document.getElementById('admin-fly').checked) {
+                    let nextY = playerLocalPos.y;
+                    if (keysPressed['e']) nextY += 80 * delta; 
+                    if (keysPressed['q']) nextY -= 80 * delta; 
+                    nextY = Math.max(1.5, nextY); 
+                    playerLocalPos.set(nextPos.x, nextY, nextPos.z);
                 } else {
                     playerLocalPos.x = nextPos.x; playerLocalPos.z = nextPos.z;
                 }
             }
 
             if (!ridingDrone && !ridingTrain && !isWarping && !focusCameraTarget) {
-                let groundY = 1.5; 
+                const isFlyMode = isAdmin && document.getElementById('admin-fly').checked;
                 
-                // 地下空間の高さ
-                if (playerLocalPos.y < -500) {
-                    groundY = -1000 + 1.5; 
-                    // モール2階判定
-                    if (Math.hypot(playerLocalPos.x, playerLocalPos.z - 5000) < 600 && playerLocalPos.y > -1000 + 50) {
-                        const distToCenter = Math.hypot(playerLocalPos.x, playerLocalPos.z - 5000);
-                        if (distToCenter > 150) groundY = -1000 + 61.5; // モール2階
-                        else groundY = -1000 + 1.5; // 吹き抜け落下
-                    }
-                } else if (Math.abs(playerLocalPos.y - 1350) < 20 && Math.hypot(playerLocalPos.x, playerLocalPos.z) < 250) {
-                    groundY = 1350;
+                if (isFlyMode) {
+                    playerVelocityY = 0; 
                 } else {
-                    for (let st of stationAreas) {
-                        if (st.type === 'circle' && Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z) < st.radius && Math.abs(playerLocalPos.y - st.y) < 20) {
-                            if (st.y > groundY) groundY = st.y; 
+                    let groundY = 1.5; 
+                    
+                    if (playerLocalPos.y < -500) {
+                        groundY = -1000 + 1.5; 
+                        if (Math.hypot(playerLocalPos.x, playerLocalPos.z - 5000) < 600 && playerLocalPos.y > -1000 + 50) {
+                            const distToCenter = Math.hypot(playerLocalPos.x, playerLocalPos.z - 5000);
+                            if (distToCenter > 150) groundY = -1000 + 61.5; 
+                            else groundY = -1000 + 1.5; 
                         }
-                        if (st.type === 'rect' && Math.abs(playerLocalPos.y - st.y) < 20) {
-                            const dx = playerLocalPos.x - st.x, dz = playerLocalPos.z - st.z;
-                            const cos = Math.cos(-st.angle), sin = Math.sin(-st.angle);
-                            const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
-                            if (Math.abs(lx) < (st.width/2) && Math.abs(lz) < (st.depth/2)) { 
+                    } else if (Math.abs(playerLocalPos.y - 1350) < 20 && Math.hypot(playerLocalPos.x, playerLocalPos.z) < 250) {
+                        groundY = 1350;
+                    } else {
+                        for (let st of stationAreas) {
+                            if (st.type === 'circle' && Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z) < st.radius && Math.abs(playerLocalPos.y - st.y) < 20) {
                                 if (st.y > groundY) groundY = st.y; 
+                            }
+                            if (st.type === 'rect' && Math.abs(playerLocalPos.y - st.y) < 20) {
+                                const dx = playerLocalPos.x - st.x, dz = playerLocalPos.z - st.z;
+                                const cos = Math.cos(-st.angle), sin = Math.sin(-st.angle);
+                                const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
+                                if (Math.abs(lx) < (st.width/2) && Math.abs(lz) < (st.depth/2)) { 
+                                    if (st.y > groundY) groundY = st.y; 
+                                }
                             }
                         }
                     }
-                }
 
-                // 世界の果てからの落下
-                if (Math.hypot(playerLocalPos.x, playerLocalPos.z) > MAP_RADIUS + 50 && playerLocalPos.y > 0) {
-                    groundY = -2000; // 底なし沼
-                }
+                    if (Math.hypot(playerLocalPos.x, playerLocalPos.z) > MAP_RADIUS + 50 && playerLocalPos.y > 0) {
+                        groundY = -2000; 
+                    }
 
-                if (playerLocalPos.y > groundY + 0.1) {
-                    playerVelocityY -= 40 * delta; 
-                    playerLocalPos.y += playerVelocityY * delta;
-                    if (playerLocalPos.y <= groundY) { playerLocalPos.y = groundY; playerVelocityY = 0; }
-                } else {
-                    playerLocalPos.y = groundY; playerVelocityY = 0;
-                }
+                    if (playerLocalPos.y > groundY + 0.1) {
+                        playerVelocityY -= 40 * delta; 
+                        playerLocalPos.y += playerVelocityY * delta;
+                        if (playerLocalPos.y <= groundY) { playerLocalPos.y = groundY; playerVelocityY = 0; }
+                    } else {
+                        playerLocalPos.y = groundY; playerVelocityY = 0;
+                    }
 
-                // リスポーン
-                if (playerLocalPos.y < -1500) {
-                    playerLocalPos.set(0, 1.5, 100);
-                    playerVelocityY = 0;
+                    if (playerLocalPos.y < -1500) {
+                        playerLocalPos.set(0, 1.5, 100);
+                        playerVelocityY = 0;
+                    }
                 }
             }
 
