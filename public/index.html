@@ -34,6 +34,15 @@
         #chat-input { padding: 8px; border: none; border-top: 1px solid #334155; background: rgba(0,0,0,0.5); color: white; outline: none; transition: 0.2s;}
         #chat-input:focus { background: rgba(0, 255, 255, 0.1); border-top: 1px solid #00ffff; }
 
+        /* 新規追加: アバターエディタUI */
+        #avatar-editor { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 23, 42, 0.95); padding: 30px; border-radius: 12px; border: 2px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.4); width: 400px; z-index: 50; pointer-events: auto;}
+        #avatar-editor h2 { margin-top: 0; color: #00ffff; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 10px;}
+        .editor-section { margin-bottom: 15px; }
+        .editor-section label { display: block; font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px; }
+        .editor-section input[type="color"] { width: 100%; height: 40px; border: none; border-radius: 4px; cursor: pointer; background: transparent; padding: 0;}
+        .editor-section input[type="range"] { width: 100%; }
+        #avatar-editor button { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; background: linear-gradient(90deg, #00ffff, #0284c7); color: #000; }
+
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; pointer-events: auto; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -78,6 +87,32 @@
         <div id="interaction-prompt"><span class="key-btn">F</span><span id="prompt-text">アクション</span></div>
     </div>
 
+    <!-- 新規追加: アバターエディタ -->
+    <div id="avatar-editor">
+        <h2>Avatar Customization</h2>
+        <div class="editor-section">
+            <label>Body Color</label>
+            <input type="color" id="edit-body-color" value="#00ffff">
+        </div>
+        <div class="editor-section">
+            <label>Head Color</label>
+            <input type="color" id="edit-head-color" value="#ffcc99">
+        </div>
+        <div class="editor-section">
+            <label>Visor Color</label>
+            <input type="color" id="edit-visor-color" value="#000000">
+        </div>
+        <div class="editor-section">
+            <label>Body Width (Width)</label>
+            <input type="range" id="edit-scale-x" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
+        <div class="editor-section">
+            <label>Body Height (Height)</label>
+            <input type="range" id="edit-scale-y" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
+        <button onclick="applyAvatarEdit()">Save & Exit</button>
+    </div>
+
     <div id="canvas-container"></div>
 
     <script>
@@ -91,9 +126,21 @@
         let playerLocalPos = new THREE.Vector3(0, 1.5, 100); 
         let playerVelocityY = 0; 
         
-        let currentCR = 500;
-        let currentStocks = 0;
-        let playerColor = 0x00ffff;
+        // --- 修正: CRと株の永続化 (localStorage) ---
+        let currentCR = parseInt(localStorage.getItem('hakuyarc_cr')) || 500;
+        let currentStocks = parseInt(localStorage.getItem('hakuyarc_stocks')) || 0;
+        
+        // --- 新規追加: アバターの部位別カラーとスケール ---
+        let playerColors = {
+            body: localStorage.getItem('hakuyarc_c_body') || '#00ffff',
+            head: localStorage.getItem('hakuyarc_c_head') || '#ffcc99',
+            visor: localStorage.getItem('hakuyarc_c_visor') || '#000000'
+        };
+        let playerScale = {
+            x: parseFloat(localStorage.getItem('hakuyarc_s_x')) || 1.0,
+            y: parseFloat(localStorage.getItem('hakuyarc_s_y')) || 1.0
+        };
+        
         let playerAccessory = 'none';
         let playerSpeedMult = 1.0;
 
@@ -122,9 +169,19 @@
         const TRAIN_BASE_SPEED = 0.12; 
         const TRAIN_STOP_TIME = 4.0; 
 
+        // 地下空間のY座標基準値
+        const UNDERGROUND_Y = -1000;
+
         function updateCR(amt) {
             currentCR += amt;
             document.getElementById('ui-money').innerText = currentCR;
+            localStorage.setItem('hakuyarc_cr', currentCR); // 保存
+        }
+
+        function updateStocks(amt) {
+            currentStocks += amt;
+            document.getElementById('ui-stocks').innerText = currentStocks;
+            localStorage.setItem('hakuyarc_stocks', currentStocks); // 保存
         }
 
         function addChatMessage(sender, text) {
@@ -139,44 +196,65 @@
             const password = document.getElementById('password').value || 'nopass';
             if (!username) return alert("Usernameを入力してください");
 
-            try {
-                let res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                let data = await res.json();
-                if (!data.success) {
-                    res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                    data = await res.json();
-                    if (!data.success) return alert(data.message);
-                    res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                    data = await res.json();
-                }
+            currentUsername = username;
+            
+            // ローカルストレージからロードした値をUIに反映
+            document.getElementById('ui-username').innerText = currentUsername;
+            document.getElementById('ui-money').innerText = currentCR;
+            document.getElementById('ui-stocks').innerText = currentStocks;
+            
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block';
+            
+            try { if (typeof io !== 'undefined') { socket = io({ auth: { username: currentUsername } }); setupSocketEvents(); } } catch(e) { console.warn("Socket skip"); }
+            try { document.body.requestPointerLock(); } catch(e) {}
+            initThreeJS();
+        }
 
-                if (data.success) {
-                    currentUsername = data.username;
-                    currentCR = data.money || 500;
-                    document.getElementById('ui-username').innerText = currentUsername;
-                    document.getElementById('ui-money').innerText = currentCR;
-                    
-                    document.getElementById('login-screen').style.display = 'none';
-                    document.getElementById('ui-layer').style.display = 'block';
-                    
-                    try { if (typeof io !== 'undefined') { socket = io({ auth: { username: currentUsername } }); setupSocketEvents(); } } catch(e) { console.warn("Socket skip"); }
-                    try { document.body.requestPointerLock(); } catch(e) {}
-                    initThreeJS();
-                } else alert("ログイン失敗");
-            } catch (err) {
-                currentUsername = username;
-                document.getElementById('ui-username').innerText = currentUsername;
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('ui-layer').style.display = 'block';
-                try { document.body.requestPointerLock(); } catch(e) {}
-                initThreeJS();
-            }
+        // --- 新規追加: アバターエディタ機能 ---
+        function openAvatarEditor() {
+            if(isLocked) document.exitPointerLock();
+            document.getElementById('avatar-editor').style.display = 'block';
+            
+            document.getElementById('edit-body-color').value = playerColors.body;
+            document.getElementById('edit-head-color').value = playerColors.head;
+            document.getElementById('edit-visor-color').value = playerColors.visor;
+            document.getElementById('edit-scale-x').value = playerScale.x;
+            document.getElementById('edit-scale-y').value = playerScale.y;
+        }
+
+        function applyAvatarEdit() {
+            playerColors.body = document.getElementById('edit-body-color').value;
+            playerColors.head = document.getElementById('edit-head-color').value;
+            playerColors.visor = document.getElementById('edit-visor-color').value;
+            playerScale.x = parseFloat(document.getElementById('edit-scale-x').value);
+            playerScale.y = parseFloat(document.getElementById('edit-scale-y').value);
+
+            // 保存
+            localStorage.setItem('hakuyarc_c_body', playerColors.body);
+            localStorage.setItem('hakuyarc_c_head', playerColors.head);
+            localStorage.setItem('hakuyarc_c_visor', playerColors.visor);
+            localStorage.setItem('hakuyarc_s_x', playerScale.x);
+            localStorage.setItem('hakuyarc_s_y', playerScale.y);
+
+            document.getElementById('avatar-editor').style.display = 'none';
+            document.body.requestPointerLock();
+            
+            updateAvatarAppearance();
         }
 
         function updateAvatarAppearance() {
             if (!localAvatar) return;
-            localAvatar.children[0].material.color.setHex(playerColor);
             
+            // 色の反映
+            localAvatar.children[0].material.color.set(playerColors.body);
+            localAvatar.children[1].material.color.set(playerColors.head);
+            localAvatar.children[2].material.color.set(playerColors.visor);
+            
+            // スケールの反映
+            localAvatar.scale.set(playerScale.x, playerScale.y, playerScale.x);
+
+            // アクセサリの反映
             localAvatar.children.forEach(child => {
                 if (child.userData.isAccessory) {
                     child.visible = (child.userData.accType === playerAccessory);
@@ -185,7 +263,8 @@
 
             if (socket) {
                 socket.emit('changeAvatarConfig', {
-                    color: playerColor,
+                    colors: playerColors,
+                    scale: playerScale,
                     accessory: playerAccessory,
                     ridingTrainIndex: ridingTrain ? trains.indexOf(ridingTrain) : -1,
                     ridingDroneIndex: ridingDrone ? personalDrones.indexOf(ridingDrone) : -1
@@ -217,7 +296,15 @@
                     const mesh = otherPlayers[data.id];
                     mesh.userData.ridingTrainIndex = data.avatar.ridingTrainIndex !== undefined ? data.avatar.ridingTrainIndex : -1;
                     mesh.userData.ridingDroneIndex = data.avatar.ridingDroneIndex !== undefined ? data.avatar.ridingDroneIndex : -1;
-                    if (data.avatar.color) mesh.children[0].material.color.setHex(data.avatar.color);
+                    
+                    if (data.avatar.colors) {
+                        mesh.children[0].material.color.set(data.avatar.colors.body);
+                        mesh.children[1].material.color.set(data.avatar.colors.head);
+                        mesh.children[2].material.color.set(data.avatar.colors.visor);
+                    }
+                    if (data.avatar.scale) {
+                        mesh.scale.set(data.avatar.scale.x, data.avatar.scale.y, data.avatar.scale.x);
+                    }
                     if (data.avatar.accessory) {
                         mesh.children.forEach(child => {
                             if (child.userData.isAccessory) child.visible = (child.userData.accType === data.avatar.accessory);
@@ -251,7 +338,7 @@
             createMonorails();
             createDrones();
             
-            localAvatar = createAvatarMesh(playerColor);
+            localAvatar = createAvatarMesh();
             updateAvatarAppearance();
             scene.add(localAvatar);
 
@@ -270,28 +357,31 @@
             animate();
         }
 
-        function createAvatarMesh(colorHex = 0x00ffff, username = null) {
+        function createAvatarMesh(username = null) {
             const group = new THREE.Group();
             const s = 2.5; 
             
-            const bodyMat = new THREE.MeshStandardMaterial({color: colorHex, roughness: 0.2, metalness: 0.8});
+            // マテリアルは色変更を可能にするため個別に作成
+            const bodyMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.2, metalness: 0.8});
             const body = new THREE.Mesh(new THREE.BoxGeometry(0.8*s, 1.2*s, 0.5*s), bodyMat);
             body.position.y = 0.6*s;
             
-            const headMat = new THREE.MeshStandardMaterial({color: 0xffcc99});
+            const headMat = new THREE.MeshStandardMaterial({color: 0xffffff});
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.6*s, 0.6*s, 0.6*s), headMat);
             head.position.y = 1.5*s;
             
-            const visorMat = new THREE.MeshBasicMaterial({color: 0x000000});
+            const visorMat = new THREE.MeshBasicMaterial({color: 0xffffff});
             const visor = new THREE.Mesh(new THREE.BoxGeometry(0.65*s, 0.2*s, 0.65*s), visorMat);
             visor.position.y = 1.5*s;
             
+            // 順番重要: [0]=body, [1]=head, [2]=visor
             group.add(body, head, visor);
 
             // 猫耳
+            const earMat = new THREE.MeshStandardMaterial({color: 0xffa500});
             const earGeo = new THREE.ConeGeometry(0.2*s, 0.4*s, 4);
-            const earL = new THREE.Mesh(earGeo, bodyMat); earL.position.set(-0.2*s, 1.9*s, 0);
-            const earR = new THREE.Mesh(earGeo, bodyMat); earR.position.set(0.2*s, 1.9*s, 0);
+            const earL = new THREE.Mesh(earGeo, earMat); earL.position.set(-0.2*s, 1.9*s, 0);
+            const earR = new THREE.Mesh(earGeo, earMat); earR.position.set(0.2*s, 1.9*s, 0);
             const catEars = new THREE.Group(); catEars.add(earL, earR);
             catEars.userData = { isAccessory: true, accType: 'cat_ears' };
             catEars.visible = false;
@@ -329,6 +419,32 @@
             return group;
         }
 
+        function addOtherPlayer(info) {
+            const mesh = createAvatarMesh(info.username); 
+            mesh.position.set(info.x, info.y, info.z);
+            mesh.rotation.y = info.rotation;
+            if (info.avatar) {
+                mesh.userData.ridingTrainIndex = info.avatar.ridingTrainIndex !== undefined ? info.avatar.ridingTrainIndex : -1;
+                mesh.userData.ridingDroneIndex = info.avatar.ridingDroneIndex !== undefined ? info.avatar.ridingDroneIndex : -1;
+                
+                if (info.avatar.colors) {
+                    mesh.children[0].material.color.set(info.avatar.colors.body);
+                    mesh.children[1].material.color.set(info.avatar.colors.head);
+                    mesh.children[2].material.color.set(info.avatar.colors.visor);
+                }
+                if (info.avatar.scale) {
+                    mesh.scale.set(info.avatar.scale.x, info.avatar.scale.y, info.avatar.scale.x);
+                }
+                if(info.avatar.accessory) {
+                    mesh.children.forEach(c => { if(c.userData.isAccessory) c.visible = (c.userData.accType === info.avatar.accessory); });
+                }
+            } else {
+                mesh.userData.ridingTrainIndex = -1; mesh.userData.ridingDroneIndex = -1;
+            }
+            scene.add(mesh);
+            otherPlayers[info.id] = mesh;
+        }
+
         function createEnvironment() {
             const ground = new THREE.Mesh(new THREE.CircleGeometry(MAP_RADIUS, 64), new THREE.MeshStandardMaterial({ color: 0x050a15, roughness: 0.9 }));
             ground.rotation.x = -Math.PI / 2; scene.add(ground);
@@ -351,11 +467,11 @@
             }
 
             // 建物の距離とスケール
-            const dist = 1600;
+            const dist = 1800;
             const corners = [
-                {x: Math.cos(Math.PI/4)*dist, z: Math.sin(Math.PI/4)*dist, col: 0x00ffff, name: "mall", label: "モールへ入る", target: new THREE.Vector3(0, 1.5, 5000)}, 
-                {x: Math.cos(3*Math.PI/4)*dist, z: Math.sin(3*Math.PI/4)*dist, col: 0xff00ff, name: "dome", label: "エンタメドームへ", target: new THREE.Vector3(0, 1.5, -5000)},
-                {x: Math.cos(7*Math.PI/4)*dist, z: Math.sin(7*Math.PI/4)*dist, col: 0x00ff00, name: "stock", label: "証券取引所へ", target: new THREE.Vector3(5000, 1.5, 0)}, 
+                {x: Math.cos(Math.PI/4)*dist, z: Math.sin(Math.PI/4)*dist, col: 0x00ffff, name: "mall", label: "モールへ入る", target: new THREE.Vector3(0, UNDERGROUND_Y + 1.5, 5000)}, 
+                {x: Math.cos(3*Math.PI/4)*dist, z: Math.sin(3*Math.PI/4)*dist, col: 0xff00ff, name: "dome", label: "エンタメドームへ", target: new THREE.Vector3(0, UNDERGROUND_Y + 1.5, -5000)},
+                {x: Math.cos(7*Math.PI/4)*dist, z: Math.sin(7*Math.PI/4)*dist, col: 0x00ff00, name: "stock", label: "証券取引所へ", target: new THREE.Vector3(5000, UNDERGROUND_Y + 1.5, 0)}, 
                 {x: Math.cos(5*Math.PI/4)*dist, z: Math.sin(5*Math.PI/4)*dist, col: 0xff0000, name: "drone", label: "発着デッキへ昇る", target: new THREE.Vector3(Math.cos(5*Math.PI/4)*dist, 66.5, Math.sin(5*Math.PI/4)*dist)}
             ];
 
@@ -363,7 +479,11 @@
                 const group = new THREE.Group();
                 const lookAngle = Math.atan2(-c.x, -c.z); 
                 
-                stationAreas.push({ type: 'wall', x: c.x, z: c.z, radius: 300 });
+                if (c.name === "drone") {
+                    stationAreas.push({ type: 'wall', x: c.x, z: c.z, radius: 120, height: 60 });
+                } else {
+                    stationAreas.push({ type: 'wall', x: c.x, z: c.z, radius: 300, height: 300 });
+                }
 
                 if (c.name === "mall") {
                     for(let i=0; i<3; i++) {
@@ -434,8 +554,12 @@
                 gateGroup.position.set(0, 0, gateRadius);
                 group.add(gateGroup);
 
-                const padX = c.x + Math.sin(lookAngle) * (gateRadius + 30);
-                const padZ = c.z + Math.cos(lookAngle) * (gateRadius + 30);
+                const padX = c.x + Math.sin(lookAngle) * (gateRadius + 50);
+                const padZ = c.z + Math.cos(lookAngle) * (gateRadius + 50);
+                
+                // 帰還用に座標を保存しておく
+                returnPads[c.name] = { x: padX, z: padZ };
+
                 createWarpPad(padX, 0, padZ, c.col, c.target.x, c.target.y, c.target.z, c.label);
 
                 if (c.name === "drone") {
@@ -449,9 +573,9 @@
         }
 
         function createUndergroundRooms() {
-            // --- モールルーム大拡張 (0, 1.5, 5000) ---
+            // --- モールルーム大拡張 (0, UNDERGROUND_Y, 5000) ---
             const mallGrp = new THREE.Group();
-            mallGrp.position.set(0, 0, 5000);
+            mallGrp.position.set(0, UNDERGROUND_Y, 5000);
             
             // 床
             mallGrp.add(new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x0a1520, roughness: 0.3})).rotateX(-Math.PI/2));
@@ -464,19 +588,22 @@
             mallGrp.add(mallCeiling, mallWall);
             
             // 照明
-            const mallLight = new THREE.PointLight(0x00ffff, 1, 1000);
+            const mallLight = new THREE.PointLight(0x00ffff, 2, 2000);
             mallLight.position.set(0, 100, 0);
             mallGrp.add(mallLight);
 
-            // 商品棚カウンターとディスプレイ
+            // --- 新規追加: アバターエディタ起動ポイント ---
+            const editPad = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 2, 32), new THREE.MeshStandardMaterial({color: 0x0284c7}));
+            editPad.position.set(0, 1, 0); mallGrp.add(editPad);
+            const editRing = new THREE.Mesh(new THREE.RingGeometry(38, 42, 32), new THREE.MeshBasicMaterial({color: 0x00ffff, side:THREE.DoubleSide})).rotateX(Math.PI/2);
+            editRing.position.set(0, 2.1, 0); mallGrp.add(editRing);
+            interactables.push({ pos: new THREE.Vector3(0, UNDERGROUND_Y + 1.5, 5000), radius: 40, label: "アバター再編集", action: openAvatarEditor });
+
             const createDisplayArea = (x, z, label) => {
                 const area = new THREE.Group();
                 area.position.set(x, 0, z);
-                
                 const counter = new THREE.Mesh(new THREE.BoxGeometry(200, 5, 40), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.9}));
                 counter.position.set(0, 2.5, 0);
-                
-                // 商品を目立たせる光る土台
                 for(let i=0; i<3; i++) {
                     const px = -60 + i*60;
                     const base = new THREE.Mesh(new THREE.CylinderGeometry(15, 20, 2, 16), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x005555}));
@@ -487,24 +614,20 @@
                 return area;
             };
 
-            const colorArea = createDisplayArea(0, -150, "Colors");
-            mallGrp.add(colorArea);
-            const accArea = createDisplayArea(0, 0, "Accessories");
+            const accArea = createDisplayArea(0, 150, "Accessories");
             mallGrp.add(accArea);
-            const speedArea = createDisplayArea(0, 150, "Boosts");
+            const speedArea = createDisplayArea(0, 250, "Boosts");
             mallGrp.add(speedArea);
 
             const addShopItem = (x, z, color, name, price, type, val, areaGrp, displayIndex) => {
-                const itemY = 15; // アイテムの表示高さを低く
+                const itemY = 15; 
                 const item = new THREE.Mesh(new THREE.OctahedronGeometry(8), new THREE.MeshBasicMaterial({color, wireframe: true}));
                 item.position.set(-60 + displayIndex*60, itemY, 0); 
                 areaGrp.add(item);
                 
-                // インタラクト用はグローバル座標で計算
-                interactables.push({ pos: new THREE.Vector3(x, 1.5, 5000 + z), radius: 30, label: `購入: ${name} (${price}CR)`, action: () => {
+                interactables.push({ pos: new THREE.Vector3(x, UNDERGROUND_Y + 1.5, 5000 + z), radius: 30, label: `購入: ${name} (${price}CR)`, action: () => {
                     if (currentCR < price) return addChatMessage("SYSTEM", "CRが足りません");
                     updateCR(-price);
-                    if (type === 'color') playerColor = val;
                     if (type === 'acc') playerAccessory = val;
                     if (type === 'speed') playerSpeedMult = val;
                     updateAvatarAppearance();
@@ -512,40 +635,32 @@
                 }});
             };
             
-            // 色変更
-            addShopItem(0 - 60, -150, 0xff0000, "レッドカラー", 50, 'color', 0xff0000, colorArea, 0);
-            addShopItem(0, -150, 0xff00ff, "マゼンタカラー", 50, 'color', 0xff00ff, colorArea, 1);
-            addShopItem(0 + 60, -150, 0xffff00, "イエローカラー", 50, 'color', 0xffff00, colorArea, 2);
-
             // アクセサリ
-            addShopItem(0 - 60, 0, 0xffa500, "猫耳アクセサリ", 100, 'acc', 'cat_ears', accArea, 0);
-            addShopItem(0, 0, 0x00ff00, "シルクハット", 100, 'acc', 'hat', accArea, 1);
-            addShopItem(0 + 60, 0, 0x00ffff, "ヘッドホン", 100, 'acc', 'headphone', accArea, 2);
+            addShopItem(0 - 60, 150, 0xffa500, "猫耳アクセサリ", 100, 'acc', 'cat_ears', accArea, 0);
+            addShopItem(0, 150, 0x00ff00, "シルクハット", 100, 'acc', 'hat', accArea, 1);
+            addShopItem(0 + 60, 150, 0x00ffff, "ヘッドホン", 100, 'acc', 'headphone', accArea, 2);
 
             // 強化アイテム
-            addShopItem(0 - 60, 150, 0xffffff, "スピード x1.2", 200, 'speed', 1.2, speedArea, 0);
-            addShopItem(0, 150, 0xffffff, "スピード x1.5", 300, 'speed', 1.5, speedArea, 1);
-            addShopItem(0 + 60, 150, 0xffffff, "スピード x2.0", 500, 'speed', 2.0, speedArea, 2);
+            addShopItem(0 - 60, 250, 0xffffff, "スピード x1.2", 200, 'speed', 1.2, speedArea, 0);
+            addShopItem(0, 250, 0xffffff, "スピード x1.5", 300, 'speed', 1.5, speedArea, 1);
+            addShopItem(0 + 60, 250, 0xffffff, "スピード x2.0", 500, 'speed', 2.0, speedArea, 2);
 
-            // 出口ワープ
-            const retPadX = Math.cos(Math.PI/4)*1600 - 350;
-            createWarpPad(0, 0, 300, 0x00ffff, retPadX, 1.5, retPadX, "地上へ戻る");
+            // 帰還ワープ
+            createWarpPad(0, UNDERGROUND_Y, 5300, 0x00ffff, returnPads.mall.x, 1.5, returnPads.mall.z, "地上へ戻る");
             scene.add(mallGrp);
 
-            // --- カジノルーム (0, 1.5, -5000) ---
+            // --- カジノルーム ---
             const casinoGrp = new THREE.Group();
-            casinoGrp.position.set(0, 0, -5000);
+            casinoGrp.position.set(0, UNDERGROUND_Y, -5000);
             casinoGrp.add(new THREE.Mesh(new THREE.CircleGeometry(500, 64), new THREE.MeshStandardMaterial({color: 0x150510})).rotateX(-Math.PI/2));
             
-            // 天井と壁
             const casinoCeiling = new THREE.Mesh(new THREE.CircleGeometry(500, 64), new THREE.MeshStandardMaterial({color: 0x050103}));
             casinoCeiling.rotation.x = Math.PI/2; casinoCeiling.position.y = 150;
             const casinoWall = new THREE.Mesh(new THREE.CylinderGeometry(500, 500, 150, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x1a0524, side: THREE.BackSide}));
             casinoWall.position.y = 75;
             casinoGrp.add(casinoCeiling, casinoWall);
 
-            // 照明
-            const casinoLight = new THREE.PointLight(0xff00ff, 1, 1000);
+            const casinoLight = new THREE.PointLight(0xff00ff, 2, 2000);
             casinoLight.position.set(0, 100, 0);
             casinoGrp.add(casinoLight);
 
@@ -572,7 +687,7 @@
 
                 const machineData = { mesh: screen, state: 'idle', timer: 0 };
                 slotMachines.push(machineData);
-                interactables.push({ pos: new THREE.Vector3(-230, 1.5, -5000 + sz), radius: 20, label: "スロットを回す (10CR)", action: () => {
+                interactables.push({ pos: new THREE.Vector3(-230, UNDERGROUND_Y + 1.5, -5000 + sz), radius: 20, label: "スロットを回す (10CR)", action: () => {
                     if (machineData.state !== 'idle') return;
                     if (currentCR < 10) return addChatMessage("SYSTEM", "CRが不足しています");
                     updateCR(-10);
@@ -587,12 +702,12 @@
             casinoGrp.add(hTable, hLine);
 
             hockeyPuck = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 2, 16), new THREE.MeshBasicMaterial({color: 0xff0000}));
-            hockeyPuck.position.set(250, 11, -5000); 
+            hockeyPuck.position.set(250, UNDERGROUND_Y + 11, -5000); 
             scene.add(hockeyPuck);
 
-            interactables.push({ pos: new THREE.Vector3(250, 1.5, -5000), radius: 80, label: "ホッケーを打つ (対人専用)", action: () => {
+            interactables.push({ pos: new THREE.Vector3(250, UNDERGROUND_Y + 1.5, -5000), radius: 80, label: "ホッケーを打つ (対人専用)", action: () => {
                 let hasOpponent = false;
-                Object.values(otherPlayers).forEach(p => { if (p.position.distanceTo(new THREE.Vector3(250, 1.5, -5000)) < 150) hasOpponent = true; });
+                Object.values(otherPlayers).forEach(p => { if (p.position.distanceTo(new THREE.Vector3(250, UNDERGROUND_Y + 1.5, -5000)) < 150) hasOpponent = true; });
                 if (!hasOpponent) return addChatMessage("SYSTEM", "対戦相手がいません。");
                 
                 const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
@@ -613,7 +728,7 @@
                 const stand = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 1, 16), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe:true}));
                 stand.position.set(p[0], 0.5, p[1] - 250);
                 casinoGrp.add(stand);
-                interactables.push({ pos: new THREE.Vector3(p[0], 1.5, p[1] - 5250), radius: 15, label: `マルチルーレット P${idx+1} (100CR)`, action: () => {
+                interactables.push({ pos: new THREE.Vector3(p[0], UNDERGROUND_Y + 1.5, p[1] - 5250), radius: 15, label: `マルチルーレット P${idx+1} (100CR)`, action: () => {
                     if (currentCR < 100) return addChatMessage("SYSTEM", "CRが不足しています");
                     updateCR(-100);
                     addChatMessage("SYSTEM", `ルーレットにエントリーしました！`);
@@ -631,25 +746,21 @@
                 }});
             });
 
-            // 出口ワープ
-            const retDomeZ = Math.sin(3*Math.PI/4)*1600 + 350;
-            createWarpPad(0, 0, 300, 0xff00ff, -retDomeZ, 1.5, retDomeZ, "地上へ戻る");
             scene.add(casinoGrp);
+            createWarpPad(0, UNDERGROUND_Y, -4700, 0xff00ff, returnPads.dome.x, 1.5, returnPads.dome.z, "地上へ戻る");
 
-            // --- 証券所ルーム (5000, 1.5, 0) ---
+            // --- 証券所ルーム ---
             const stockGrp = new THREE.Group();
-            stockGrp.position.set(5000, 0, 0);
+            stockGrp.position.set(5000, UNDERGROUND_Y, 0);
             stockGrp.add(new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshStandardMaterial({color: 0x052405})).rotateX(-Math.PI/2));
             
-            // 天井と壁
             const stockCeiling = new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshStandardMaterial({color: 0x010501}));
             stockCeiling.rotation.x = Math.PI/2; stockCeiling.position.y = 150;
             const stockWall = new THREE.Mesh(new THREE.CylinderGeometry(300, 300, 150, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x052405, side: THREE.BackSide}));
             stockWall.position.y = 75;
             stockGrp.add(stockCeiling, stockWall);
 
-            // 照明
-            const stockLight = new THREE.PointLight(0x00ff00, 1, 1000);
+            const stockLight = new THREE.PointLight(0x00ff00, 2, 2000);
             stockLight.position.set(0, 100, 0);
             stockGrp.add(stockLight);
 
@@ -661,21 +772,19 @@
             const term = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 20), new THREE.MeshStandardMaterial({color: 0x224422}));
             term.position.set(0, 7.5, -50); stockGrp.add(term);
 
-            interactables.push({ pos: new THREE.Vector3(5000, 1.5, -50), radius: 30, label: "株を購入/売却", action: () => {
+            interactables.push({ pos: new THREE.Vector3(5000, UNDERGROUND_Y + 1.5, -50), radius: 30, label: "株を購入/売却", action: () => {
                 const action = prompt(`現在の株価: ${currentStockPrice}CR\n[1] 買う\n[2] 売る\n半角数字で入力してください`);
                 if (action === '1') {
-                    if(currentCR >= currentStockPrice) { updateCR(-currentStockPrice); currentStocks++; document.getElementById('ui-stocks').innerText = currentStocks; addChatMessage("SYSTEM", "株を購入しました"); }
+                    if(currentCR >= currentStockPrice) { updateCR(-currentStockPrice); updateStocks(1); addChatMessage("SYSTEM", "株を購入しました"); }
                     else addChatMessage("SYSTEM", "CRが足りません");
                 } else if (action === '2') {
-                    if(currentStocks > 0) { updateCR(currentStockPrice); currentStocks--; document.getElementById('ui-stocks').innerText = currentStocks; addChatMessage("SYSTEM", "株を売却しました"); }
+                    if(currentStocks > 0) { updateCR(currentStockPrice); updateStocks(-1); addChatMessage("SYSTEM", "株を売却しました"); }
                     else addChatMessage("SYSTEM", "株を持っていません");
                 }
             }});
 
-            // 出口ワープ
-            const retStockX = Math.cos(7*Math.PI/4)*1600 - 350;
-            createWarpPad(0, 0, 100, 0x00ff00, retStockX, 1.5, -retStockX, "地上へ戻る");
             scene.add(stockGrp);
+            createWarpPad(5000, UNDERGROUND_Y, 150, 0x00ff00, returnPads.stock.x, 1.5, returnPads.stock.z, "地上へ戻る");
         }
 
         function updateStockChart() {
@@ -771,7 +880,8 @@
         }
 
         function createMonorails() {
-            const rInner = 600, rOuter = 1300, trackY = 80;
+            // 外周を1200に縮小して施設との干渉を防ぐ
+            const rInner = 600, rOuter = 1200, trackY = 80;
             const railMat = new THREE.MeshBasicMaterial({color: 0xcccccc});
             const neonMatCyan = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity:0.4});
             const neonMatPink = new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true, transparent:true, opacity:0.4});
@@ -785,11 +895,11 @@
             };
             drawTrack(rInner, false); drawTrack(rOuter, true);
 
-            // rInner=600 と rOuter=1300 の間を完璧に波打つ数式 (中心950、振幅350)
+            // rInner=600 と rOuter=1200 の間を完璧に波打つ数式 (中心900、振幅300)
             const curvePts = [];
             for (let i = 0; i <= 128; i++) {
                 const a = (i / 128) * Math.PI * 2;
-                const r = 950 - 350 * Math.cos(4 * a); 
+                const r = 900 - 300 * Math.cos(4 * a); 
                 curvePts.push(new THREE.Vector3(Math.cos(a) * r, trackY, Math.sin(a) * r));
             }
             const curveSpline = new THREE.CatmullRomCurve3(curvePts, true);
@@ -813,9 +923,8 @@
 
                 const dirX = Math.cos(angle), dirZ = Math.sin(angle);
                 
-                // 施設の拡大に伴い、外周駅のワープ先（地上）を内側にずらす
                 const offset = (radius === rInner) ? -20 : 20; 
-                const groundOffset = (radius === rInner) ? 30 : -50; // 外周駅のワープ先を軌道より内側（タワー寄り）にする
+                const groundOffset = (radius === rInner) ? 40 : 40; 
                 
                 createWarpPad(x + dirX*offset, trackY, z + dirZ*offset, 0xff00ff, x + dirX*groundOffset, 1.5, z + dirZ*groundOffset, "地上へ");
                 createWarpPad(x + dirX*groundOffset, 1, z + dirZ*groundOffset, 0x00ffff, x + dirX*offset, trackY+1.5, z + dirZ*offset, "駅ホームへ");
@@ -850,13 +959,12 @@
             };
             
             spawnTrain(rInner, 0, 'inner'); spawnTrain(rInner, Math.PI, 'inner');
-            // 外周列車の初期位置を調整
             spawnTrain(rOuter, 0, 'outer'); spawnTrain(rOuter, Math.PI, 'outer');
             spawnTrain(null, 0, 'curve'); spawnTrain(null, Math.PI, 'curve'); 
         }
 
         function createDrones() {
-            const dist = 1600;
+            const dist = 1800; // 発着場の距離に合わせる
             const lookAngle = Math.atan2(-Math.cos(5*Math.PI/4)*dist, -Math.sin(5*Math.PI/4)*dist);
             const cx = Math.cos(5*Math.PI/4)*dist;
             const cz = Math.sin(5*Math.PI/4)*dist;
@@ -896,7 +1004,15 @@
             const canvas = document.getElementById('canvas-container');
             canvas.addEventListener('mousedown', () => { isDragging = true; try { document.body.requestPointerLock(); } catch(e){} });
             document.addEventListener('mouseup', () => isDragging = false);
-            document.addEventListener('pointerlockchange', () => isLocked = document.pointerLockElement === document.body);
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = document.pointerLockElement === document.body;
+                if(!isLocked && document.getElementById('avatar-editor').style.display !== 'block') {
+                    document.getElementById('ui-layer').style.display = 'none';
+                } else if(isLocked) {
+                    document.getElementById('ui-layer').style.display = 'block';
+                    document.getElementById('avatar-editor').style.display = 'none';
+                }
+            });
             
             document.addEventListener('mousemove', e => {
                 if (isLocked || isDragging) {
@@ -916,7 +1032,7 @@
             ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(100, 100, 6, 0, Math.PI*2); ctx.fill();
             ctx.strokeStyle = 'rgba(136, 204, 255, 0.4)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.arc(100, 100, (600/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(100, 100, (1300/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(100, 100, (1200/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
 
             const px = 100 + (playerLocalPos.x / MAP_RADIUS) * 100;
             const py = 100 + (playerLocalPos.z / MAP_RADIUS) * 100;
@@ -967,8 +1083,8 @@
                 let r = t.radius;
                 let dr = 0;
                 if (t.type === 'curve') {
-                    r = 950 - 350 * Math.cos(4 * t.angle); // 半径600から1300まで滑らかに変動
-                    dr = 1400 * Math.sin(4 * t.angle);
+                    r = 900 - 300 * Math.cos(4 * t.angle); // 半径600から1200まで滑らかに変動
+                    dr = 1200 * Math.sin(4 * t.angle);
                     t.radius = r;
                 }
                 const pt = new THREE.Vector3(Math.cos(t.angle) * r, 80, Math.sin(t.angle) * r);
@@ -1084,8 +1200,9 @@
             if (promptText) { document.getElementById('prompt-text').innerText = promptText; promptEl.style.display = 'block'; }
             else promptEl.style.display = 'none';
 
-            if (!isWarping && !ridingTrain && document.activeElement !== document.getElementById('chat-input')) {
-                const speed = (keysPressed['shift'] ? 150 : 60) * playerSpeedMult * delta; 
+            if (!isWarping && !ridingTrain && document.activeElement !== document.getElementById('chat-input') && document.getElementById('avatar-editor').style.display !== 'block') {
+                // 空間拡張に合わせて移動速度を少しアップ
+                const speed = (keysPressed['shift'] ? 250 : 100) * playerSpeedMult * delta; 
                 
                 const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
                 const right = new THREE.Vector3().crossVectors(fwd, camera.up).normalize();
@@ -1155,9 +1272,9 @@
                         }
                     }
 
-                    // 大施設の壁
+                    // 大施設の壁（高さ制限を追加し、ドローンによる上空移動時の干渉を防ぐ）
                     for (let st of stationAreas) {
-                        if (st.type === 'wall' && Math.abs(y) < 300) {
+                        if (st.type === 'wall' && y >= 0 && y < (st.height || 300)) {
                             if (Math.hypot(nextPos.x - st.x, nextPos.z - st.z) < st.radius + 2) {
                                 const angle = Math.atan2(nextPos.z - st.z, nextPos.x - st.x);
                                 nextPos.x = st.x + Math.cos(angle) * (st.radius + 2);
@@ -1166,8 +1283,8 @@
                         }
                     }
 
-                    // 地下空間の壁制限
-                    if (Math.abs(y) < 20) {
+                    // --- 修正: 地下空間の壁制限 (Y = UNDERGROUND_Y) ---
+                    if (Math.abs(y - UNDERGROUND_Y) < 20) {
                         if (Math.hypot(nextPos.x, nextPos.z - 5000) > 590 && Math.hypot(nextPos.x, nextPos.z - 5000) < 1000) {
                             const ang = Math.atan2(nextPos.z - 5000, nextPos.x);
                             nextPos.x = Math.cos(ang)*590; nextPos.z = 5000 + Math.sin(ang)*590;
@@ -1200,6 +1317,8 @@
                 
                 if (Math.abs(playerLocalPos.y - 1350) < 20 && Math.hypot(playerLocalPos.x, playerLocalPos.z) < 250) {
                     groundY = 1350;
+                } else if (Math.abs(playerLocalPos.y - UNDERGROUND_Y) < 50) {
+                    groundY = UNDERGROUND_Y + 1.5; // 地下空間の重力床
                 } else {
                     for (let st of stationAreas) {
                         if (st.type === 'circle' && Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z) < st.radius && Math.abs(playerLocalPos.y - st.y) < 20) {
@@ -1229,7 +1348,7 @@
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS;
                 if (ridingTrain) localAvatar.rotation.y = ridingTrain.mesh.rotation.y;
-                else if (!isWarping && !ridingDrone && document.activeElement !== document.getElementById('chat-input')) {
+                else if (!isWarping && !ridingDrone && document.activeElement !== document.getElementById('chat-input') && document.getElementById('avatar-editor').style.display !== 'block') {
                     if (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d']) {
                         let targetYaw = cameraYaw;
                         if (keysPressed['s']) targetYaw += Math.PI; else if (keysPressed['a']) targetYaw += Math.PI/2; else if (keysPressed['d']) targetYaw -= Math.PI/2;
