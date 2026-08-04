@@ -53,16 +53,18 @@
     <div id="login-screen">
         <div class="panel">
             <h2>HAKUYARC</h2>
+            <div id="auth-msg" style="color: #f472b6; font-size: 0.8rem; text-align: center; height: 1.2rem;"></div>
             <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password (Optional)">
+            <input type="password" id="password" placeholder="Password" required>
             
             <!-- アドミン専用セクション -->
             <div id="admin-login-section" style="display: none; border-top: 1px solid #334155; margin-top: 15px; padding-top: 15px;">
                 <div style="color: #ff00ff; font-size: 0.8rem; margin-bottom: 5px; font-weight: bold;">[ADMIN MODE AVAILABLE]</div>
-                <input type="password" id="admin-password" placeholder="Admin Password" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ff00ff; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none;">
+                <input type="password" id="admin-password" placeholder="Admin Password (Optional)" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ff00ff; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none;">
             </div>
 
-            <button class="btn-primary" onclick="attemptAuth()">ENTER SYSTEM</button>
+            <button class="btn-primary" onclick="attemptAuth('login')">LOGIN (ENTER SYSTEM)</button>
+            <button onclick="attemptAuth('register')" style="background: transparent; border: 1px solid #f472b6; color: #f472b6; width: 100%; padding: 12px; margin-top: 5px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;">REGISTER (新規登録)</button>
         </div>
     </div>
 
@@ -149,10 +151,29 @@
     <div id="canvas-container"></div>
 
     <script>
+        // ----------------------------------------------------
+        // 1. ユーザーDB（localStorageによる永続化）
+        // ----------------------------------------------------
+        let usersDb = JSON.parse(localStorage.getItem('haku_users_db')) || {};
+
+        function saveUserDb() {
+            localStorage.setItem('haku_users_db', JSON.stringify(usersDb));
+        }
+
+        function saveCurrentUserData() {
+            if (!currentUsername || !usersDb[currentUsername]) return;
+            usersDb[currentUsername].cr = currentCR;
+            usersDb[currentUsername].stocks = currentStocks;
+            usersDb[currentUsername].color = playerColor;
+            usersDb[currentUsername].accessory = playerAccessory;
+            usersDb[currentUsername].bodyParams = playerBodyParams;
+            saveUserDb();
+        }
+
         let currentUsername = 'Guest', socket = null;
         let isAdmin = false;
         let scene, camera, renderer, clock;
-        const MAP_RADIUS = 2000; 
+        const MAP_RADIUS = 3000; 
         
         const keysPressed = {};
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isDragging = false, isFPS = false;
@@ -160,14 +181,11 @@
         let playerLocalPos = new THREE.Vector3(0, 1.5, 100); 
         let playerVelocityY = 0; 
         
-        // データ永続化 (localStorage)
-        let currentCR = parseInt(localStorage.getItem('haku_cr')) || 500;
-        let currentStocks = parseInt(localStorage.getItem('haku_stocks')) || 0;
+        let currentCR = 500;
+        let currentStocks = 0;
         let playerColor = 0x00ffff;
         let playerAccessory = 'none';
         let playerSpeedMult = 1.0;
-        
-        // アバター体格データ
         let playerBodyParams = { w: 0.8, h: 1.2, d: 0.5 };
 
         const trains = [], personalDrones = [], warpPads = [], stationAreas = []; 
@@ -200,7 +218,7 @@
         const TRAIN_STOP_TIME = 4.0; 
         const returnPads = {};
 
-        // --- アドミンモード用リスナー ---
+        // --- ログイン＆アドミン処理 ---
         document.getElementById('username').addEventListener('input', (e) => {
             const val = e.target.value;
             if (val === '898scr' || val === '898sct') {
@@ -220,17 +238,24 @@
             if (!isNaN(cr)) {
                 currentCR = cr;
                 document.getElementById('ui-money').innerText = currentCR;
-                localStorage.setItem('haku_cr', currentCR);
+                saveCurrentUserData();
                 addChatMessage('SYSTEM', `[ADMIN] 所持金を ${currentCR} CR に変更しました。`);
             }
         }
 
         function adminBan() {
             if (!isAdmin) return;
-            const target = document.getElementById('admin-ban-id').value;
+            const target = document.getElementById('admin-ban-id').value.trim();
             if (target) {
+                if (usersDb[target]) {
+                    usersDb[target].isBanned = true;
+                    saveUserDb();
+                    addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' をBAN(アカウント凍結)しました。`);
+                } else {
+                    addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' は存在しません。`);
+                }
+                
                 if (socket) socket.emit('chatMessage', `/ban ${target}`);
-                addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' をBANしました。`);
                 for(let id in otherPlayers) {
                     if (otherPlayers[id].userData.username === target) {
                         scene.remove(otherPlayers[id]);
@@ -243,7 +268,7 @@
         function updateCR(amt) {
             currentCR += amt;
             document.getElementById('ui-money').innerText = currentCR;
-            localStorage.setItem('haku_cr', currentCR);
+            saveCurrentUserData();
         }
 
         function addChatMessage(sender, text) {
@@ -253,60 +278,87 @@
             document.getElementById('chat-messages').scrollTop = 9999;
         }
 
-        async function attemptAuth() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value || 'nopass';
+        function attemptAuth(action) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
             const adminPassword = document.getElementById('admin-password').value;
-            if (!username) return alert("Usernameを入力してください");
-
-            isAdmin = false;
-            if ((username === '898scr' || username === '898sct') && document.getElementById('admin-login-section').style.display === 'block') {
-                if (adminPassword === 'admin') {
-                    isAdmin = true;
-                } else if (adminPassword !== '') {
-                    return alert("Admin Passwordが違います (pass: admin)");
-                } else {
-                    return alert("Admin Passwordを入力してください");
-                }
+            const msgEl = document.getElementById('auth-msg');
+            
+            if (!username || !password) {
+                msgEl.innerText = "UsernameとPasswordを入力してください";
+                msgEl.style.color = "#f43f5e";
+                return;
             }
 
-            try {
-                let res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                let data = await res.json();
-                if (!data.success) {
-                    res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                    data = await res.json();
-                    if (!data.success) return alert(data.message);
-                    res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                    data = await res.json();
+            if (action === 'register') {
+                if (usersDb[username]) {
+                    msgEl.innerText = "そのUsernameは既に登録されています";
+                    msgEl.style.color = "#f43f5e";
+                    return;
+                }
+                usersDb[username] = {
+                    password: password,
+                    cr: 500,
+                    stocks: 0,
+                    color: 0x00ffff,
+                    accessory: 'none',
+                    bodyParams: { w: 0.8, h: 1.2, d: 0.5 },
+                    isBanned: false
+                };
+                saveUserDb();
+                msgEl.innerText = "登録完了！そのままLOGINしてください";
+                msgEl.style.color = "#4ade80";
+                return;
+            }
+
+            if (action === 'login') {
+                const user = usersDb[username];
+                if (!user) {
+                    msgEl.innerText = "ユーザーが見つかりません。REGISTERしてください";
+                    msgEl.style.color = "#f43f5e";
+                    return;
+                }
+                if (user.password !== password) {
+                    msgEl.innerText = "Passwordが違います";
+                    msgEl.style.color = "#f43f5e";
+                    return;
+                }
+                if (user.isBanned) {
+                    msgEl.innerText = "このアカウントはBANされています";
+                    msgEl.style.color = "#f43f5e";
+                    return;
                 }
 
-                if (data.success) {
-                    currentUsername = data.username;
-                    document.getElementById('ui-username').innerText = currentUsername;
-                    document.getElementById('ui-money').innerText = currentCR;
-                    document.getElementById('ui-stocks').innerText = currentStocks;
-                    
-                    document.getElementById('login-screen').style.display = 'none';
-                    document.getElementById('ui-layer').style.display = 'block';
-                    
-                    if(isAdmin) activateAdminMode();
+                isAdmin = false;
+                if ((username === '898scr' || username === '898sct') && document.getElementById('admin-login-section').style.display === 'block') {
+                    if (adminPassword === 'admin') {
+                        isAdmin = true;
+                    } else if (adminPassword !== '') {
+                        msgEl.innerText = "Admin Passwordが違います";
+                        msgEl.style.color = "#f43f5e";
+                        return;
+                    }
+                    // adminPassword が空欄の場合は通常モードとしてスルー
+                }
 
-                    try { if (typeof io !== 'undefined') { socket = io({ auth: { username: currentUsername } }); setupSocketEvents(); } } catch(e) { console.warn("Socket skip"); }
-                    try { document.body.requestPointerLock(); } catch(e) {}
-                    initThreeJS();
-                } else alert("ログイン失敗");
-            } catch (err) {
-                // サーバー無しフォールバック
+                // ログイン成功処理
                 currentUsername = username;
+                currentCR = user.cr;
+                currentStocks = user.stocks || 0;
+                playerColor = user.color || 0x00ffff;
+                playerAccessory = user.accessory || 'none';
+                playerBodyParams = user.bodyParams || { w: 0.8, h: 1.2, d: 0.5 };
+
                 document.getElementById('ui-username').innerText = currentUsername;
                 document.getElementById('ui-money').innerText = currentCR;
                 document.getElementById('ui-stocks').innerText = currentStocks;
+                
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('ui-layer').style.display = 'block';
                 
                 if(isAdmin) activateAdminMode();
 
+                try { if (typeof io !== 'undefined') { socket = io({ auth: { username: currentUsername } }); setupSocketEvents(); } } catch(e) { console.warn("Socket skip"); }
                 try { document.body.requestPointerLock(); } catch(e) {}
                 initThreeJS();
             }
@@ -345,6 +397,7 @@
                 updateAvatarAppearance();
                 scene.add(localAvatar);
             }
+            saveCurrentUserData();
         }
 
         function updateAvatarAppearance() {
@@ -405,21 +458,24 @@
 
         function initThreeJS() {
             scene = new THREE.Scene(); 
-            scene.background = new THREE.Color(0x02081a);
-            scene.fog = new THREE.FogExp2(0x02081a, 0.0003); 
+            scene.background = new THREE.Color(0x051024);
+            scene.fog = new THREE.FogExp2(0x051024, 0.0004); 
 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 8000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight); 
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.5; 
+            renderer.toneMappingExposure = 1.2;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0x556688, 3.0));
-            const hemiLight = new THREE.HemisphereLight(0x44ffff, 0xff44ff, 2.0);
+            scene.add(new THREE.AmbientLight(0x223355, 1.5));
+            const hemiLight = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8);
             hemiLight.position.set(0, 1000, 0);
             scene.add(hemiLight);
+
+            // Clockの初期化をここで行う（真っ暗エラーの回避）
+            clock = new THREE.Clock();
 
             createEnvironment();
             createUndergroundRooms();
@@ -432,7 +488,6 @@
             scene.add(localAvatar);
 
             minimapCtx = document.getElementById('minimap').getContext('2d');
-            clock = new THREE.Clock();
             
             setupInputHandlers();
             
@@ -506,7 +561,7 @@
             const mesh = createAvatarMesh(0x0284c7, info.username, {w:0.8, h:1.2, d:0.5}); 
             mesh.position.set(info.x, info.y, info.z);
             mesh.rotation.y = info.rotation;
-            mesh.userData.username = info.username; // BAN用に保存
+            mesh.userData.username = info.username;
             
             if (info.avatar) {
                 mesh.userData.ridingTrainIndex = info.avatar.ridingTrainIndex !== undefined ? info.avatar.ridingTrainIndex : -1;
@@ -745,6 +800,7 @@
                     if (type === 'acc') playerAccessory = val;
                     if (type === 'speed') playerSpeedMult = val;
                     updateAvatarAppearance();
+                    saveCurrentUserData();
                     addChatMessage("SYSTEM", `${name} を購入・装備しました！`);
                 }});
             };
@@ -933,10 +989,10 @@
             interactables.push({ pos: new THREE.Vector3(5000, BASE_Y + 1.5, -50), radius: 30, label: "株を購入/売却", action: () => {
                 const action = prompt(`現在の株価: ${currentStockPrice}CR\n[1] 買う\n[2] 売る\n半角数字で入力してください`);
                 if (action === '1') {
-                    if(currentCR >= currentStockPrice) { updateCR(-currentStockPrice); currentStocks++; document.getElementById('ui-stocks').innerText = currentStocks; addChatMessage("SYSTEM", "株を購入しました"); localStorage.setItem('haku_stocks', currentStocks);}
+                    if(currentCR >= currentStockPrice) { updateCR(-currentStockPrice); currentStocks++; document.getElementById('ui-stocks').innerText = currentStocks; addChatMessage("SYSTEM", "株を購入しました"); saveCurrentUserData();}
                     else addChatMessage("SYSTEM", "CRが足りません");
                 } else if (action === '2') {
-                    if(currentStocks > 0) { updateCR(currentStockPrice); currentStocks--; document.getElementById('ui-stocks').innerText = currentStocks; addChatMessage("SYSTEM", "株を売却しました"); localStorage.setItem('haku_stocks', currentStocks);}
+                    if(currentStocks > 0) { updateCR(currentStockPrice); currentStocks--; document.getElementById('ui-stocks').innerText = currentStocks; addChatMessage("SYSTEM", "株を売却しました"); saveCurrentUserData();}
                     else addChatMessage("SYSTEM", "株を持っていません");
                 }
             }});
@@ -1243,6 +1299,7 @@
                             const accs = ['cat_ears', 'hat', 'headphone'];
                             playerAccessory = accs[Math.floor(Math.random()*accs.length)];
                             updateAvatarAppearance();
+                            saveCurrentUserData();
                         } else {
                             addChatMessage("CASINO", "クレーンゲーム：ハズレ...");
                         }
@@ -1357,9 +1414,9 @@
                                 if (d.mesh.position.y < targetY - 10) {
                                     d.mesh.position.y += 200 * delta; 
                                 } else {
-                                    let speed = 300 * delta;
-                                    d.mesh.position.x += (dx / dist2D) * speed;
-                                    d.mesh.position.z += (dz / dist2D) * speed;
+                                    let dspeed = 300 * delta;
+                                    d.mesh.position.x += (dx / dist2D) * dspeed;
+                                    d.mesh.position.z += (dz / dist2D) * dspeed;
                                 }
                             } else {
                                 if (d.mesh.position.y > d.initialPos.y + 5) {
