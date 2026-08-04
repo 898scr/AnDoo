@@ -305,7 +305,7 @@
             hatGrp.visible = false;
             group.add(hatGrp);
 
-            // ヘッドホン (新実装)
+            // ヘッドホン
             const hpGrp = new THREE.Group();
             const band = new THREE.Mesh(new THREE.TorusGeometry(0.45*s, 0.08*s, 8, 16, Math.PI), new THREE.MeshStandardMaterial({color:0x111111}));
             band.position.set(0, 1.8*s, 0);
@@ -350,7 +350,7 @@
                 roadGrp.rotation.y = angle; scene.add(roadGrp);
             }
 
-            // 建物の距離とスケールを大拡張
+            // 建物の距離とスケール
             const dist = 1600;
             const corners = [
                 {x: Math.cos(Math.PI/4)*dist, z: Math.sin(Math.PI/4)*dist, col: 0x00ffff, name: "mall", label: "モールへ入る", target: new THREE.Vector3(0, 1.5, 5000)}, 
@@ -363,7 +363,6 @@
                 const group = new THREE.Group();
                 const lookAngle = Math.atan2(-c.x, -c.z); 
                 
-                // コリジョン半径も300へ拡大
                 stationAreas.push({ type: 'wall', x: c.x, z: c.z, radius: 300 });
 
                 if (c.name === "mall") {
@@ -406,12 +405,10 @@
                     stationAreas.push({ type: 'circle', x: c.x, z: c.z, radius: 320, y: 65 });
 
                     for(let i=0; i<8; i++) {
-                        // パッドの絶対座標を計算
                         const pa = i * Math.PI/4 + lookAngle + Math.PI;
                         const px = c.x + Math.cos(pa) * 200;
                         const pz = c.z + Math.sin(pa) * 200;
                         
-                        // groupローカル配置用の座標
                         const lpx = Math.cos(i * Math.PI/4) * 200;
                         const lpz = Math.sin(i * Math.PI/4) * 200;
 
@@ -437,7 +434,6 @@
                 gateGroup.position.set(0, 0, gateRadius);
                 group.add(gateGroup);
 
-                // --- 修正: ワープパッドを絶対にズレない絶対座標に配置 ---
                 const padX = c.x + Math.sin(lookAngle) * (gateRadius + 30);
                 const padZ = c.z + Math.cos(lookAngle) * (gateRadius + 30);
                 createWarpPad(padX, 0, padZ, c.col, c.target.x, c.target.y, c.target.z, c.label);
@@ -458,30 +454,53 @@
             mallGrp.position.set(0, 0, 5000);
             
             // 床
-            mallGrp.add(new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x051a24})).rotateX(-Math.PI/2));
+            mallGrp.add(new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x0a1520, roughness: 0.3})).rotateX(-Math.PI/2));
             
             // 天井と壁
-            const ceiling = new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x020a10}));
-            ceiling.rotation.x = Math.PI/2; ceiling.position.y = 100;
-            const wall = new THREE.Mesh(new THREE.CylinderGeometry(600, 600, 100, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x0a2a4a, side: THREE.BackSide}));
-            wall.position.y = 50;
-            mallGrp.add(ceiling, wall);
+            const mallCeiling = new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x051a24}));
+            mallCeiling.rotation.x = Math.PI/2; mallCeiling.position.y = 150;
+            const mallWall = new THREE.Mesh(new THREE.CylinderGeometry(600, 600, 150, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x0a2a4a, side: THREE.BackSide}));
+            mallWall.position.y = 75;
+            mallGrp.add(mallCeiling, mallWall);
+            
+            // 照明
+            const mallLight = new THREE.PointLight(0x00ffff, 1, 1000);
+            mallLight.position.set(0, 100, 0);
+            mallGrp.add(mallLight);
 
-            // 商品棚カウンター
-            const c1 = new THREE.Mesh(new THREE.BoxGeometry(250, 10, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
-            c1.position.set(0, 5, -100);
-            const c2 = new THREE.Mesh(new THREE.BoxGeometry(250, 10, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
-            c2.position.set(0, 5, 50);
-            const c3 = new THREE.Mesh(new THREE.BoxGeometry(250, 10, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
-            c3.position.set(0, 5, 150);
-            mallGrp.add(c1, c2, c3);
-
-            const addShopItem = (x, z, color, name, price, type, val) => {
-                const item = new THREE.Mesh(new THREE.OctahedronGeometry(8), new THREE.MeshBasicMaterial({color, wireframe: true}));
-                item.position.set(x, 25, z); mallGrp.add(item);
-                const stand = new THREE.Mesh(new THREE.CylinderGeometry(10, 15, 10), new THREE.MeshStandardMaterial({color:0x222222}));
-                stand.position.set(x, 5, z); mallGrp.add(stand);
+            // 商品棚カウンターとディスプレイ
+            const createDisplayArea = (x, z, label) => {
+                const area = new THREE.Group();
+                area.position.set(x, 0, z);
                 
+                const counter = new THREE.Mesh(new THREE.BoxGeometry(200, 5, 40), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.9}));
+                counter.position.set(0, 2.5, 0);
+                
+                // 商品を目立たせる光る土台
+                for(let i=0; i<3; i++) {
+                    const px = -60 + i*60;
+                    const base = new THREE.Mesh(new THREE.CylinderGeometry(15, 20, 2, 16), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x005555}));
+                    base.position.set(px, 6, 0);
+                    area.add(base);
+                }
+                area.add(counter);
+                return area;
+            };
+
+            const colorArea = createDisplayArea(0, -150, "Colors");
+            mallGrp.add(colorArea);
+            const accArea = createDisplayArea(0, 0, "Accessories");
+            mallGrp.add(accArea);
+            const speedArea = createDisplayArea(0, 150, "Boosts");
+            mallGrp.add(speedArea);
+
+            const addShopItem = (x, z, color, name, price, type, val, areaGrp, displayIndex) => {
+                const itemY = 15; // アイテムの表示高さを低く
+                const item = new THREE.Mesh(new THREE.OctahedronGeometry(8), new THREE.MeshBasicMaterial({color, wireframe: true}));
+                item.position.set(-60 + displayIndex*60, itemY, 0); 
+                areaGrp.add(item);
+                
+                // インタラクト用はグローバル座標で計算
                 interactables.push({ pos: new THREE.Vector3(x, 1.5, 5000 + z), radius: 30, label: `購入: ${name} (${price}CR)`, action: () => {
                     if (currentCR < price) return addChatMessage("SYSTEM", "CRが足りません");
                     updateCR(-price);
@@ -493,30 +512,43 @@
                 }});
             };
             
-            // 色変更 (奥の棚)
-            addShopItem(-150, -100, 0xff0000, "レッドカラー", 50, 'color', 0xff0000);
-            addShopItem(-50, -100, 0xff00ff, "マゼンタカラー", 50, 'color', 0xff00ff);
-            addShopItem(50, -100, 0x0000ff, "ブルーカラー", 50, 'color', 0x0000ff);
-            addShopItem(150, -100, 0xffff00, "イエローカラー", 50, 'color', 0xffff00);
+            // 色変更
+            addShopItem(0 - 60, -150, 0xff0000, "レッドカラー", 50, 'color', 0xff0000, colorArea, 0);
+            addShopItem(0, -150, 0xff00ff, "マゼンタカラー", 50, 'color', 0xff00ff, colorArea, 1);
+            addShopItem(0 + 60, -150, 0xffff00, "イエローカラー", 50, 'color', 0xffff00, colorArea, 2);
 
-            // アクセサリ (中央の棚)
-            addShopItem(-100, 50, 0xffa500, "猫耳アクセサリ", 100, 'acc', 'cat_ears');
-            addShopItem(0, 50, 0x00ff00, "シルクハット", 100, 'acc', 'hat');
-            addShopItem(100, 50, 0x00ffff, "ヘッドホン", 100, 'acc', 'headphone');
+            // アクセサリ
+            addShopItem(0 - 60, 0, 0xffa500, "猫耳アクセサリ", 100, 'acc', 'cat_ears', accArea, 0);
+            addShopItem(0, 0, 0x00ff00, "シルクハット", 100, 'acc', 'hat', accArea, 1);
+            addShopItem(0 + 60, 0, 0x00ffff, "ヘッドホン", 100, 'acc', 'headphone', accArea, 2);
 
-            // 強化アイテム (手前の棚)
-            addShopItem(-50, 150, 0xffffff, "スピード x1.5", 300, 'speed', 1.5);
-            addShopItem(50, 150, 0xffffff, "スピード x2.0", 500, 'speed', 2.0);
+            // 強化アイテム
+            addShopItem(0 - 60, 150, 0xffffff, "スピード x1.2", 200, 'speed', 1.2, speedArea, 0);
+            addShopItem(0, 150, 0xffffff, "スピード x1.5", 300, 'speed', 1.5, speedArea, 1);
+            addShopItem(0 + 60, 150, 0xffffff, "スピード x2.0", 500, 'speed', 2.0, speedArea, 2);
 
+            // 出口ワープ
             const retPadX = Math.cos(Math.PI/4)*1600 - 350;
             createWarpPad(0, 0, 300, 0x00ffff, retPadX, 1.5, retPadX, "地上へ戻る");
             scene.add(mallGrp);
 
-            // --- カジノルーム大拡張 (0, 1.5, -5000) ---
+            // --- カジノルーム (0, 1.5, -5000) ---
             const casinoGrp = new THREE.Group();
             casinoGrp.position.set(0, 0, -5000);
             casinoGrp.add(new THREE.Mesh(new THREE.CircleGeometry(500, 64), new THREE.MeshStandardMaterial({color: 0x150510})).rotateX(-Math.PI/2));
             
+            // 天井と壁
+            const casinoCeiling = new THREE.Mesh(new THREE.CircleGeometry(500, 64), new THREE.MeshStandardMaterial({color: 0x050103}));
+            casinoCeiling.rotation.x = Math.PI/2; casinoCeiling.position.y = 150;
+            const casinoWall = new THREE.Mesh(new THREE.CylinderGeometry(500, 500, 150, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x1a0524, side: THREE.BackSide}));
+            casinoWall.position.y = 75;
+            casinoGrp.add(casinoCeiling, casinoWall);
+
+            // 照明
+            const casinoLight = new THREE.PointLight(0xff00ff, 1, 1000);
+            casinoLight.position.set(0, 100, 0);
+            casinoGrp.add(casinoLight);
+
             const slotCarpet = new THREE.Mesh(new THREE.CircleGeometry(150, 32), new THREE.MeshBasicMaterial({color: 0x330000, transparent:true, opacity:0.5}));
             slotCarpet.rotation.x = -Math.PI/2; slotCarpet.position.set(-250, 0.1, 0); casinoGrp.add(slotCarpet);
 
@@ -599,6 +631,7 @@
                 }});
             });
 
+            // 出口ワープ
             const retDomeZ = Math.sin(3*Math.PI/4)*1600 + 350;
             createWarpPad(0, 0, 300, 0xff00ff, -retDomeZ, 1.5, retDomeZ, "地上へ戻る");
             scene.add(casinoGrp);
@@ -608,6 +641,18 @@
             stockGrp.position.set(5000, 0, 0);
             stockGrp.add(new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshStandardMaterial({color: 0x052405})).rotateX(-Math.PI/2));
             
+            // 天井と壁
+            const stockCeiling = new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshStandardMaterial({color: 0x010501}));
+            stockCeiling.rotation.x = Math.PI/2; stockCeiling.position.y = 150;
+            const stockWall = new THREE.Mesh(new THREE.CylinderGeometry(300, 300, 150, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x052405, side: THREE.BackSide}));
+            stockWall.position.y = 75;
+            stockGrp.add(stockCeiling, stockWall);
+
+            // 照明
+            const stockLight = new THREE.PointLight(0x00ff00, 1, 1000);
+            stockLight.position.set(0, 100, 0);
+            stockGrp.add(stockLight);
+
             const board = new THREE.Mesh(new THREE.BoxGeometry(200, 80, 10), new THREE.MeshStandardMaterial({color: 0x111111}));
             board.position.set(0, 60, -150); stockGrp.add(board);
             const stockScreen = new THREE.Mesh(new THREE.PlaneGeometry(190, 70), new THREE.MeshBasicMaterial({map: stockTex}));
@@ -627,6 +672,7 @@
                 }
             }});
 
+            // 出口ワープ
             const retStockX = Math.cos(7*Math.PI/4)*1600 - 350;
             createWarpPad(0, 0, 100, 0x00ff00, retStockX, 1.5, -retStockX, "地上へ戻る");
             scene.add(stockGrp);
@@ -766,17 +812,23 @@
                 group.position.set(x, trackY, z); group.rotation.y = rotY; scene.add(group);
 
                 const dirX = Math.cos(angle), dirZ = Math.sin(angle);
-                const offset = (radius === rInner) ? -20 : 20; 
                 
-                createWarpPad(x + dirX*offset, trackY, z + dirZ*offset, 0xff00ff, x + dirX*30, 1.5, z + dirZ*30, "地上へ");
-                createWarpPad(x + dirX*30, 1, z + dirZ*30, 0x00ffff, x + dirX*offset, trackY+1.5, z + dirZ*offset, "駅ホームへ");
+                // 施設の拡大に伴い、外周駅のワープ先（地上）を内側にずらす
+                const offset = (radius === rInner) ? -20 : 20; 
+                const groundOffset = (radius === rInner) ? 30 : -50; // 外周駅のワープ先を軌道より内側（タワー寄り）にする
+                
+                createWarpPad(x + dirX*offset, trackY, z + dirZ*offset, 0xff00ff, x + dirX*groundOffset, 1.5, z + dirZ*groundOffset, "地上へ");
+                createWarpPad(x + dirX*groundOffset, 1, z + dirZ*groundOffset, 0x00ffff, x + dirX*offset, trackY+1.5, z + dirZ*offset, "駅ホームへ");
 
                 stationAreas.push({ type: 'rect', x, z, angle: rotY, width: pWidth, depth: pDepth, y: trackY });
             };
 
             for(let i=0; i<4; i++) {
                 addStation(rInner, i * Math.PI/2);
-                addStation(rOuter, i * Math.PI/2 + Math.PI/4); 
+            }
+            // 外周駅を8つに増設 (45度間隔)
+            for(let i=0; i<8; i++) {
+                 addStation(rOuter, i * Math.PI/4);
             }
 
             const spawnTrain = (radius, initAngle, type) => {
@@ -792,13 +844,14 @@
                 
                 scene.add(car);
                 
-                // 停止箇所の数を正確に指定（内・外周は4駅、カーブ路線は8駅）
-                const numStops = (type === 'curve') ? 8 : 4;
+                // 停止箇所の数を正確に指定（内周4駅、外周8駅、カーブ路線は8駅）
+                const numStops = (type === 'outer') ? 8 : (type === 'curve') ? 8 : 4;
                 trains.push({ mesh: car, radius, initialAngle: initAngle, angle: initAngle, type: type, numStops: numStops });
             };
             
             spawnTrain(rInner, 0, 'inner'); spawnTrain(rInner, Math.PI, 'inner');
-            spawnTrain(rOuter, Math.PI/4, 'outer'); spawnTrain(rOuter, Math.PI*1.25, 'outer');
+            // 外周列車の初期位置を調整
+            spawnTrain(rOuter, 0, 'outer'); spawnTrain(rOuter, Math.PI, 'outer');
             spawnTrain(null, 0, 'curve'); spawnTrain(null, Math.PI, 'curve'); 
         }
 
@@ -984,7 +1037,8 @@
                 if (canAlight) {
                     promptText = "駅で降りる";
                     if (tryInteract) {
-                        const offset = (ridingTrain.radius === 600) ? -20 : 20;
+                        const isOuter = nearestStation.x * nearestStation.x + nearestStation.z * nearestStation.z > 1000 * 1000;
+                        const offset = isOuter ? -20 : -20; // どちらも軌道の内側に降りる
                         const dirX = Math.cos(nearestStation.angle), dirZ = Math.sin(nearestStation.angle);
                         playerLocalPos.set(nearestStation.x + dirX*offset, 81.5, nearestStation.z + dirZ*offset);
                         ridingTrain = null; updateAvatarAppearance();
@@ -1078,6 +1132,29 @@
                         }
                     }
                     
+                    // ドローン発着デッキの壁 (デッキ半径320)
+                    if (Math.abs(y - 60) < 20) {
+                        let onDeck = false;
+                        let deckCenter = null;
+                        for (let st of stationAreas) {
+                            if (st.type === 'circle' && st.y === 65) { 
+                                if (Math.hypot(nextPos.x - st.x, nextPos.z - st.z) < 318) {
+                                    onDeck = true;
+                                    break;
+                                }
+                                deckCenter = st;
+                            }
+                        }
+                        if (!onDeck && deckCenter) {
+                            const dist = Math.hypot(nextPos.x - deckCenter.x, nextPos.z - deckCenter.z);
+                            if (dist > 318) {
+                                const angle = Math.atan2(nextPos.z - deckCenter.z, nextPos.x - deckCenter.x);
+                                nextPos.x = deckCenter.x + Math.cos(angle) * 318;
+                                nextPos.z = deckCenter.z + Math.sin(angle) * 318;
+                            }
+                        }
+                    }
+
                     // 大施設の壁
                     for (let st of stationAreas) {
                         if (st.type === 'wall' && Math.abs(y) < 300) {
