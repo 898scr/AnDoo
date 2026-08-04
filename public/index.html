@@ -83,7 +83,7 @@
     <script>
         let currentUsername = 'Guest', socket = null;
         let scene, camera, renderer, clock;
-        const MAP_RADIUS = 2500; 
+        const MAP_RADIUS = 3000; 
         
         const keysPressed = {};
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isDragging = false, isFPS = false;
@@ -121,7 +121,6 @@
 
         const TRAIN_BASE_SPEED = 0.12; 
         const TRAIN_STOP_TIME = 4.0; 
-        const TRAIN_SECTION_ANGLE = Math.PI / 2;
 
         function updateCR(amt) {
             currentCR += amt;
@@ -289,6 +288,7 @@
             
             group.add(body, head, visor);
 
+            // 猫耳
             const earGeo = new THREE.ConeGeometry(0.2*s, 0.4*s, 4);
             const earL = new THREE.Mesh(earGeo, bodyMat); earL.position.set(-0.2*s, 1.9*s, 0);
             const earR = new THREE.Mesh(earGeo, bodyMat); earR.position.set(0.2*s, 1.9*s, 0);
@@ -297,12 +297,25 @@
             catEars.visible = false;
             group.add(catEars);
 
+            // ハット
             const hatGrp = new THREE.Group();
             hatGrp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4*s, 0.4*s, 0.1*s, 16), new THREE.MeshStandardMaterial({color:0x222222})).translateY(1.8*s));
             hatGrp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.25*s, 0.25*s, 0.5*s, 16), new THREE.MeshStandardMaterial({color:0x111111})).translateY(2.1*s));
             hatGrp.userData = { isAccessory: true, accType: 'hat' };
             hatGrp.visible = false;
             group.add(hatGrp);
+
+            // ヘッドホン (新実装)
+            const hpGrp = new THREE.Group();
+            const band = new THREE.Mesh(new THREE.TorusGeometry(0.45*s, 0.08*s, 8, 16, Math.PI), new THREE.MeshStandardMaterial({color:0x111111}));
+            band.position.set(0, 1.8*s, 0);
+            const earPadL = new THREE.Mesh(new THREE.CylinderGeometry(0.2*s, 0.2*s, 0.15*s), new THREE.MeshStandardMaterial({color:0x333333}));
+            earPadL.rotation.z = Math.PI/2; earPadL.position.set(-0.45*s, 1.5*s, 0);
+            const earPadR = earPadL.clone(); earPadR.position.x = 0.45*s;
+            hpGrp.add(band, earPadL, earPadR);
+            hpGrp.userData = { isAccessory: true, accType: 'headphone' };
+            hpGrp.visible = false;
+            group.add(hpGrp);
 
             if (username) {
                 const canvas = document.createElement('canvas');
@@ -314,24 +327,6 @@
                 group.add(sprite);
             }
             return group;
-        }
-
-        function addOtherPlayer(info) {
-            const mesh = createAvatarMesh(0x0284c7, info.username); 
-            mesh.position.set(info.x, info.y, info.z);
-            mesh.rotation.y = info.rotation;
-            if (info.avatar) {
-                mesh.userData.ridingTrainIndex = info.avatar.ridingTrainIndex !== undefined ? info.avatar.ridingTrainIndex : -1;
-                mesh.userData.ridingDroneIndex = info.avatar.ridingDroneIndex !== undefined ? info.avatar.ridingDroneIndex : -1;
-                if(info.avatar.color) mesh.children[0].material.color.setHex(info.avatar.color);
-                if(info.avatar.accessory) {
-                    mesh.children.forEach(c => { if(c.userData.isAccessory) c.visible = (c.userData.accType === info.avatar.accessory); });
-                }
-            } else {
-                mesh.userData.ridingTrainIndex = -1; mesh.userData.ridingDroneIndex = -1;
-            }
-            scene.add(mesh);
-            otherPlayers[info.id] = mesh;
         }
 
         function createEnvironment() {
@@ -355,83 +350,101 @@
                 roadGrp.rotation.y = angle; scene.add(roadGrp);
             }
 
+            // 建物の距離とスケールを大拡張
+            const dist = 1600;
             const corners = [
-                {x: 1300, z: 1300, col: 0x00ffff, name: "mall", label: "モールへ入る", target: new THREE.Vector3(0, 1.5, 5000)}, 
-                {x: -1300, z: 1300, col: 0xff00ff, name: "dome", label: "エンタメドームへ", target: new THREE.Vector3(0, 1.5, -5000)},
-                {x: 1300, z: -1300, col: 0x00ff00, name: "stock", label: "証券取引所へ", target: new THREE.Vector3(5000, 1.5, 0)}, 
-                {x: -1300, z: -1300, col: 0xff0000, name: "drone", label: "発着デッキへ昇る", target: new THREE.Vector3(-1300, 66.5, -1300)}
+                {x: Math.cos(Math.PI/4)*dist, z: Math.sin(Math.PI/4)*dist, col: 0x00ffff, name: "mall", label: "モールへ入る", target: new THREE.Vector3(0, 1.5, 5000)}, 
+                {x: Math.cos(3*Math.PI/4)*dist, z: Math.sin(3*Math.PI/4)*dist, col: 0xff00ff, name: "dome", label: "エンタメドームへ", target: new THREE.Vector3(0, 1.5, -5000)},
+                {x: Math.cos(7*Math.PI/4)*dist, z: Math.sin(7*Math.PI/4)*dist, col: 0x00ff00, name: "stock", label: "証券取引所へ", target: new THREE.Vector3(5000, 1.5, 0)}, 
+                {x: Math.cos(5*Math.PI/4)*dist, z: Math.sin(5*Math.PI/4)*dist, col: 0xff0000, name: "drone", label: "発着デッキへ昇る", target: new THREE.Vector3(Math.cos(5*Math.PI/4)*dist, 66.5, Math.sin(5*Math.PI/4)*dist)}
             ];
 
             corners.forEach(c => {
                 const group = new THREE.Group();
                 const lookAngle = Math.atan2(-c.x, -c.z); 
                 
-                stationAreas.push({ type: 'wall', x: c.x, z: c.z, radius: 200 });
+                // コリジョン半径も300へ拡大
+                stationAreas.push({ type: 'wall', x: c.x, z: c.z, radius: 300 });
 
                 if (c.name === "mall") {
                     for(let i=0; i<3; i++) {
-                        const r = 200 - i*30;
+                        const r = 300 - i*40;
                         const floor = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 5, 32), new THREE.MeshStandardMaterial({color: 0x112233, roughness: 0.2}));
-                        floor.position.y = 2.5 + i*60;
-                        const glass = new THREE.Mesh(new THREE.CylinderGeometry(r-5, r-5, 55, 32), new THREE.MeshStandardMaterial({color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide}));
-                        glass.position.y = 32.5 + i*60;
-                        const core = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 55, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true}));
-                        core.position.y = 32.5 + i*60;
+                        floor.position.y = 2.5 + i*80;
+                        const glass = new THREE.Mesh(new THREE.CylinderGeometry(r-5, r-5, 75, 32), new THREE.MeshStandardMaterial({color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide}));
+                        glass.position.y = 42.5 + i*80;
+                        const core = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 75, 16), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true}));
+                        core.position.y = 42.5 + i*80;
                         group.add(floor, glass, core);
                     }
                 } else if (c.name === "dome") {
-                    const dome = new THREE.Mesh(new THREE.SphereGeometry(200, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshStandardMaterial({color: 0x1a0524, roughness: 0.2}));
-                    const wire = new THREE.Mesh(new THREE.SphereGeometry(202, 16, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: c.col, wireframe: true, transparent:true, opacity:0.3}));
+                    const dome = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshStandardMaterial({color: 0x1a0524, roughness: 0.2}));
+                    const wire = new THREE.Mesh(new THREE.SphereGeometry(302, 16, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshBasicMaterial({color: c.col, wireframe: true, transparent:true, opacity:0.3}));
                     group.add(dome, wire);
                 } else if (c.name === "stock") {
-                    const base = new THREE.Mesh(new THREE.CylinderGeometry(220, 220, 20, 16), new THREE.MeshStandardMaterial({color: 0x052405}));
+                    const base = new THREE.Mesh(new THREE.CylinderGeometry(320, 320, 20, 16), new THREE.MeshStandardMaterial({color: 0x052405}));
                     base.position.y = 10;
                     group.add(base);
                     for(let i=0; i<8; i++){
                         const ang = i * Math.PI/4;
-                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 150, 8), new THREE.MeshStandardMaterial({color: 0x114411}));
-                        pillar.position.set(Math.cos(ang)*180, 95, Math.sin(ang)*180);
+                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 200, 8), new THREE.MeshStandardMaterial({color: 0x114411}));
+                        pillar.position.set(Math.cos(ang)*270, 120, Math.sin(ang)*270);
                         group.add(pillar);
                     }
-                    const roof = new THREE.Mesh(new THREE.CylinderGeometry(230, 200, 30, 16), new THREE.MeshStandardMaterial({color: 0x052405}));
-                    roof.position.y = 185;
-                    const outScreen = new THREE.Mesh(new THREE.CylinderGeometry(130, 130, 100, 32), new THREE.MeshBasicMaterial({map: stockTex, transparent: true, opacity: 0.8, side: THREE.DoubleSide}));
-                    outScreen.position.y = 95;
+                    const roof = new THREE.Mesh(new THREE.CylinderGeometry(330, 300, 40, 16), new THREE.MeshStandardMaterial({color: 0x052405}));
+                    roof.position.y = 240;
+                    const outScreen = new THREE.Mesh(new THREE.CylinderGeometry(200, 200, 150, 32), new THREE.MeshBasicMaterial({map: stockTex, transparent: true, opacity: 0.8, side: THREE.DoubleSide}));
+                    outScreen.position.y = 120;
                     group.add(roof, outScreen);
                 } else if (c.name === "drone") {
-                    const deck = new THREE.Mesh(new THREE.CylinderGeometry(220, 180, 10, 32), new THREE.MeshStandardMaterial({color: 0x221111}));
+                    const deck = new THREE.Mesh(new THREE.CylinderGeometry(320, 260, 10, 32), new THREE.MeshStandardMaterial({color: 0x221111}));
                     deck.position.y = 60; 
-                    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(50, 80, 55, 16), new THREE.MeshStandardMaterial({color: 0x111111}));
+                    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(80, 120, 55, 16), new THREE.MeshStandardMaterial({color: 0x111111}));
                     pillar.position.y = 27.5;
                     group.add(deck, pillar);
 
-                    stationAreas.push({ type: 'circle', x: c.x, z: c.z, radius: 220, y: 65 });
+                    stationAreas.push({ type: 'circle', x: c.x, z: c.z, radius: 320, y: 65 });
 
                     for(let i=0; i<8; i++) {
-                        const pa = i * Math.PI/4;
-                        const px = Math.cos(pa) * 140, pz = Math.sin(pa) * 140;
-                        const pad = new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 2, 16), new THREE.MeshStandardMaterial({color: 0x442222}));
-                        pad.position.set(px, 66, pz);
-                        const ring = new THREE.Mesh(new THREE.RingGeometry(25, 30, 32), new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide})).rotateX(-Math.PI/2);
-                        ring.position.set(px, 67.1, pz);
+                        // パッドの絶対座標を計算
+                        const pa = i * Math.PI/4 + lookAngle + Math.PI;
+                        const px = c.x + Math.cos(pa) * 200;
+                        const pz = c.z + Math.sin(pa) * 200;
+                        
+                        // groupローカル配置用の座標
+                        const lpx = Math.cos(i * Math.PI/4) * 200;
+                        const lpz = Math.sin(i * Math.PI/4) * 200;
+
+                        const pad = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 2, 16), new THREE.MeshStandardMaterial({color: 0x442222}));
+                        pad.position.set(lpx, 66, lpz);
+                        const ring = new THREE.Mesh(new THREE.RingGeometry(35, 40, 32), new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide})).rotateX(-Math.PI/2);
+                        ring.position.set(lpx, 67.1, lpz);
                         group.add(pad, ring);
                         
-                        stationAreas.push({ type: 'circle', x: c.x + px, z: c.z + pz, radius: 30, y: 67 });
+                        stationAreas.push({ type: 'circle', x: px, z: pz, radius: 40, y: 67 });
                     }
-                    createWarpPad(0, 65, 0, c.col, c.x + Math.sin(lookAngle)*250, 1.5, c.z + Math.cos(lookAngle)*250, "地上へ降りる");
                 }
 
+                // ゲートの生成
                 const gateGroup = new THREE.Group();
                 const gateMat = new THREE.MeshStandardMaterial({color: 0x333333});
-                const gL = new THREE.Mesh(new THREE.BoxGeometry(10, 60, 10), gateMat); gL.position.set(-40, 30, 0);
-                const gR = new THREE.Mesh(new THREE.BoxGeometry(10, 60, 10), gateMat); gR.position.set(40, 30, 0);
-                const gT = new THREE.Mesh(new THREE.BoxGeometry(90, 10, 10), new THREE.MeshBasicMaterial({color: c.col})); gT.position.set(0, 65, 0);
+                const gL = new THREE.Mesh(new THREE.BoxGeometry(15, 80, 15), gateMat); gL.position.set(-60, 40, 0);
+                const gR = new THREE.Mesh(new THREE.BoxGeometry(15, 80, 15), gateMat); gR.position.set(60, 40, 0);
+                const gT = new THREE.Mesh(new THREE.BoxGeometry(135, 15, 15), new THREE.MeshBasicMaterial({color: c.col})); gT.position.set(0, 87.5, 0);
                 gateGroup.add(gL, gR, gT);
                 
-                const gateRadius = 230; 
+                const gateRadius = 330; 
                 gateGroup.position.set(0, 0, gateRadius);
-                
-                createWarpPad(0, 0, gateRadius + 20, c.col, c.target.x, c.target.y, c.target.z, c.label);
+                group.add(gateGroup);
+
+                // --- 修正: ワープパッドを絶対にズレない絶対座標に配置 ---
+                const padX = c.x + Math.sin(lookAngle) * (gateRadius + 30);
+                const padZ = c.z + Math.cos(lookAngle) * (gateRadius + 30);
+                createWarpPad(padX, 0, padZ, c.col, c.target.x, c.target.y, c.target.z, c.label);
+
+                if (c.name === "drone") {
+                    createWarpPad(c.x, 65, c.z, c.col, padX, 1.5, padZ, "地上へ降りる");
+                }
 
                 group.position.set(c.x, 0, c.z);
                 group.rotation.y = lookAngle + Math.PI; 
@@ -440,18 +453,36 @@
         }
 
         function createUndergroundRooms() {
-            // --- モールルーム (0, 1.5, 5000) ---
+            // --- モールルーム大拡張 (0, 1.5, 5000) ---
             const mallGrp = new THREE.Group();
             mallGrp.position.set(0, 0, 5000);
-            mallGrp.add(new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshStandardMaterial({color: 0x051a24})).rotateX(-Math.PI/2));
             
-            const shopCounter = new THREE.Mesh(new THREE.BoxGeometry(100, 15, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
-            shopCounter.position.set(0, 7.5, -50); mallGrp.add(shopCounter);
+            // 床
+            mallGrp.add(new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x051a24})).rotateX(-Math.PI/2));
+            
+            // 天井と壁
+            const ceiling = new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({color: 0x020a10}));
+            ceiling.rotation.x = Math.PI/2; ceiling.position.y = 100;
+            const wall = new THREE.Mesh(new THREE.CylinderGeometry(600, 600, 100, 64, 1, true), new THREE.MeshStandardMaterial({color: 0x0a2a4a, side: THREE.BackSide}));
+            wall.position.y = 50;
+            mallGrp.add(ceiling, wall);
 
-            const addShopItem = (x, color, name, price, type, val) => {
-                const item = new THREE.Mesh(new THREE.OctahedronGeometry(5), new THREE.MeshBasicMaterial({color, wireframe: true}));
-                item.position.set(x, 25, -50); mallGrp.add(item);
-                interactables.push({ pos: new THREE.Vector3(x, 1.5, 4950), radius: 25, label: `購入: ${name} (${price}CR)`, action: () => {
+            // 商品棚カウンター
+            const c1 = new THREE.Mesh(new THREE.BoxGeometry(250, 10, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
+            c1.position.set(0, 5, -100);
+            const c2 = new THREE.Mesh(new THREE.BoxGeometry(250, 10, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
+            c2.position.set(0, 5, 50);
+            const c3 = new THREE.Mesh(new THREE.BoxGeometry(250, 10, 20), new THREE.MeshStandardMaterial({color: 0x113344, transparent:true, opacity:0.8}));
+            c3.position.set(0, 5, 150);
+            mallGrp.add(c1, c2, c3);
+
+            const addShopItem = (x, z, color, name, price, type, val) => {
+                const item = new THREE.Mesh(new THREE.OctahedronGeometry(8), new THREE.MeshBasicMaterial({color, wireframe: true}));
+                item.position.set(x, 25, z); mallGrp.add(item);
+                const stand = new THREE.Mesh(new THREE.CylinderGeometry(10, 15, 10), new THREE.MeshStandardMaterial({color:0x222222}));
+                stand.position.set(x, 5, z); mallGrp.add(stand);
+                
+                interactables.push({ pos: new THREE.Vector3(x, 1.5, 5000 + z), radius: 30, label: `購入: ${name} (${price}CR)`, action: () => {
                     if (currentCR < price) return addChatMessage("SYSTEM", "CRが足りません");
                     updateCR(-price);
                     if (type === 'color') playerColor = val;
@@ -461,11 +492,24 @@
                     addChatMessage("SYSTEM", `${name} を購入・装備しました！`);
                 }});
             };
-            addShopItem(-30, 0xff00ff, "マゼンタカラー", 50, 'color', 0xff00ff);
-            addShopItem(0, 0xffff00, "猫耳アクセサリ", 100, 'acc', 'cat_ears');
-            addShopItem(30, 0x00ff00, "ハット", 100, 'acc', 'hat');
+            
+            // 色変更 (奥の棚)
+            addShopItem(-150, -100, 0xff0000, "レッドカラー", 50, 'color', 0xff0000);
+            addShopItem(-50, -100, 0xff00ff, "マゼンタカラー", 50, 'color', 0xff00ff);
+            addShopItem(50, -100, 0x0000ff, "ブルーカラー", 50, 'color', 0x0000ff);
+            addShopItem(150, -100, 0xffff00, "イエローカラー", 50, 'color', 0xffff00);
 
-            createWarpPad(0, 0, 100, 0x00ffff, 1300 - 250, 1.5, 1300 - 250, "地上へ戻る");
+            // アクセサリ (中央の棚)
+            addShopItem(-100, 50, 0xffa500, "猫耳アクセサリ", 100, 'acc', 'cat_ears');
+            addShopItem(0, 50, 0x00ff00, "シルクハット", 100, 'acc', 'hat');
+            addShopItem(100, 50, 0x00ffff, "ヘッドホン", 100, 'acc', 'headphone');
+
+            // 強化アイテム (手前の棚)
+            addShopItem(-50, 150, 0xffffff, "スピード x1.5", 300, 'speed', 1.5);
+            addShopItem(50, 150, 0xffffff, "スピード x2.0", 500, 'speed', 2.0);
+
+            const retPadX = Math.cos(Math.PI/4)*1600 - 350;
+            createWarpPad(0, 0, 300, 0x00ffff, retPadX, 1.5, retPadX, "地上へ戻る");
             scene.add(mallGrp);
 
             // --- カジノルーム大拡張 (0, 1.5, -5000) ---
@@ -473,7 +517,6 @@
             casinoGrp.position.set(0, 0, -5000);
             casinoGrp.add(new THREE.Mesh(new THREE.CircleGeometry(500, 64), new THREE.MeshStandardMaterial({color: 0x150510})).rotateX(-Math.PI/2));
             
-            // エリアカーペット
             const slotCarpet = new THREE.Mesh(new THREE.CircleGeometry(150, 32), new THREE.MeshBasicMaterial({color: 0x330000, transparent:true, opacity:0.5}));
             slotCarpet.rotation.x = -Math.PI/2; slotCarpet.position.set(-250, 0.1, 0); casinoGrp.add(slotCarpet);
 
@@ -483,7 +526,6 @@
             const multiCarpet = new THREE.Mesh(new THREE.CircleGeometry(150, 32), new THREE.MeshBasicMaterial({color: 0x003300, transparent:true, opacity:0.5}));
             multiCarpet.rotation.x = -Math.PI/2; multiCarpet.position.set(0, 0.1, -250); casinoGrp.add(multiCarpet);
 
-            // 【1人用】スロットマシン 5台
             for(let i=0; i<5; i++) {
                 const sz = -80 + i * 40;
                 const mGrp = new THREE.Group();
@@ -506,7 +548,6 @@
                 }});
             }
 
-            // 【2人用】エアホッケー台
             const hTable = new THREE.Mesh(new THREE.BoxGeometry(80, 10, 160), new THREE.MeshStandardMaterial({color: 0x111133}));
             hTable.position.set(250, 5, 0);
             const hLine = new THREE.Mesh(new THREE.BoxGeometry(80, 10.2, 2), new THREE.MeshBasicMaterial({color: 0x00ffff}));
@@ -526,7 +567,6 @@
                 hockeyPuckVel.copy(dir.multiplyScalar(250)); 
             }});
 
-            // 【最大4人用】マルチプレイルーレット
             const tableGroup = new THREE.Group();
             const mTable = new THREE.Mesh(new THREE.CylinderGeometry(40, 35, 15, 32), new THREE.MeshStandardMaterial({color: 0x113311}));
             mTable.position.y = 7.5;
@@ -559,7 +599,8 @@
                 }});
             });
 
-            createWarpPad(0, 0, 100, 0xff00ff, -1300 + 250, 1.5, 1300 - 250, "地上へ戻る");
+            const retDomeZ = Math.sin(3*Math.PI/4)*1600 + 350;
+            createWarpPad(0, 0, 300, 0xff00ff, -retDomeZ, 1.5, retDomeZ, "地上へ戻る");
             scene.add(casinoGrp);
 
             // --- 証券所ルーム (5000, 1.5, 0) ---
@@ -586,7 +627,8 @@
                 }
             }});
 
-            createWarpPad(0, 0, 100, 0x00ff00, 1300 - 250, 1.5, -1300 + 250, "地上へ戻る");
+            const retStockX = Math.cos(7*Math.PI/4)*1600 - 350;
+            createWarpPad(0, 0, 100, 0x00ff00, retStockX, 1.5, -retStockX, "地上へ戻る");
             scene.add(stockGrp);
         }
 
@@ -683,7 +725,7 @@
         }
 
         function createMonorails() {
-            const rInner = 600, rOuter = 1200, trackY = 80;
+            const rInner = 600, rOuter = 1300, trackY = 80;
             const railMat = new THREE.MeshBasicMaterial({color: 0xcccccc});
             const neonMatCyan = new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true, transparent:true, opacity:0.4});
             const neonMatPink = new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true, transparent:true, opacity:0.4});
@@ -697,10 +739,11 @@
             };
             drawTrack(rInner, false); drawTrack(rOuter, true);
 
+            // rInner=600 と rOuter=1300 の間を完璧に波打つ数式 (中心950、振幅350)
             const curvePts = [];
             for (let i = 0; i <= 128; i++) {
                 const a = (i / 128) * Math.PI * 2;
-                const r = 900 - 300 * Math.cos(4 * a); 
+                const r = 950 - 350 * Math.cos(4 * a); 
                 curvePts.push(new THREE.Vector3(Math.cos(a) * r, trackY, Math.sin(a) * r));
             }
             const curveSpline = new THREE.CatmullRomCurve3(curvePts, true);
@@ -748,7 +791,10 @@
                 car.add(new THREE.Mesh(new THREE.PlaneGeometry(10, 16), wGlass).rotateY(Math.PI/2).translateZ(7).translateY(9).translateX(-15));
                 
                 scene.add(car);
-                trains.push({ mesh: car, radius, initialAngle: initAngle, angle: initAngle, type: type });
+                
+                // 停止箇所の数を正確に指定（内・外周は4駅、カーブ路線は8駅）
+                const numStops = (type === 'curve') ? 8 : 4;
+                trains.push({ mesh: car, radius, initialAngle: initAngle, angle: initAngle, type: type, numStops: numStops });
             };
             
             spawnTrain(rInner, 0, 'inner'); spawnTrain(rInner, Math.PI, 'inner');
@@ -757,9 +803,15 @@
         }
 
         function createDrones() {
+            const dist = 1600;
+            const lookAngle = Math.atan2(-Math.cos(5*Math.PI/4)*dist, -Math.sin(5*Math.PI/4)*dist);
+            const cx = Math.cos(5*Math.PI/4)*dist;
+            const cz = Math.sin(5*Math.PI/4)*dist;
+            
             for(let i=0; i<8; i++) {
-                const pa = i * Math.PI/4;
-                const px = -1300 + Math.cos(pa) * 140, pz = -1300 + Math.sin(pa) * 140;
+                const pa = i * Math.PI/4 + lookAngle + Math.PI;
+                const px = cx + Math.cos(pa) * 200;
+                const pz = cz + Math.sin(pa) * 200;
                 
                 const grp = new THREE.Group();
                 grp.add(new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 3, 8), new THREE.MeshStandardMaterial({color: 0x222222})));
@@ -811,7 +863,7 @@
             ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(100, 100, 6, 0, Math.PI*2); ctx.fill();
             ctx.strokeStyle = 'rgba(136, 204, 255, 0.4)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.arc(100, 100, (600/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(100, 100, (1200/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(100, 100, (1300/MAP_RADIUS)*100, 0, Math.PI*2); ctx.stroke();
 
             const px = 100 + (playerLocalPos.x / MAP_RADIUS) * 100;
             const py = 100 + (playerLocalPos.z / MAP_RADIUS) * 100;
@@ -834,30 +886,36 @@
 
             const nowSec = Date.now() / 1000;
 
+            // --- 新・絶対時間 列車同期アルゴリズム ---
             trains.forEach(t => {
-                const totalCycleTime = (Math.PI*2) / TRAIN_BASE_SPEED; 
-                const timeOffset = (t.initialAngle / (Math.PI*2)) * totalCycleTime;
+                const stopInterval = (Math.PI * 2) / t.numStops;
+                const moveTime = stopInterval / TRAIN_BASE_SPEED;
+                const sectionTotalTime = moveTime + TRAIN_STOP_TIME;
+                const totalCycleTime = sectionTotalTime * t.numStops;
+                
+                const timeOffset = (t.initialAngle / stopInterval) * sectionTotalTime;
                 const currentT = (nowSec + timeOffset) % totalCycleTime;
                 
-                const progress = currentT / totalCycleTime; 
-                const section = Math.floor(progress * 4);
-                const sectionProgress = (progress * 4) % 1;
+                const section = Math.floor(currentT / sectionTotalTime);
+                const timeInSection = currentT % sectionTotalTime;
                 
                 let easeProgress = 0;
-                if (sectionProgress < 0.8) {
-                    const p = sectionProgress / 0.8;
-                    easeProgress = (1 - Math.cos(p * Math.PI)) / 2;
+                if (timeInSection < moveTime) {
+                    const p = timeInSection / moveTime;
+                    easeProgress = (1 - Math.cos(p * Math.PI)) / 2; // サイン波による滑らかな加減速
+                    t.state = 'moving';
                 } else {
                     easeProgress = 1.0; 
+                    t.state = 'stopped';
                 }
 
-                t.angle = (section * Math.PI/2) + easeProgress * (Math.PI/2);
+                t.angle = (section * stopInterval) + easeProgress * stopInterval;
 
                 let r = t.radius;
                 let dr = 0;
                 if (t.type === 'curve') {
-                    r = 900 - 300 * Math.cos(4 * t.angle);
-                    dr = 1200 * Math.sin(4 * t.angle);
+                    r = 950 - 350 * Math.cos(4 * t.angle); // 半径600から1300まで滑らかに変動
+                    dr = 1400 * Math.sin(4 * t.angle);
                     t.radius = r;
                 }
                 const pt = new THREE.Vector3(Math.cos(t.angle) * r, 80, Math.sin(t.angle) * r);
@@ -936,7 +994,7 @@
                 let foundInteract = false;
                 
                 for (let t of trains) {
-                    if (Math.abs(t.angle % (Math.PI/2)) < 0.05 && Math.abs(playerLocalPos.y - t.mesh.position.y) < 15 && playerLocalPos.distanceTo(t.mesh.position) < 40) {
+                    if (t.state === 'stopped' && Math.abs(playerLocalPos.y - t.mesh.position.y) < 15 && playerLocalPos.distanceTo(t.mesh.position) < 40) {
                         promptText = "列車に乗る"; interactTarget = () => { ridingTrain = t; updateAvatarAppearance(); };
                         foundInteract = true; break;
                     }
@@ -990,13 +1048,15 @@
                 if (!ridingDrone && !ridingTrain && !isWarping) {
                     let y = playerLocalPos.y;
                     
+                    // 展望台の壁 (半径250の床に対して、落ちないよう248で制限)
                     if (Math.abs(y - 1350) < 20) {
                         const dist = Math.hypot(nextPos.x, nextPos.z);
-                        if (dist > 245) { 
+                        if (dist > 248) { 
                             const angle = Math.atan2(nextPos.z, nextPos.x);
-                            nextPos.x = Math.cos(angle) * 245; nextPos.z = Math.sin(angle) * 245;
+                            nextPos.x = Math.cos(angle) * 248; nextPos.z = Math.sin(angle) * 248;
                         }
                     } 
+                    // 駅ホームの壁
                     else if (Math.abs(y - 80) < 20) {
                         let currentSt = null;
                         for (let st of stationAreas) {
@@ -1018,6 +1078,7 @@
                         }
                     }
                     
+                    // 大施設の壁
                     for (let st of stationAreas) {
                         if (st.type === 'wall' && Math.abs(y) < 300) {
                             if (Math.hypot(nextPos.x - st.x, nextPos.z - st.z) < st.radius + 2) {
@@ -1028,10 +1089,11 @@
                         }
                     }
 
+                    // 地下空間の壁制限
                     if (Math.abs(y) < 20) {
-                        if (Math.hypot(nextPos.x, nextPos.z - 5000) > 290 && Math.hypot(nextPos.x, nextPos.z - 5000) < 1000) {
+                        if (Math.hypot(nextPos.x, nextPos.z - 5000) > 590 && Math.hypot(nextPos.x, nextPos.z - 5000) < 1000) {
                             const ang = Math.atan2(nextPos.z - 5000, nextPos.x);
-                            nextPos.x = Math.cos(ang)*290; nextPos.z = 5000 + Math.sin(ang)*290;
+                            nextPos.x = Math.cos(ang)*590; nextPos.z = 5000 + Math.sin(ang)*590;
                         }
                         if (Math.hypot(nextPos.x, nextPos.z + 5000) > 490 && Math.hypot(nextPos.x, nextPos.z + 5000) < 1000) {
                             const ang = Math.atan2(nextPos.z + 5000, nextPos.x);
@@ -1059,7 +1121,7 @@
             if (!ridingDrone && !ridingTrain && !isWarping) {
                 let groundY = 1.5; 
                 
-                if (Math.abs(playerLocalPos.y - 1350) < 20 && Math.hypot(playerLocalPos.x, playerLocalPos.z) < 245) {
+                if (Math.abs(playerLocalPos.y - 1350) < 20 && Math.hypot(playerLocalPos.x, playerLocalPos.z) < 250) {
                     groundY = 1350;
                 } else {
                     for (let st of stationAreas) {
