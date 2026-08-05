@@ -82,10 +82,14 @@
                 </div>
             </div>
             <div style="margin-bottom: 10px;">
-                <label style="color:#cbd5e1; font-size:0.8rem; display:block;">BAN USER</label>
-                <div style="display:flex; gap:5px;">
-                    <input type="text" id="admin-ban-id" placeholder="Username" style="width: 70%; padding:5px; background:rgba(0,0,0,0.5); color:white; border:1px solid #ff00ff;">
-                    <button onclick="adminBan()" style="width: 30%; background:#f43f5e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">BAN</button>
+                <label style="color:#cbd5e1; font-size:0.8rem; display:block;">USER MGMT (BAN/UNBAN/GRANT)</label>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                    <input type="text" id="admin-target-id" placeholder="Username" style="width: 100%; padding:5px; background:rgba(0,0,0,0.5); color:white; border:1px solid #ff00ff; box-sizing: border-box;">
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="adminUserAction('ban')" style="flex:1; background:#f43f5e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 0.7rem; padding: 5px;">BAN</button>
+                        <button onclick="adminUserAction('unban')" style="flex:1; background:#10b981; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 0.7rem; padding: 5px;">UNBAN</button>
+                        <button onclick="adminUserAction('grant')" style="flex:1; background:#8b5cf6; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 0.7rem; padding: 5px;">GRANT</button>
+                    </div>
                 </div>
             </div>
             <div>
@@ -146,6 +150,9 @@
         
         let ridingTrain = null, ridingDrone = null, localAvatar = null;
         let isWarping = false, fKeyWasPressed = false, vKeyWasPressed = false;
+        let isPlayingMinigame = false; // ミニゲームプレイ中フラグを追加
+        let minigameCameraTarget = new THREE.Vector3(); // フォーカス座標
+        let minigameCameraLookAt = new THREE.Vector3(); // 注視点
         let minimapCtx;
         
         let lastSentPos = new THREE.Vector3();
@@ -210,7 +217,7 @@
             if (action === 'register') {
                 if (usersDb[username]) { msgEl.innerText = "既に登録されています"; msgEl.style.color = "#f43f5e"; return; }
                 
-                usersDb[username] = { password: password, cr: 500, stocks: 0, color: 0x00ffff, accessory: 'none', isBanned: false };
+                usersDb[username] = { password: password, cr: 500, stocks: 0, color: 0x00ffff, accessory: 'none', isBanned: false, isAdminPrivileged: false };
                 saveUserDb();
                 
                 try { await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) }); } catch(e) {}
@@ -226,7 +233,7 @@
                     const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
                     const data = await res.json();
                     if(data.success && !user) {
-                        user = { password: password, cr: data.money || 500, stocks: data.stocks || 0, color: 0x00ffff, accessory: 'none', isBanned: false };
+                        user = { password: password, cr: data.money || 500, stocks: data.stocks || 0, color: 0x00ffff, accessory: 'none', isBanned: false, isAdminPrivileged: false };
                         usersDb[username] = user;
                         saveUserDb();
                     } else if (!data.success && user) {
@@ -239,7 +246,7 @@
                 if (user.isBanned) { msgEl.innerText = "アカウント凍結中"; msgEl.style.color = "#f43f5e"; return; }
 
                 isAdmin = false;
-                if ((username === '898scr' || username === '898sct') && document.getElementById('admin-login-section').style.display === 'block') {
+                if ((username === '898scr' || username === '898sct' || user.isAdminPrivileged) && document.getElementById('admin-login-section').style.display === 'block') {
                     if (adminPassword === 'admin') isAdmin = true;
                     else if (adminPassword !== '') { msgEl.innerText = "Admin Passwordが違います"; msgEl.style.color = "#f43f5e"; return; }
                 }
@@ -247,8 +254,8 @@
                 currentUsername = username;
                 currentCR = user.cr || 500;
                 currentStocks = user.stocks || 0;
-                playerColor = user.color || 0x00ffff;
-                playerAccessory = user.accessory || 'none';
+                playerColor = user.color || 0x00ffff; // 保存された色を読み込む
+                playerAccessory = user.accessory || 'none'; // 保存されたアクセサリを読み込む
 
                 document.getElementById('ui-username').innerText = currentUsername;
                 document.getElementById('ui-money').innerText = currentCR;
@@ -268,6 +275,48 @@
 
                 try { document.body.requestPointerLock(); } catch(e) {}
                 initThreeJS();
+            }
+        }
+
+        function activateAdminMode() {
+            document.getElementById('admin-panel').style.display = 'block';
+            playerSpeedMult = parseFloat(document.getElementById('admin-speed').value) || 3.0;
+            addChatMessage("SYSTEM", `[ADMIN] ${currentUsername} としてログインしました。`);
+        }
+
+        function setAdminCR() {
+            if (!isAdmin) return;
+            const cr = parseInt(document.getElementById('admin-cr').value);
+            if (!isNaN(cr)) { updateCR(cr - currentCR); addChatMessage('SYSTEM', `[ADMIN] 所持金を ${currentCR} CR に変更しました。`); }
+        }
+
+        function adminUserAction(actionType) {
+            if (!isAdmin) return;
+            const target = document.getElementById('admin-target-id').value.trim();
+            if (!target) return;
+
+            if (!usersDb[target]) {
+                addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' は存在しません。`);
+                return;
+            }
+
+            if (actionType === 'ban') {
+                usersDb[target].isBanned = true;
+                saveUserDb(); 
+                addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' をBANしました。`);
+                if (socket && socket.connected) socket.emit('chatMessage', `/ban ${target}`); // Server側対応用
+                for(let id in otherPlayers) {
+                    if (otherPlayers[id].userData && otherPlayers[id].userData.username === target) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; }
+                }
+            } else if (actionType === 'unban') {
+                usersDb[target].isBanned = false;
+                saveUserDb();
+                addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' のBANを解除しました。`);
+            } else if (actionType === 'grant') {
+                usersDb[target].isAdminPrivileged = true;
+                saveUserDb();
+                addChatMessage('SYSTEM', `[ADMIN] ユーザー '${target}' にADMIN権限を付与しました。(次回ログイン時から有効)`);
+                // リアルタイム反映のためにサーバー経由で通知を送るのがベストですが、今回はローカルDB更新のみ。
             }
         }
 
@@ -693,8 +742,17 @@
                 interactables.push({ pos: new THREE.Vector3(-230, 1.5, -5000 + sz), radius: 20, label: "スロットを回す (10CR)", action: () => {
                     if (machineData.state !== 'idle') return;
                     if (currentCR < 10) return addChatMessage("SYSTEM", "CRが不足しています");
+                    
                     updateCR(-10);
-                    machineData.state = 'spinning'; machineData.timer = 3.0;
+                    machineData.state = 'spinning'; 
+                    machineData.timer = 3.0;
+                    
+                    // カメラフォーカス設定
+                    isPlayingMinigame = true;
+                    // カメラ位置: スロットマシンの少し手前、画面の高さ
+                    minigameCameraTarget.set(-230, 20, -5000 + sz);
+                    // 注視点: スロットマシンの画面
+                    minigameCameraLookAt.set(-240, 20, -5000 + sz);
                 }});
             }
 
@@ -736,7 +794,18 @@
                     updateCR(-100);
                     addChatMessage("SYSTEM", `ルーレットにエントリーしました！`);
                     mScreen.material.color.setHex(0xffffff);
+                    
+                    // カメラフォーカス設定
+                    isPlayingMinigame = true;
+                    // カメラ位置: 自分のスタンドの少し上、テーブル寄り
+                    // スタンド位置 (p[0], 0.5, p[1] - 250) + ドーム位置(0,0,-5000) -> (p[0], 0.5, p[1] - 5250)
+                    // 少し高く、中央(0, 15, -5250)を見下ろすように
+                    const camDir = new THREE.Vector3(0 - p[0], 0, -5250 - (p[1] - 5250)).normalize();
+                    minigameCameraTarget.set(p[0] + camDir.x * 5, 25, (p[1] - 5250) + camDir.z * 5);
+                    minigameCameraLookAt.set(0, 15, -5250);
+
                     setTimeout(() => {
+                        isPlayingMinigame = false; // フォーカス解除
                         if(Math.random() > 0.6) {
                             mScreen.material.color.setHex(0xff0000);
                             updateCR(300);
@@ -1009,7 +1078,7 @@
             document.addEventListener('pointerlockchange', () => isLocked = document.pointerLockElement === document.body);
             
             document.addEventListener('mousemove', e => {
-                if (isLocked || isDragging) {
+                if ((isLocked || isDragging) && !isPlayingMinigame) { // ミニゲーム中は視点移動ロック
                     cameraYaw -= e.movementX * 0.002;
                     cameraPitch -= e.movementY * 0.002;
                     cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
@@ -1095,6 +1164,7 @@
                     m.mesh.material.color.setHex(Math.random() * 0xffffff);
                     if (m.timer <= 0) {
                         m.state = 'idle';
+                        isPlayingMinigame = false; // フォーカス解除
                         const r1 = Math.floor(Math.random()*5);
                         const r2 = Math.floor(Math.random()*5);
                         const r3 = Math.floor(Math.random()*5);
@@ -1193,7 +1263,7 @@
             if (promptText) { document.getElementById('prompt-text').innerText = promptText; promptEl.style.display = 'block'; }
             else promptEl.style.display = 'none';
 
-            if (!isWarping && !ridingTrain && document.activeElement !== document.getElementById('chat-input')) {
+            if (!isWarping && !ridingTrain && document.activeElement !== document.getElementById('chat-input') && !isPlayingMinigame) { // ミニゲーム中はWASD移動を無効化
                 const speed = (keysPressed['shift'] ? 200 : 80) * playerSpeedMult * delta; 
                 
                 const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
@@ -1370,15 +1440,37 @@
                 }
             });
 
-            const camTarget = playerLocalPos.clone();
-            if (isFPS) {
-                camera.position.copy(camTarget); camera.position.y += 1.6 * 2.5;
+            if (isPlayingMinigame) {
+                // ミニゲーム中のカメラ固定
+                camera.position.lerp(minigameCameraTarget, 0.1);
+                
+                // lerpでlookAtの方向を滑らかに補間するのは複雑なため、
+                // 注視点自体をlerpで補間してそれをlookAtする
+                if (!camera.userData.currentLookAt) camera.userData.currentLookAt = new THREE.Vector3().copy(camera.position).add(new THREE.Vector3(-Math.sin(cameraYaw) * Math.cos(cameraPitch), Math.sin(cameraPitch), -Math.cos(cameraYaw) * Math.cos(cameraPitch)));
+                
+                camera.userData.currentLookAt.lerp(minigameCameraLookAt, 0.1);
+                camera.lookAt(camera.userData.currentLookAt);
+                
+                // ミニゲーム終了時に視点が急に戻らないよう、カメラのアングルをゲーム中のものに合わせておく(簡易対応)
+                const dir = new THREE.Vector3().subVectors(minigameCameraLookAt, camera.position).normalize();
+                cameraYaw = Math.atan2(-dir.x, -dir.z);
+                cameraPitch = Math.asin(dir.y);
+
             } else {
-                const offset = new THREE.Vector3(Math.sin(cameraYaw)*35, 20 + Math.sin(cameraPitch)*20, Math.cos(cameraYaw)*35);
-                camera.position.copy(camTarget).add(offset); camTarget.y += 4; 
+                // 通常のカメラ制御
+                const camTarget = playerLocalPos.clone();
+                if (isFPS) {
+                    camera.position.copy(camTarget); camera.position.y += 1.6 * 2.5;
+                } else {
+                    const offset = new THREE.Vector3(Math.sin(cameraYaw)*35, 20 + Math.sin(cameraPitch)*20, Math.cos(cameraYaw)*35);
+                    camera.position.copy(camTarget).add(offset); camTarget.y += 4; 
+                }
+                const lookDir = new THREE.Vector3(-Math.sin(cameraYaw) * Math.cos(cameraPitch), Math.sin(cameraPitch), -Math.cos(cameraYaw) * Math.cos(cameraPitch));
+                camera.lookAt(camera.position.clone().add(lookDir));
+                
+                // ミニゲーム終了後に再利用するためリセット
+                camera.userData.currentLookAt = null; 
             }
-            const lookDir = new THREE.Vector3(-Math.sin(cameraYaw) * Math.cos(cameraPitch), Math.sin(cameraPitch), -Math.cos(cameraYaw) * Math.cos(cameraPitch));
-            camera.lookAt(camera.position.clone().add(lookDir));
 
             updateMinimap();
             renderer.render(scene, camera);
