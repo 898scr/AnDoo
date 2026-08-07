@@ -3,24 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAKUYARC Metaverse (Map Loading)</title>
+    <title>HAKUYARC Metaverse</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #020617; color: #fff; }
         
-        /* ログイン画面 */
         #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); display: flex; justify-content: center; align-items: center; z-index: 100; }
         .panel { background: rgba(15, 23, 42, 0.85); padding: 30px; border-radius: 12px; border: 1px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); width: 320px; backdrop-filter: blur(10px);}
         .panel h2 { margin-top: 0; color: #00ffff; text-align: center; letter-spacing: 2px; }
         .panel input { width: 100%; box-sizing: border-box; padding: 12px; margin: 10px 0; border: 1px solid #38bdf8; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none; }
-        .panel label { font-size: 0.85rem; color: #94a3b8; display: flex; align-items: center; gap: 8px; margin: 10px 0; }
         .panel button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: linear-gradient(90deg, #00ffff, #0284c7); color: #000; }
         .btn-success { background: transparent; border: 1px solid #00ffff; color: #00ffff; }
         .btn-success:hover { background: rgba(0, 255, 255, 0.1); }
         .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
-        /* UIレイヤー */
         #ui-layer { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
+        
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background: rgba(0, 255, 255, 0.8); border-radius: 50%; }
         
         #sidebar { position: absolute; top: 20px; left: 20px; width: 250px; background: rgba(15,23,42,0.8); border-left: 3px solid #00ffff; padding: 15px; border-radius: 0 8px 8px 0; pointer-events: auto;}
@@ -47,7 +45,7 @@
 
     <div id="login-screen">
         <div class="panel">
-            <h2>HAKUYARC (MAP EDITION)</h2>
+            <h2>HAKUYARC</h2>
             <div id="auth-error" class="error-msg"></div>
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
@@ -83,7 +81,6 @@
         </div>
     </div>
 
-    <!-- ここがないと真っ暗になります -->
     <div id="canvas-container"></div>
 
     <script>
@@ -101,7 +98,7 @@
         let isFlying = false;
         let localAvatar = null;
 
-        // マップデータ (JSONから読み込む)
+        // マップデータ
         let mapData = { floors: [], walls: [], warpPads: [] };
 
         async function attemptAuth(endpoint) {
@@ -118,16 +115,14 @@
                 if (data.success) {
                     if (endpoint === '/api/login') {
                         currentUsername = data.username;
-                        isAdmin = data.isAdmin; // サーバー側から特権判定を受け取る
+                        isAdmin = data.isAdmin;
                         document.getElementById('ui-username').innerText = currentUsername;
                         document.getElementById('ui-money').innerText = data.cr;
                         
-                        // Adminの場合のみパネルを表示
                         if (isAdmin) document.getElementById('admin-panel').style.display = 'block';
                         
                         startGame(); 
                     } else {
-                        // 登録成功メッセージを青色で表示
                         document.getElementById('auth-error').style.color = '#00ffff';
                         document.getElementById('auth-error').innerText = data.message;
                     }
@@ -152,7 +147,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight); 
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
             const dirLight = new THREE.DirectionalLight(0x00ffff, 0.8);
             dirLight.position.set(100, 200, 50);
             scene.add(dirLight);
@@ -160,91 +155,86 @@
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
 
-            // ★ 関節・アニメーション対応、より滑らかでディテールのあるアバター生成
+            // ==========================================
+            // ★ アバターの大改修（曲線パーツ・多色化）
+            // ==========================================
             window.createAvatarMesh = function(colorHex) {
                 const group = new THREE.Group();
                 
-                // マテリアルの定義（質感や色を分けてのっぺり感を無くす）
-                const matShirt = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.8 }); // プレイヤーカラーのシャツ
-                const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.5 }); // 肌
-                const matPants = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }); // ズボン（ダークグレー）
-                const matShoes = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }); // 靴
+                // パーツごとのマテリアル（質感・色）を定義
+                const matShirt = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.8 }); 
+                const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.5 }); 
+                const matPants = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }); 
+                const matShoes = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }); 
                 
-                // 胴体 (少し丸みを持たせるためにCapsuleや複数のパーツを組み合わせる)
+                // 1. 胴体 (丸みのあるカプセル風)
                 const bodyGroup = new THREE.Group();
                 bodyGroup.position.y = 1.3;
                 
-                // 胸〜腹（シャツ）
-                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.45, 1.0, 16), matShirt);
+                // 胸〜腹（シャツ） - 角を落とした円柱
+                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 1.1, 16), matShirt);
                 torso.position.y = 0.3;
-                // 腰（ズボン）
-                const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16), matPants);
-                pelvis.position.y = -0.4;
+                
+                // 腰〜尻（ズボン）
+                const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16), matPants);
+                pelvis.scale.set(1, 0.7, 0.9); // 少し平べったく
+                pelvis.position.y = -0.3;
                 
                 bodyGroup.add(torso, pelvis);
                 group.add(bodyGroup);
 
-                // 頭部 (首の付け根を支点にする)
+                // 2. 頭部 (完全な球体ベースに変更)
                 const headGroup = new THREE.Group();
                 headGroup.position.y = 2.15; 
                 
-                // 顔の丸み（BoxではなくSphereに近い形状で角を丸める）
-                const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8, 4, 4, 4);
-                // 角を丸める簡易的な手法として、頂点を少し球に近づける
-                const pos = headGeo.attributes.position;
-                for(let i=0; i<pos.count; i++) {
-                    const v = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i));
-                    v.normalize().multiplyScalar(0.4).lerp(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)), 0.5); // 球と箱のハイブリッド
-                    pos.setXYZ(i, v.x, v.y, v.z);
-                }
-                headGeo.computeVertexNormals();
-                const head = new THREE.Mesh(headGeo, matSkin);
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), matSkin);
                 head.position.y = 0.4;
                 
-                // 目 (少しサイバーなバイザー風に変更して個性を出す)
-                const matVisor = new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5});
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.1), matVisor);
-                visor.position.set(0, 0.5, -0.41);
+                // サイバーパンクな光るバイザー（目）
+                const matVisor = new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.8});
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.1), matVisor);
+                visor.position.set(0, 0.45, -0.42); // 顔の前面に配置
                 
                 headGroup.add(head, visor);
                 group.add(headGroup);
 
-                // 腕 (肩を支点にする。角を丸めたCylinderやCapsuleを使用)
-                // ※ r128ではCapsuleGeometryが標準ではないため、Cylinderで代用
+                // 3. 腕 (肩を支点に。球と円柱の組み合わせ)
                 const armLGroup = new THREE.Group();
                 armLGroup.position.set(-0.65, 1.9, 0); 
-                const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 1.0, 12), matShirt); // 袖
+                const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matShirt);
+                const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 12), matSkin);
                 armL.position.y = -0.4; 
-                const handL = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), matSkin); // 手
-                handL.position.y = -0.9;
-                armLGroup.add(armL, handL);
+                const handL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), matSkin);
+                handL.position.y = -0.8;
+                armLGroup.add(shoulderL, armL, handL);
                 group.add(armLGroup);
 
                 const armRGroup = new THREE.Group();
                 armRGroup.position.set(0.65, 1.9, 0); 
-                const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 1.0, 12), matShirt);
+                const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matShirt);
+                const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 12), matSkin);
                 armR.position.y = -0.4; 
-                const handR = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), matSkin);
-                handR.position.y = -0.9;
-                armRGroup.add(armR, handR);
+                const handR = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), matSkin);
+                handR.position.y = -0.8;
+                armRGroup.add(shoulderR, armR, handR);
                 group.add(armRGroup);
 
-                // 足 (股関節を支点にする)
+                // 4. 足 (股関節を支点に)
                 const legLGroup = new THREE.Group();
                 legLGroup.position.set(-0.25, 0.9, 0); 
-                const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.8, 12), matPants);
+                const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.8, 12), matPants);
                 legL.position.y = -0.4; 
-                const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.4), matShoes); // 靴
-                shoeL.position.set(0, -0.9, -0.1);
+                const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.35), matShoes); 
+                shoeL.position.set(0, -0.85, -0.1);
                 legLGroup.add(legL, shoeL);
                 group.add(legLGroup);
 
                 const legRGroup = new THREE.Group();
                 legRGroup.position.set(0.25, 0.9, 0);
-                const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.8, 12), matPants);
+                const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.8, 12), matPants);
                 legR.position.y = -0.4;
-                const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.4), matShoes);
-                shoeR.position.set(0, -0.9, -0.1);
+                const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.35), matShoes);
+                shoeR.position.set(0, -0.85, -0.1);
                 legRGroup.add(legR, shoeR);
                 group.add(legRGroup);
 
@@ -258,7 +248,6 @@
             clock = new THREE.Clock();
             setupInputHandlers();
             
-            // リサイズ対応
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -269,46 +258,35 @@
         async function loadMapData() {
             try {
                 const res = await fetch('test_map.json');
-                if (!res.ok) throw new Error('Network response was not ok');
+                if (!res.ok) throw new Error();
                 const data = await res.json();
-                
                 mapData = data;
                 
-                // 地面・床の生成
                 if (data.floors) {
                     data.floors.forEach(f => {
                         let mesh;
-                        if (f.type === 'circle') {
-                            mesh = new THREE.Mesh(new THREE.CircleGeometry(f.radius, 32), new THREE.MeshStandardMaterial({color: f.color}));
-                            mesh.rotation.x = -Math.PI/2;
-                            mesh.position.set(f.x, f.y, f.z);
-                        } else if (f.type === 'rect') {
-                            mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), new THREE.MeshStandardMaterial({color: f.color}));
-                            mesh.position.set(f.x, f.y - 0.5, f.z);
+                        if (f.type === 'circle') mesh = new THREE.Mesh(new THREE.CircleGeometry(f.radius, 32), new THREE.MeshStandardMaterial({color: f.color}));
+                        else if (f.type === 'rect') mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), new THREE.MeshStandardMaterial({color: f.color}));
+                        if (mesh) {
+                            if(f.type==='circle') { mesh.rotation.x = -Math.PI/2; mesh.position.set(f.x, f.y, f.z); }
+                            else mesh.position.set(f.x, f.y - 0.5, f.z);
+                            mapGroup.add(mesh);
                         }
-                        if (mesh) mapGroup.add(mesh);
                     });
                 }
                 
-                // 壁の生成
                 if (data.walls) {
                     data.walls.forEach(w => {
                         const height = w.maxY - w.minY;
                         const yPos = w.minY + height / 2;
                         let mesh;
-                        if (w.type === 'rect') {
-                            mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), new THREE.MeshStandardMaterial({color: w.color, transparent:true, opacity:0.8}));
-                            mesh.position.set(w.x, yPos, w.z);
-                        } else if (w.type === 'circle') {
-                            mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 16), new THREE.MeshStandardMaterial({color: w.color}));
-                            mesh.position.set(w.x, yPos, w.z);
-                        }
-                        if (mesh) mapGroup.add(mesh);
+                        if (w.type === 'rect') mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), new THREE.MeshStandardMaterial({color: w.color, transparent:true, opacity:0.8}));
+                        else if (w.type === 'circle') mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 16), new THREE.MeshStandardMaterial({color: w.color}));
+                        if (mesh) { mesh.position.set(w.x, yPos, w.z); mapGroup.add(mesh); }
                     });
                 }
             } catch (error) {
-                console.warn('Map load failed. Creating emergency fallback ground to prevent black screen.', error);
-                // 読み込み失敗時は真っ暗になるのを防ぐため、仮の地面を作る
+                // ロード失敗時の緊急フロア生成
                 const fallbackGround = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({color: 0x112233}));
                 fallbackGround.rotation.x = -Math.PI/2;
                 mapGroup.add(fallbackGround);
@@ -321,11 +299,11 @@
             document.body.requestPointerLock();
             
             initThreeJS();
-            await loadMapData(); // マップを読み込んでからアニメーション開始
+            await loadMapData(); 
 
             socket = io();
             setupSocket();
-            socket.emit('joinGame'); // 参加をサーバーに通知
+            socket.emit('joinGame');
             animate();
         }
 
@@ -336,7 +314,6 @@
             });
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
             
-            // Esc解除後に画面クリックで確実に再ロックする処理
             document.addEventListener('click', () => {
                 if (!isLocked && document.getElementById('login-screen').style.display === 'none') {
                     document.body.requestPointerLock();
@@ -352,6 +329,7 @@
                 if (isLocked) {
                     cameraYaw -= e.movementX * 0.002;
                     cameraPitch -= e.movementY * 0.002;
+                    // 見上げすぎ・見下ろしすぎを制限
                     cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
                 }
             });
@@ -382,7 +360,7 @@
                 const op = otherPlayers[info.id];
                 if (op) {
                     const dist = op.position.distanceTo(new THREE.Vector3(info.x, info.y, info.z));
-                    if (dist > 0.05) op.userData.movingTimer = 0.1; // 動きがあればアニメーションタイマーセット
+                    if (dist > 0.05) op.userData.movingTimer = 0.1;
                     
                     op.position.set(info.x, info.y, info.z);
                     op.rotation.y = info.rotation;
@@ -422,7 +400,6 @@
                 ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.1);
                 ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.1);
             }
-            // 首の上下（ピッチ連動）
             ud.head.rotation.x = camPitch;
         }
 
@@ -469,9 +446,7 @@
                 if (playerLocalPos.y >= w.minY && playerLocalPos.y <= w.maxY) {
                     if (w.type === 'rect') {
                         const hw = w.width / 2, hd = w.depth / 2;
-                        // X軸の壁判定
                         if (Math.abs(nextX - w.x) < hw + 1.0 && Math.abs(playerLocalPos.z - w.z) < hd + 1.0) collidedX = true;
-                        // Z軸の壁判定
                         if (Math.abs(playerLocalPos.x - w.x) < hw + 1.0 && Math.abs(nextZ - w.z) < hd + 1.0) collidedZ = true;
                     }
                 }
@@ -484,10 +459,9 @@
                 if (keysPressed['e']) { playerLocalPos.y += 20 * delta; moved = true; }
                 if (keysPressed['q']) { playerLocalPos.y -= 20 * delta; moved = true; }
             } else {
-                // 床サーチ (最も高い床を探す)
                 let groundY = -5000;
                 for (let f of mapData.floors) {
-                    if (playerLocalPos.y >= f.y - 5 && playerLocalPos.y <= f.y + 10) { // 高さの許容範囲
+                    if (playerLocalPos.y >= f.y - 5 && playerLocalPos.y <= f.y + 10) { 
                         let onFloor = false;
                         if (f.type === 'circle') {
                             if (Math.hypot(playerLocalPos.x - f.x, playerLocalPos.z - f.z) <= f.radius) onFloor = true;
@@ -499,7 +473,6 @@
                     }
                 }
 
-                // 重力適用
                 if (playerLocalPos.y > groundY + 0.1) {
                     playerVelocityY -= 30 * delta; 
                     playerLocalPos.y += playerVelocityY * delta;
@@ -509,7 +482,6 @@
                     playerLocalPos.y = groundY; playerVelocityY = 0;
                 }
 
-                // 奈落判定
                 if (playerLocalPos.y < -100) {
                     playerLocalPos.set(0, 5, 50); playerVelocityY = 0; moved = true;
                 }
@@ -539,24 +511,17 @@
                 });
             }
 
-            // --- ゼルダ/フォートナイト風 TPSカメラ (見上げ時のめり込み防止＆オフセット調整) ---
+            // ==========================================
+            // ★ TPSカメラの大改修（完璧な中心フォーカス）
+            // ==========================================
             
-            // 注視点 (Target) をキャラクターの顔の「少し上、少し右」に設定 (オーバーショルダー視点)
+            // 注視点 (Target) をキャラクターの顔の「少し上」に設定
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 2.0; // 肩から顔の高さ
-            
-            // クロスヘア（照準）の計算用ベクトル
-            const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-            const rightVec = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
-
-            // 注視点を少し右（肩越し）にずらす
-            headTarget.addScaledVector(rightVec, 0.8);
+            headTarget.y += 2.0; 
 
             if (isFPS) {
-                // FPS時は顔の真正面
                 camera.position.copy(playerLocalPos);
-                camera.position.y += 2.2; // 目の高さ
-                
+                camera.position.y += 2.2; 
                 const lookDir = new THREE.Vector3(
                     -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                     Math.sin(cameraPitch),
@@ -564,37 +529,43 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                // TPS時のカメラ距離
-                const distance = 6.0; 
+                // TPS時のカメラ距離を微調整
+                const distance = 4.5; 
                 
-                // ピッチが上（見上げる）にいくほど、カメラを少し後ろ・下に下げて頭頂部のめり込みを防ぐ
-                // pitch は -Math.PI/2 (見下ろし) 〜 Math.PI/2 (見上げ) の範囲
-                
-                // 球面座標系でのオフセット計算
+                // 【重要】右寄りのズレを解消。常に背面の真後ろ（Yaw角）を基準に球面上を移動する
+                // 球面座標系でのオフセット計算 (pitch角を考慮してY軸とXZ平面の距離を配分)
+                const horizontalDist = Math.cos(cameraPitch) * distance;
+                const verticalDist = Math.sin(cameraPitch) * distance;
+
                 const offset = new THREE.Vector3(
-                    Math.sin(cameraYaw) * Math.cos(cameraPitch) * distance,
-                    -Math.sin(cameraPitch) * distance, 
-                    Math.cos(cameraYaw) * Math.cos(cameraPitch) * distance
+                    Math.sin(cameraYaw) * horizontalDist,
+                    -verticalDist, // ピッチが上の時(見上げる時)、カメラは下に潜り込む
+                    Math.cos(cameraYaw) * horizontalDist
                 );
                 
-                // カメラの基本位置を適用
+                // カメラ位置を決定
                 camera.position.copy(headTarget).add(offset);
                 
-                // 【重要】見上げた際（pitch > 0）のカメラめり込み防止処理
-                // キャラクターの頭頂部（headTargetよりさらに上）にカメラが食い込まないよう、
-                // Y座標（高さ）の下限を設けるか、カメラをさらに後ろに引く
+                // 【重要】見上げた際（pitch > 0）のカメラめり込み防止処理を強化
+                // カメラが頭にめり込まないよう、pitchの角度に比例してY軸（高さ）の下限を上げる
                 if (cameraPitch > 0) {
-                    // 見上げるほど、カメラを背中側に少し離す
+                    // 見上げるほど、カメラを背中側に引きつつ、わずかに上に持ち上げる
                     const pushBack = cameraPitch * 2.0; 
+                    const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     camera.position.addScaledVector(fwdVec, -pushBack);
+                    
+                    // キャラクターの頭（Y=2.4付近）に食い込まないよう最低高度を保証
+                    if (camera.position.y < playerLocalPos.y + 0.5) {
+                        camera.position.y = playerLocalPos.y + 0.5;
+                    }
                 }
 
-                // 地面にめり込まない簡易ガード
+                // 地面にめり込まないガード
                 if (camera.position.y < playerLocalPos.y + 0.2) {
                     camera.position.y = playerLocalPos.y + 0.2;
                 }
 
-                // カメラは常にオフセットされた注視点（肩越し）を向く
+                // カメラは常に顔の中心（headTarget）を確実に見つめる
                 camera.lookAt(headTarget);
             }
 
