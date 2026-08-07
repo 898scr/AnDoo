@@ -156,88 +156,100 @@
             scene.add(mapGroup);
 
             // ==========================================
-            // ★ アバターの大改修（曲線パーツ・多色化）
+            // ★ 次世代シンプル・スタイリッシュアバター
             // ==========================================
+            // 角丸ボックスを生成するヘルパー関数 (シンプルながらチープさをなくす)
+            function createRoundedBox(width, height, depth, radius0, smoothness) {
+                let shape = new THREE.Shape();
+                let eps = 0.00001;
+                let radius = radius0 - eps;
+                shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
+                shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
+                shape.absarc(width - radius * 2, height - radius * 2, eps, Math.PI / 2, 0, true);
+                shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
+                let geometry = new THREE.ExtrudeGeometry(shape, {
+                    depth: depth - radius0 * 2,
+                    bevelEnabled: true,
+                    bevelSegments: smoothness * 2,
+                    steps: 1,
+                    bevelSize: radius,
+                    bevelThickness: radius0,
+                    curveSegments: smoothness
+                });
+                geometry.center();
+                return geometry;
+            }
+
             window.createAvatarMesh = function(colorHex) {
                 const group = new THREE.Group();
                 
-                // パーツごとのマテリアル（質感・色）を定義
-                const matShirt = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.8 }); 
-                const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.5 }); 
-                const matPants = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }); 
-                const matShoes = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }); 
+                // サイバー・ホログラム風マテリアル
+                const matBody = new THREE.MeshStandardMaterial({ 
+                    color: colorHex, 
+                    roughness: 0.2, 
+                    metalness: 0.8,
+                    transparent: true,
+                    opacity: 0.9
+                }); 
+                const matDark = new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.9 }); 
                 
-                // 1. 胴体 (丸みのあるカプセル風)
-                const bodyGroup = new THREE.Group();
-                bodyGroup.position.y = 1.3;
-                
-                // 胸〜腹（シャツ） - 角を落とした円柱
-                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 1.1, 16), matShirt);
-                torso.position.y = 0.3;
-                
-                // 腰〜尻（ズボン）
-                const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16), matPants);
-                pelvis.scale.set(1, 0.7, 0.9); // 少し平べったく
-                pelvis.position.y = -0.3;
-                
-                bodyGroup.add(torso, pelvis);
-                group.add(bodyGroup);
+                // 1. 胴体
+                const torsoGeo = createRoundedBox(0.8, 1.2, 0.5, 0.1, 2);
+                const torso = new THREE.Mesh(torsoGeo, matBody);
+                torso.position.y = 1.3;
+                group.add(torso);
 
-                // 2. 頭部 (完全な球体ベースに変更)
+                // 2. 頭部
                 const headGroup = new THREE.Group();
-                headGroup.position.y = 2.15; 
+                headGroup.position.y = 2.0; // 首の付け根（ピボット）
                 
-                const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), matSkin);
-                head.position.y = 0.4;
+                const headGeo = createRoundedBox(0.6, 0.6, 0.6, 0.1, 2);
+                const head = new THREE.Mesh(headGeo, matBody);
+                head.position.y = 0.3; // ピボットからのオフセット
                 
-                // サイバーパンクな光るバイザー（目）
-                const matVisor = new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.8});
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.1), matVisor);
-                visor.position.set(0, 0.45, -0.42); // 顔の前面に配置
+                // 発光バイザー
+                const matVisor = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 1.0});
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.1), matVisor);
+                visor.position.set(0, 0.35, -0.32);
                 
                 headGroup.add(head, visor);
                 group.add(headGroup);
 
-                // 3. 腕 (肩を支点に。球と円柱の組み合わせ)
+                // 3. 腕 (肩を支点に)
+                const armGeo = createRoundedBox(0.25, 1.0, 0.25, 0.08, 2);
+                
                 const armLGroup = new THREE.Group();
-                armLGroup.position.set(-0.65, 1.9, 0); 
-                const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matShirt);
-                const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 12), matSkin);
+                armLGroup.position.set(-0.55, 1.8, 0); // 左肩
+                const armL = new THREE.Mesh(armGeo, matDark);
                 armL.position.y = -0.4; 
-                const handL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), matSkin);
-                handL.position.y = -0.8;
-                armLGroup.add(shoulderL, armL, handL);
+                armLGroup.add(armL);
                 group.add(armLGroup);
 
                 const armRGroup = new THREE.Group();
-                armRGroup.position.set(0.65, 1.9, 0); 
-                const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matShirt);
-                const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 12), matSkin);
+                armRGroup.position.set(0.55, 1.8, 0); // 右肩
+                const armR = new THREE.Mesh(armGeo, matDark);
                 armR.position.y = -0.4; 
-                const handR = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), matSkin);
-                handR.position.y = -0.8;
-                armRGroup.add(shoulderR, armR, handR);
+                armRGroup.add(armR);
                 group.add(armRGroup);
 
                 // 4. 足 (股関節を支点に)
+                const legGeo = createRoundedBox(0.3, 1.1, 0.3, 0.08, 2);
+
                 const legLGroup = new THREE.Group();
-                legLGroup.position.set(-0.25, 0.9, 0); 
-                const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.8, 12), matPants);
-                legL.position.y = -0.4; 
-                const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.35), matShoes); 
-                shoeL.position.set(0, -0.85, -0.1);
-                legLGroup.add(legL, shoeL);
+                legLGroup.position.set(-0.2, 0.9, 0); // 左股関節
+                const legL = new THREE.Mesh(legGeo, matDark);
+                legL.position.y = -0.45; 
+                legLGroup.add(legL);
                 group.add(legLGroup);
 
                 const legRGroup = new THREE.Group();
-                legRGroup.position.set(0.25, 0.9, 0);
-                const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.8, 12), matPants);
-                legR.position.y = -0.4;
-                const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.35), matShoes);
-                shoeR.position.set(0, -0.85, -0.1);
-                legRGroup.add(legR, shoeR);
+                legRGroup.position.set(0.2, 0.9, 0); // 右股関節
+                const legR = new THREE.Mesh(legGeo, matDark);
+                legR.position.y = -0.45;
+                legRGroup.add(legR);
                 group.add(legRGroup);
 
+                // 将来の体形カスタマイズやアニメーション用に参照を保持
                 group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
                 return group;
             };
@@ -400,7 +412,10 @@
                 ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.1);
                 ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.1);
             }
-            ud.head.rotation.x = camPitch;
+            
+            // 首の可動範囲を制限（不自然に曲がりすぎないように）
+            const clampedPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, camPitch));
+            ud.head.rotation.x = clampedPitch;
         }
 
         let vKeyWasPressed = false, zKeyWasPressed = false;
@@ -446,8 +461,8 @@
                 if (playerLocalPos.y >= w.minY && playerLocalPos.y <= w.maxY) {
                     if (w.type === 'rect') {
                         const hw = w.width / 2, hd = w.depth / 2;
-                        if (Math.abs(nextX - w.x) < hw + 1.0 && Math.abs(playerLocalPos.z - w.z) < hd + 1.0) collidedX = true;
-                        if (Math.abs(playerLocalPos.x - w.x) < hw + 1.0 && Math.abs(nextZ - w.z) < hd + 1.0) collidedZ = true;
+                        if (Math.abs(nextX - w.x) < hw + 0.5 && Math.abs(playerLocalPos.z - w.z) < hd + 0.5) collidedX = true;
+                        if (Math.abs(playerLocalPos.x - w.x) < hw + 0.5 && Math.abs(nextZ - w.z) < hd + 0.5) collidedZ = true;
                     }
                 }
             }
@@ -512,12 +527,12 @@
             }
 
             // ==========================================
-            // ★ TPSカメラの大改修（完璧な中心フォーカス）
+            // ★ TPSカメラ (ゼルダ・フォートナイト仕様 調整版)
             // ==========================================
             
-            // 注視点 (Target) をキャラクターの顔の「少し上」に設定
+            // 注視点を頭の中心より少し上に
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 2.0; 
+            headTarget.y += 2.2; 
 
             if (isFPS) {
                 camera.position.copy(playerLocalPos);
@@ -529,43 +544,38 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                // TPS時のカメラ距離を微調整
-                const distance = 4.5; 
+                // カメラの基本距離
+                const distance = 5.0; 
                 
-                // 【重要】右寄りのズレを解消。常に背面の真後ろ（Yaw角）を基準に球面上を移動する
-                // 球面座標系でのオフセット計算 (pitch角を考慮してY軸とXZ平面の距離を配分)
                 const horizontalDist = Math.cos(cameraPitch) * distance;
                 const verticalDist = Math.sin(cameraPitch) * distance;
 
                 const offset = new THREE.Vector3(
                     Math.sin(cameraYaw) * horizontalDist,
-                    -verticalDist, // ピッチが上の時(見上げる時)、カメラは下に潜り込む
+                    -verticalDist, 
                     Math.cos(cameraYaw) * horizontalDist
                 );
                 
-                // カメラ位置を決定
                 camera.position.copy(headTarget).add(offset);
                 
-                // 【重要】見上げた際（pitch > 0）のカメラめり込み防止処理を強化
-                // カメラが頭にめり込まないよう、pitchの角度に比例してY軸（高さ）の下限を上げる
+                // 【修正】見上げた時の頭頂部めり込み防止を強化
                 if (cameraPitch > 0) {
-                    // 見上げるほど、カメラを背中側に引きつつ、わずかに上に持ち上げる
-                    const pushBack = cameraPitch * 2.0; 
+                    // 見上げるほどカメラを後ろに引く
+                    const pushBack = cameraPitch * 3.0; 
                     const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     camera.position.addScaledVector(fwdVec, -pushBack);
                     
-                    // キャラクターの頭（Y=2.4付近）に食い込まないよう最低高度を保証
-                    if (camera.position.y < playerLocalPos.y + 0.5) {
-                        camera.position.y = playerLocalPos.y + 0.5;
+                    // 高度の最低保証を少し高めに設定（頭がカメラを突き抜けないように）
+                    const minHeight = playerLocalPos.y + 1.0 + (cameraPitch * 1.5);
+                    if (camera.position.y < minHeight) {
+                        camera.position.y = minHeight;
                     }
                 }
 
-                // 地面にめり込まないガード
                 if (camera.position.y < playerLocalPos.y + 0.2) {
                     camera.position.y = playerLocalPos.y + 0.2;
                 }
 
-                // カメラは常に顔の中心（headTarget）を確実に見つめる
                 camera.lookAt(headTarget);
             }
 
