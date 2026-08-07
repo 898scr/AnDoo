@@ -69,6 +69,7 @@
         </div>
     </div>
 
+    <!-- 略: UI部分は変更なし -->
     <div id="ui-layer">
         <div id="crosshair"></div>
         <div id="sidebar">
@@ -140,8 +141,8 @@
         let cameraYaw = 0, cameraPitch = 0, isLocked = false, isFPS = false;
         let isGameFocus = false, gameCameraTarget = null, gameLookAt = null;
         
-        // ★初期スポーン位置（タワー南側の大通り上）
-        let playerLocalPos = new THREE.Vector3(0, BASE_Y, 500); 
+        // ★初期スポーン位置（タワー付近の大通り上、床抜け防止のため確実な高さを指定）
+        let playerLocalPos = new THREE.Vector3(0, BASE_Y + 1.5, 300); 
         let playerVelocityY = 0;
         
         const trains = [], personalDrones = [], warpPads = [];
@@ -152,6 +153,7 @@
         let minimapCtx;
         let frameCount = 0, lastFpsTime = 0, pingStart = 0;
 
+        // ログインUI処理
         document.getElementById('username').addEventListener('input', (e) => {
             const val = e.target.value.trim();
             const chkBox = document.getElementById('admin-check-container');
@@ -216,6 +218,7 @@
             document.getElementById('chat-messages').scrollTop = 9999;
         }
 
+        // Three.js 初期化
         function initThreeJS() {
             scene = new THREE.Scene(); 
             scene.background = new THREE.Color(0x020813); 
@@ -298,13 +301,11 @@
         }
 
         function createEnvironment() {
-            // スラム・奈落の床 (GROUND_Y = 0)
+            // アンダーシティの床 (奈落防止)
             const groundMat = new THREE.MeshStandardMaterial({color: 0x050a10, roughness: 0.9});
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(MAP_RADIUS * 2, MAP_RADIUS * 2), groundMat);
             ground.rotation.x = -Math.PI/2; ground.position.y = GROUND_Y;
             scene.add(ground);
-            
-            // ★奈落の床判定を正確に登録 (落ちてもここで止まる)
             stationAreas.push({ type: 'floor_circle', x: 0, z: 0, radius: MAP_RADIUS, y: GROUND_Y });
 
             // 放射状の高架道路 (BASE_Y = 100)
@@ -328,7 +329,6 @@
                 roadGrp.rotation.y = -angle; 
                 scene.add(roadGrp);
 
-                // ★道路の床判定
                 stationAreas.push({ type: 'floor_rect', x: Math.sin(angle)*MAP_RADIUS/2, z: Math.cos(angle)*MAP_RADIUS/2, angle: -angle, width: roadWidth, depth: MAP_RADIUS, y: BASE_Y });
             }
             
@@ -344,17 +344,15 @@
                 
                 ringGrp.position.y = BASE_Y; scene.add(ringGrp);
                 
-                // ★リング道路の床判定
                 stationAreas.push({ type: 'floor_ring', x: 0, z: 0, innerRadius: r - 60, outerRadius: r + 60, y: BASE_Y });
             });
 
-            // 中央広場 (タワー直下)
+            // 中央広場
             const plazaGeo = new THREE.CylinderGeometry(450, 450, 10, 8);
             plazaGeo.rotateY(Math.PI/8);
             const plaza = new THREE.Mesh(plazaGeo, new THREE.MeshStandardMaterial({color: 0x0f172a}));
             plaza.position.y = BASE_Y - 5; 
             scene.add(plaza);
-            // ★中央広場の床判定
             stationAreas.push({ type: 'floor_circle', x: 0, z: 0, radius: 450, y: BASE_Y });
         }
 
@@ -368,7 +366,7 @@
         }
 
         function createMegaFacilities() {
-            // 1. ランドマークタワー (八角形・巨大化)
+            // ★ ランドマークタワー (八角形・巨大化)
             const towerGroup = new THREE.Group();
             const TOWER_Y = BASE_Y + 1400; 
             const octMat = new THREE.MeshStandardMaterial({color: 0x0f172a, roughness: 0.3, metalness: 0.8});
@@ -380,44 +378,44 @@
                 mesh.position.y = y; towerGroup.add(mesh);
             };
 
-            // 胴体
+            // 胴体 (下太・腹細・上中太)
             createOct(250, 400, 400, BASE_Y + 200); // Base 
             createOct(150, 250, 600, BASE_Y + 700); // Middle 
             createOct(350, 150, 400, BASE_Y + 1200); // Top
 
-            // 垂直ピラー
+            // 外骨格ピラー (道路に被らないように配置角度を 22.5度 ずらす)
             for(let i=0; i<8; i++) {
-                const angle = i * Math.PI/4 + Math.PI/8; 
+                const angle = i * Math.PI/4 + Math.PI/8; // 22.5度(PI/8)ずらす
                 const pillarGeo = new THREE.BoxGeometry(80, 1400, 150);
                 const pillar = new THREE.Mesh(pillarGeo, octMat);
                 pillar.position.set(Math.cos(angle)*300, BASE_Y + 700, Math.sin(angle)*300);
                 pillar.rotation.y = -angle; 
                 towerGroup.add(pillar);
                 
-                // ★ピラーの壁判定 (外壁のみ)
                 stationAreas.push({ type: 'solid_rect', x: pillar.position.x, z: pillar.position.z, angle: angle, width: 80, depth: 150, minY: BASE_Y, maxY: TOWER_Y });
             }
 
-            // 展望台 (巨大化)
+            // 展望台 (四角形化のリクエスト対応: CylinderGeometry(segments: 4))
             const obsRadius = 700;
-            const diskGeo = new THREE.CylinderGeometry(obsRadius, obsRadius - 150, 100, 8);
-            diskGeo.rotateY(Math.PI/8);
+            const diskGeo = new THREE.CylinderGeometry(obsRadius, obsRadius - 150, 100, 4);
+            diskGeo.rotateY(Math.PI/4); // 角が十字方向を向くように調整
             const disk = new THREE.Mesh(diskGeo, new THREE.MeshStandardMaterial({color: 0x1e293b, metalness: 0.8}));
             disk.position.y = TOWER_Y - 50; towerGroup.add(disk);
 
-            const floorTop = new THREE.Mesh(new THREE.CylinderGeometry(obsRadius, obsRadius, 2, 8), new THREE.MeshStandardMaterial({color: 0x050a15}));
-            floorTop.rotateY(Math.PI/8); floorTop.position.y = TOWER_Y; towerGroup.add(floorTop);
+            const floorTop = new THREE.Mesh(new THREE.CylinderGeometry(obsRadius, obsRadius, 2, 4), new THREE.MeshStandardMaterial({color: 0x050a15}));
+            floorTop.rotateY(Math.PI/4); floorTop.position.y = TOWER_Y; towerGroup.add(floorTop);
             
-            // ★展望台の床判定
-            stationAreas.push({ type: 'floor_circle', x: 0, z: 0, radius: obsRadius - 5, y: TOWER_Y });
+            // 四角形展望台の床判定
+            stationAreas.push({ type: 'floor_rect', x: 0, z: 0, angle: 0, width: obsRadius*1.414, depth: obsRadius*1.414, y: TOWER_Y }); // 半径から幅を計算
 
+            // ワープパッド
             createTeleporter(0, BASE_Y, 200, 0x00ffff, 0, TOWER_Y + 2, 350, "展望台へ昇る");
             createTeleporter(0, TOWER_Y, 350, 0xff00ff, 0, BASE_Y + 1.5, 200, "地上へ戻る");
             
             scene.add(towerGroup);
 
-            // 4大施設 (巨大化)
-            const distMajor = 1100;
+            // ★ 4大施設 (巨大化 & 外側へ配置移動)
+            const distMajor = 1500; // 外縁に大きく移動
             createMallComplex(Math.cos(Math.PI/4)*distMajor, Math.sin(Math.PI/4)*distMajor, 5*Math.PI/4, BASE_Y);
             createCasinoDome(Math.cos(7*Math.PI/4)*distMajor, Math.sin(7*Math.PI/4)*distMajor, 3*Math.PI/4, BASE_Y);
             createStockExchange(Math.cos(5*Math.PI/4)*distMajor, Math.sin(5*Math.PI/4)*distMajor, Math.PI/4, BASE_Y);
@@ -436,7 +434,6 @@
             const fMat = new THREE.MeshStandardMaterial({color: 0x051a24});
             const f1 = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), fMat); f1.rotation.x = -Math.PI/2; f1.position.y = 10.5; grp.add(f1);
             
-            // ★モールのコリジョン（外壁、内壁、床）
             stationAreas.push({ type: 'solid_rect', x: x, z: z, angle: rot, width: width+40, depth: depth+40, minY: baseY, maxY: baseY + 500 });
             stationAreas.push({ type: 'room_rect', x: x, z: z, angle: rot, width: width-20, depth: depth-20, minY: baseY, maxY: baseY + 500 });
             stationAreas.push({ type: 'floor_rect', x: x, z: z, angle: rot, width: width, depth: depth, y: baseY + 10.5 }); 
@@ -449,7 +446,6 @@
             grp.add(slopeMesh);
 
             const slopeWorldPt = new THREE.Vector3(400, 0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), rot).add(new THREE.Vector3(x, 0, z));
-            // ★スロープの床判定
             stationAreas.push({ type: 'slope_rect', x: slopeWorldPt.x, z: slopeWorldPt.z, angle: rot, width: slopeWid, depth: slopeLen, bottomY: baseY + 10.5, topY: baseY + 100 });
 
             // ゲート
@@ -459,12 +455,10 @@
             scene.add(grp);
 
             const ptOut = new THREE.Vector3(0, 0, depth/2 + 100).applyAxisAngle(new THREE.Vector3(0,1,0), rot).add(new THREE.Vector3(x, 0, z));
-            const ptIn = new THREE.Vector3(0, 10.5, depth/2 - 50).applyAxisAngle(new THREE.Vector3(0,1,0), rot).add(newVector3(x, 0, z));
+            const ptIn = new THREE.Vector3(0, 10.5, depth/2 - 50).applyAxisAngle(new THREE.Vector3(0,1,0), rot).add(new THREE.Vector3(x, 0, z));
             createTeleporter(ptOut.x, baseY, ptOut.z, 0x00ffff, ptIn.x, baseY + 12, ptIn.z, "モール内部へ");
             createTeleporter(ptIn.x, baseY + 11, ptIn.z, 0xff00ff, ptOut.x, baseY + 1.5, ptOut.z, "外へ出る");
         }
-        
-        function newVector3(x, y, z) { return new THREE.Vector3(x,y,z); }
 
         function createCasinoDome(x, z, rot, baseY) {
             const grp = new THREE.Group(); grp.position.set(x, baseY, z); grp.rotation.y = rot;
@@ -477,7 +471,6 @@
             const floor = new THREE.Mesh(new THREE.CircleGeometry(radius-10, 64), new THREE.MeshStandardMaterial({color: 0x050103}));
             floor.rotation.x = -Math.PI/2; floor.position.y = 5; grp.add(floor);
             
-            // ★カジノのコリジョン（外壁、内壁、床）
             stationAreas.push({ type: 'solid_circle', x: x, z: z, radius: radius, minY: baseY, maxY: baseY + 800 });
             stationAreas.push({ type: 'room_circle', x: x, z: z, radius: radius-20, minY: baseY, maxY: baseY + 800 });
             stationAreas.push({ type: 'floor_circle', x: x, z: z, radius: radius-10, y: baseY + 5 });
@@ -500,7 +493,6 @@
             const floor = new THREE.Mesh(new THREE.PlaneGeometry(width-20, depth-20), new THREE.MeshStandardMaterial({color: 0x010501}));
             floor.rotation.x = -Math.PI/2; floor.position.y = 11; grp.add(floor);
             
-            // ★証券のコリジョン（外壁、内壁、床）
             stationAreas.push({ type: 'solid_rect', x: x, z: z, angle: rot, width: width, depth: depth, minY: baseY, maxY: baseY + 500 });
             stationAreas.push({ type: 'room_rect', x: x, z: z, angle: rot, width: width-20, depth: depth-20, minY: baseY, maxY: baseY + 500 });
             stationAreas.push({ type: 'floor_rect', x: x, z: z, angle: rot, width: width-20, depth: depth-20, y: baseY + 11 });
@@ -519,7 +511,6 @@
             const deck = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius-80, 50, 64), new THREE.MeshStandardMaterial({color: 0x221111}));
             deck.position.y = 150; grp.add(deck);
             
-            // ★ハブのコリジョン
             stationAreas.push({ type: 'solid_circle', x: x, z: z, radius: radius, minY: baseY, maxY: baseY + 200 });
             stationAreas.push({ type: 'room_circle', x: x, z: z, radius: radius-20, minY: baseY, maxY: baseY + 200 });
             stationAreas.push({ type: 'floor_circle', x: x, z: z, radius: radius, y: baseY + 175 });
@@ -533,7 +524,8 @@
         }
 
         function createMonorails() {
-            const trackY = BASE_Y + 150; 
+            // モノレールの高度をさらに上空へ (+150 -> +200)
+            const trackY = BASE_Y + 200; 
             const railMat = new THREE.MeshBasicMaterial({color: 0xcccccc});
             
             const createCrossTrack = (axis) => {
@@ -543,6 +535,7 @@
                 const line = new THREE.Mesh(lineGeo, railMat);
                 line.position.y = trackY; scene.add(line);
             };
+            // タワーの腹を貫通するクロス路線
             createCrossTrack('x');
             createCrossTrack('z');
 
@@ -550,7 +543,7 @@
                 const car = new THREE.Group();
                 car.add(new THREE.Mesh(new THREE.BoxGeometry(32, 3, 90), new THREE.MeshStandardMaterial({color: 0x111122})));
                 scene.add(car);
-                trains.push({ mesh: car, type, axis, progress: initProgress, state: 'stopped', timer: 0 });
+                trains.push({ mesh: car, type, axis, progress: initProgress, state: 'moving', timer: 0, trackY: trackY });
             };
             
             spawnTrain('line', 'x', 0.1); spawnTrain('line', 'z', 0.3);
@@ -636,7 +629,7 @@
             const fPressed = keysPressed['f']; let tryInteract = fPressed && !fKeyWasPressed; fKeyWasPressed = fPressed;
             const isFlyMode = document.getElementById('admin-fly') && document.getElementById('admin-fly').checked;
 
-            // 1. 壁(X, Z)の厳格なコリジョン判定と滑り処理
+            // --- 壁コリジョンとスライド移動 ---
             if (!isWarping && !ridingTrain && !isGameFocus && document.activeElement !== document.getElementById('chat-input')) {
                 const speed = (keysPressed['shift'] ? 250 : 100) * myData.speedMult * delta; 
                 const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
@@ -656,19 +649,19 @@
                     playerLocalPos.set(nextX, nextY, nextZ);
                 } else {
                     for (let st of stationAreas) {
-                        // 壁判定 (外壁 solid / 内壁 room)
                         if (st.minY !== undefined && st.maxY !== undefined) {
+                            // 壁の高さ範囲にいる場合のみ判定
                             if (playerLocalPos.y >= st.minY && playerLocalPos.y < st.maxY) {
                                 if (st.type === 'solid_circle') {
                                     const dist = Math.hypot(nextX - st.x, nextZ - st.z);
-                                    if (dist < st.radius) { // 中に入れない
+                                    if (dist < st.radius) {
                                         const angle = Math.atan2(nextZ - st.z, nextX - st.x);
                                         nextX = st.x + Math.cos(angle) * st.radius; 
                                         nextZ = st.z + Math.sin(angle) * st.radius;
                                     }
                                 } else if (st.type === 'room_circle') {
                                     const dist = Math.hypot(nextX - st.x, nextZ - st.z);
-                                    if (dist > st.radius) { // 外に出られない
+                                    if (dist > st.radius) {
                                         const angle = Math.atan2(nextZ - st.z, nextX - st.x);
                                         nextX = st.x + Math.cos(angle) * st.radius; 
                                         nextZ = st.z + Math.sin(angle) * st.radius;
@@ -704,42 +697,46 @@
                 }
             }
 
-            // 2. 厳格な重力・落下・床判定 (X, Z 確定後)
+            // --- 堅牢な床（落下）判定ロジック ---
             if (!ridingDrone && !ridingTrain && !isWarping && !isFlyMode && !isGameFocus) {
                 let groundY = -5000; 
+                const yMargin = 150; // ジャンプ中や落下中でも、真下150m以内にある床を感知する
                 
-                // 真下に何の床（floor）があるか探す
                 for (let st of stationAreas) {
-                    if (st.type === 'floor_circle' && Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z) < st.radius && Math.abs(playerLocalPos.y - st.y) < 40) {
-                        if (st.y > groundY) groundY = st.y; 
-                    }
-                    if (st.type === 'floor_rect' && Math.abs(playerLocalPos.y - st.y) < 40) {
-                        const dx = playerLocalPos.x - st.x, dz = playerLocalPos.z - st.z;
-                        const cos = Math.cos(-st.angle || 0), sin = Math.sin(-st.angle || 0);
-                        const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
-                        if (Math.abs(lx) < (st.width/2) && Math.abs(lz) < (st.depth/2)) { 
-                            if (st.y > groundY) groundY = st.y; 
-                        }
-                    }
-                    if (st.type === 'floor_ring') {
-                        const dist = Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z);
-                        if (dist >= st.innerRadius && dist <= st.outerRadius && Math.abs(playerLocalPos.y - st.y) < 40) {
-                            if (st.y > groundY) groundY = st.y;
+                    if (st.type.startsWith('floor')) {
+                        // プレイヤーのY座標が、床の高さから -10m (めり込み許容) 〜 +150m (ジャンプ・落下中) の範囲にあるか
+                        if (playerLocalPos.y >= st.y - 10 && playerLocalPos.y <= st.y + yMargin) {
+                            let onFloor = false;
+                            if (st.type === 'floor_circle') {
+                                if (Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z) <= st.radius) onFloor = true;
+                            } else if (st.type === 'floor_rect') {
+                                const dx = playerLocalPos.x - st.x, dz = playerLocalPos.z - st.z;
+                                const cos = Math.cos(-st.angle || 0), sin = Math.sin(-st.angle || 0);
+                                const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
+                                if (Math.abs(lx) <= st.width/2 && Math.abs(lz) <= st.depth/2) onFloor = true;
+                            } else if (st.type === 'floor_ring') {
+                                const dist = Math.hypot(playerLocalPos.x - st.x, playerLocalPos.z - st.z);
+                                if (dist >= st.innerRadius && dist <= st.outerRadius) onFloor = true;
+                            }
+                            
+                            if (onFloor && st.y > groundY) groundY = st.y;
                         }
                     }
                     if (st.type === 'slope_rect') {
                         const dx = playerLocalPos.x - st.x, dz = playerLocalPos.z - st.z;
                         const cos = Math.cos(-st.angle || 0), sin = Math.sin(-st.angle || 0);
                         const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
-                        if (Math.abs(lx) < st.width/2 && Math.abs(lz) < st.depth/2) {
+                        if (Math.abs(lx) <= st.width/2 && Math.abs(lz) <= st.depth/2) {
                             const progress = (lz + st.depth/2) / st.depth; 
                             const sy = st.bottomY + progress * (st.topY - st.bottomY);
-                            if (Math.abs(playerLocalPos.y - sy) < 50 && sy > groundY) groundY = sy;
+                            if (playerLocalPos.y >= sy - 10 && playerLocalPos.y <= sy + yMargin) {
+                                if (sy > groundY) groundY = sy;
+                            }
                         }
                     }
                 }
 
-                // 地面への着地判定 (身長の半分の1.5を足した位置が足元)
+                // 地面への着地判定
                 const footY = groundY + 1.5 * (myData.bodyScale ? myData.bodyScale.y : 1);
 
                 if (playerLocalPos.y > footY + 0.1) {
@@ -750,11 +747,11 @@
                     playerLocalPos.y = footY; playerVelocityY = 0; 
                 }
 
-                // 奈落の底（-200m）へ落ちたら高架へ戻す
+                // 奈落の底（-200m）へ落ちたら高架道路（安全地帯）へ強制リスポーン
                 if (playerLocalPos.y < GROUND_Y - 200) { 
-                    playerLocalPos.set(0, BASE_Y + 1.5, 500); 
+                    playerLocalPos.set(0, BASE_Y + 1.5, 300); 
                     playerVelocityY = 0; 
-                    addChatMessage("SYSTEM", "奈落から転送されました。"); 
+                    addChatMessage("SYSTEM", "奈落から救出されました。"); 
                 }
             }
 
@@ -769,6 +766,16 @@
                     }
                 }
             }
+
+            // モノレールのアニメーション
+            trains.forEach(t => {
+                t.progress += 0.05 * delta; // speed
+                if(t.progress > 1) t.progress -= 1;
+                
+                const pt = (t.progress - 0.5) * MAP_RADIUS * 2;
+                if(t.axis === 'x') { t.mesh.position.set(pt, t.trackY, 0); }
+                else { t.mesh.position.set(0, t.trackY, pt); t.mesh.rotation.y = Math.PI/2; }
+            });
 
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos); localAvatar.visible = !isFPS;
