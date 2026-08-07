@@ -160,59 +160,92 @@
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
 
-            // ★ 関節・アニメーション対応のアバター生成関数
+            // ★ 関節・アニメーション対応、より滑らかでディテールのあるアバター生成
             window.createAvatarMesh = function(colorHex) {
                 const group = new THREE.Group();
-                const matBody = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.7 });
-                const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.6 });
                 
-                // 胴体
-                const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 0.7), matBody);
-                body.position.y = 1.4; 
-                group.add(body);
+                // マテリアルの定義（質感や色を分けてのっぺり感を無くす）
+                const matShirt = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.8 }); // プレイヤーカラーのシャツ
+                const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.5 }); // 肌
+                const matPants = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }); // ズボン（ダークグレー）
+                const matShoes = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }); // 靴
+                
+                // 胴体 (少し丸みを持たせるためにCapsuleや複数のパーツを組み合わせる)
+                const bodyGroup = new THREE.Group();
+                bodyGroup.position.y = 1.3;
+                
+                // 胸〜腹（シャツ）
+                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.45, 1.0, 16), matShirt);
+                torso.position.y = 0.3;
+                // 腰（ズボン）
+                const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16), matPants);
+                pelvis.position.y = -0.4;
+                
+                bodyGroup.add(torso, pelvis);
+                group.add(bodyGroup);
 
                 // 頭部 (首の付け根を支点にする)
                 const headGroup = new THREE.Group();
-                headGroup.position.y = 2.1; 
-                const head = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), matSkin);
-                head.position.y = 0.5;
+                headGroup.position.y = 2.15; 
                 
-                const matEye = new THREE.MeshBasicMaterial({color: 0x111111});
-                const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), matEye);
-                eyeL.position.set(-0.25, 0.6, -0.51);
-                const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), matEye);
-                eyeR.position.set(0.25, 0.6, -0.51);
-                headGroup.add(head, eyeL, eyeR);
+                // 顔の丸み（BoxではなくSphereに近い形状で角を丸める）
+                const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8, 4, 4, 4);
+                // 角を丸める簡易的な手法として、頂点を少し球に近づける
+                const pos = headGeo.attributes.position;
+                for(let i=0; i<pos.count; i++) {
+                    const v = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i));
+                    v.normalize().multiplyScalar(0.4).lerp(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)), 0.5); // 球と箱のハイブリッド
+                    pos.setXYZ(i, v.x, v.y, v.z);
+                }
+                headGeo.computeVertexNormals();
+                const head = new THREE.Mesh(headGeo, matSkin);
+                head.position.y = 0.4;
+                
+                // 目 (少しサイバーなバイザー風に変更して個性を出す)
+                const matVisor = new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5});
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.1), matVisor);
+                visor.position.set(0, 0.5, -0.41);
+                
+                headGroup.add(head, visor);
                 group.add(headGroup);
 
-                // 腕 (肩を支点にする)
+                // 腕 (肩を支点にする。角を丸めたCylinderやCapsuleを使用)
+                // ※ r128ではCapsuleGeometryが標準ではないため、Cylinderで代用
                 const armLGroup = new THREE.Group();
-                armLGroup.position.set(-0.8, 1.9, 0); 
-                const armL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.4), matBody);
-                armL.position.y = -0.55; 
-                armLGroup.add(armL);
+                armLGroup.position.set(-0.65, 1.9, 0); 
+                const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 1.0, 12), matShirt); // 袖
+                armL.position.y = -0.4; 
+                const handL = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), matSkin); // 手
+                handL.position.y = -0.9;
+                armLGroup.add(armL, handL);
                 group.add(armLGroup);
 
                 const armRGroup = new THREE.Group();
-                armRGroup.position.set(0.8, 1.9, 0); 
-                const armR = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.4), matBody);
-                armR.position.y = -0.55; 
-                armRGroup.add(armR);
+                armRGroup.position.set(0.65, 1.9, 0); 
+                const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 1.0, 12), matShirt);
+                armR.position.y = -0.4; 
+                const handR = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), matSkin);
+                handR.position.y = -0.9;
+                armRGroup.add(armR, handR);
                 group.add(armRGroup);
 
                 // 足 (股関節を支点にする)
                 const legLGroup = new THREE.Group();
-                legLGroup.position.set(-0.35, 0.7, 0); 
-                const legL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.45), matBody);
-                legL.position.y = -0.55; 
-                legLGroup.add(legL);
+                legLGroup.position.set(-0.25, 0.9, 0); 
+                const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.8, 12), matPants);
+                legL.position.y = -0.4; 
+                const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.4), matShoes); // 靴
+                shoeL.position.set(0, -0.9, -0.1);
+                legLGroup.add(legL, shoeL);
                 group.add(legLGroup);
 
                 const legRGroup = new THREE.Group();
-                legRGroup.position.set(0.35, 0.7, 0);
-                const legR = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.45), matBody);
-                legR.position.y = -0.55;
-                legRGroup.add(legR);
+                legRGroup.position.set(0.25, 0.9, 0);
+                const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.8, 12), matPants);
+                legR.position.y = -0.4;
+                const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.4), matShoes);
+                shoeR.position.set(0, -0.9, -0.1);
+                legRGroup.add(legR, shoeR);
                 group.add(legRGroup);
 
                 group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
@@ -506,13 +539,24 @@
                 });
             }
 
-            // ゼルダ/フォートナイト風 TPSカメラ (顔を中心に公転)
+            // --- ゼルダ/フォートナイト風 TPSカメラ (見上げ時のめり込み防止＆オフセット調整) ---
+            
+            // 注視点 (Target) をキャラクターの顔の「少し上、少し右」に設定 (オーバーショルダー視点)
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 2.4; 
+            headTarget.y += 2.0; // 肩から顔の高さ
+            
+            // クロスヘア（照準）の計算用ベクトル
+            const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+            const rightVec = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+
+            // 注視点を少し右（肩越し）にずらす
+            headTarget.addScaledVector(rightVec, 0.8);
 
             if (isFPS) {
-                camera.position.copy(headTarget);
-                camera.position.y += 0.2; 
+                // FPS時は顔の真正面
+                camera.position.copy(playerLocalPos);
+                camera.position.y += 2.2; // 目の高さ
+                
                 const lookDir = new THREE.Vector3(
                     -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                     Math.sin(cameraPitch),
@@ -520,20 +564,37 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                const distance = 8; // カメラ距離の調整
-                // ピッチが上下しても距離を一定に保つ球面軌道
+                // TPS時のカメラ距離
+                const distance = 6.0; 
+                
+                // ピッチが上（見上げる）にいくほど、カメラを少し後ろ・下に下げて頭頂部のめり込みを防ぐ
+                // pitch は -Math.PI/2 (見下ろし) 〜 Math.PI/2 (見上げ) の範囲
+                
+                // 球面座標系でのオフセット計算
                 const offset = new THREE.Vector3(
                     Math.sin(cameraYaw) * Math.cos(cameraPitch) * distance,
                     -Math.sin(cameraPitch) * distance, 
                     Math.cos(cameraYaw) * Math.cos(cameraPitch) * distance
                 );
                 
+                // カメラの基本位置を適用
                 camera.position.copy(headTarget).add(offset);
                 
-                // 地面にめり込まない簡易ガード
-                if (camera.position.y < playerLocalPos.y + 0.5) camera.position.y = playerLocalPos.y + 0.5;
+                // 【重要】見上げた際（pitch > 0）のカメラめり込み防止処理
+                // キャラクターの頭頂部（headTargetよりさらに上）にカメラが食い込まないよう、
+                // Y座標（高さ）の下限を設けるか、カメラをさらに後ろに引く
+                if (cameraPitch > 0) {
+                    // 見上げるほど、カメラを背中側に少し離す
+                    const pushBack = cameraPitch * 2.0; 
+                    camera.position.addScaledVector(fwdVec, -pushBack);
+                }
 
-                // 常に顔の周辺を注視
+                // 地面にめり込まない簡易ガード
+                if (camera.position.y < playerLocalPos.y + 0.2) {
+                    camera.position.y = playerLocalPos.y + 0.2;
+                }
+
+                // カメラは常にオフセットされた注視点（肩越し）を向く
                 camera.lookAt(headTarget);
             }
 
