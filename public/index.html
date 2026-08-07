@@ -36,6 +36,7 @@
         /* インタラクション & 操作ヘルプ */
         #interaction-prompt { position: absolute; bottom: 20vh; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 20px; border-radius: 20px; color: #00ffff; font-weight: bold; font-size: 1.2rem; display: none; }
         .key-btn { background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; }
+        
         #controls-help { position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.7); font-size: 0.8rem; line-height: 1.6; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;}
 
         /* パフォーマンス & Adminパネル */
@@ -84,7 +85,8 @@
             [W A S D] 移動<br>
             [Shift] ダッシュ<br>
             [V] FPS/TPS切替<br>
-            [F] インタラクト (ワープ等)
+            [F] インタラクト (ワープ等)<br>
+            <span style="color:#f472b6; font-size:0.75rem;">【Admin時】 Z: 飛行切替 | E: 上昇 / Q: 下降</span>
         </div>
         
         <div id="interaction-prompt"><span class="key-btn">F</span><span id="prompt-text">アクション</span></div>
@@ -131,7 +133,8 @@
         let playerLocalPos = new THREE.Vector3(0, 5, 50); // スポーン位置
         let playerVelocityY = 0;
         let isWarping = false;
-        let fKeyWasPressed = false, vKeyWasPressed = false;
+        let fKeyWasPressed = false, vKeyWasPressed = false, zKeyWasPressed = false;
+        let isFlying = false;
         let frames = 0, lastTime = 0;
 
         // --- 1. 認証・ログイン処理 ---
@@ -373,6 +376,13 @@
             });
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
             
+            // 修正箇所1: フォーカス解除後、画面クリックで再ロック可能にする
+            document.addEventListener('click', () => {
+                if (!isLocked && document.getElementById('login-screen').style.display === 'none') {
+                    document.body.requestPointerLock();
+                }
+            });
+
             document.addEventListener('pointerlockchange', () => {
                 isLocked = document.pointerLockElement === document.body;
                 document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
@@ -462,6 +472,13 @@
             let tryInteract = fPressed && !fKeyWasPressed;
             fKeyWasPressed = fPressed;
 
+            // Admin専用: 飛行モード切替 (Zキー)
+            if (isAdmin) {
+                const zPressed = keysPressed['z'];
+                if (zPressed && !zKeyWasPressed) { isFlying = !isFlying; playerVelocityY = 0; }
+                zKeyWasPressed = zPressed;
+            }
+
             // 移動 (Adminスピード対応)
             let adminSpeed = 1.0;
             if(isAdmin) {
@@ -492,32 +509,39 @@
                 playerLocalPos.x = colRes.adjustedX;
                 playerLocalPos.z = colRes.adjustedZ;
 
-                // 落下 (床サーチ)
-                let groundY = -5000;
-                for (let f of mapData.floors) {
-                    if (playerLocalPos.y >= f.y - 5 && playerLocalPos.y <= f.y + 10) {
-                        let onFloor = false;
-                        if (f.type === 'circle') {
-                            if (Math.hypot(playerLocalPos.x - f.x, playerLocalPos.z - f.z) <= f.radius) onFloor = true;
-                        } else if (f.type === 'rect') {
-                            const hw = f.width / 2, hd = f.depth / 2;
-                            if (Math.abs(playerLocalPos.x - f.x) <= hw && Math.abs(playerLocalPos.z - f.z) <= hd) onFloor = true;
-                        }
-                        if (onFloor && f.y > groundY) groundY = f.y;
-                    }
-                }
-
-                if (playerLocalPos.y > groundY + 0.1) {
-                    playerVelocityY -= 30 * delta; 
-                    playerLocalPos.y += playerVelocityY * delta;
-                    moved = true;
-                    if (playerLocalPos.y <= groundY) { playerLocalPos.y = groundY; playerVelocityY = 0; }
+                if (isFlying && isAdmin) {
+                    // 飛行中は重力と床を無視し、E/Qで上下移動
+                    if (keysPressed['e']) { playerLocalPos.y += moveSpeed; moved = true; }
+                    if (keysPressed['q']) { playerLocalPos.y -= moveSpeed; moved = true; }
                 } else {
-                    playerLocalPos.y = groundY; playerVelocityY = 0;
-                }
+                    // 通常時: 落下 (床サーチ)
+                    let groundY = -5000;
+                    for (let f of mapData.floors) {
+                        if (playerLocalPos.y >= f.y - 5 && playerLocalPos.y <= f.y + 10) {
+                            let onFloor = false;
+                            if (f.type === 'circle') {
+                                if (Math.hypot(playerLocalPos.x - f.x, playerLocalPos.z - f.z) <= f.radius) onFloor = true;
+                            } else if (f.type === 'rect') {
+                                const hw = f.width / 2, hd = f.depth / 2;
+                                if (Math.abs(playerLocalPos.x - f.x) <= hw && Math.abs(playerLocalPos.z - f.z) <= hd) onFloor = true;
+                            }
+                            if (onFloor && f.y > groundY) groundY = f.y;
+                        }
+                    }
 
-                if (playerLocalPos.y < -100) {
-                    playerLocalPos.set(0, 5, 50); playerVelocityY = 0; moved = true;
+                    if (playerLocalPos.y > groundY + 0.1) {
+                        playerVelocityY -= 30 * delta; 
+                        playerLocalPos.y += playerVelocityY * delta;
+                        moved = true;
+                        if (playerLocalPos.y <= groundY) { playerLocalPos.y = groundY; playerVelocityY = 0; }
+                    } else {
+                        playerLocalPos.y = groundY; playerVelocityY = 0;
+                    }
+
+                    // 奈落判定
+                    if (playerLocalPos.y < -100) {
+                        playerLocalPos.set(0, 5, 50); playerVelocityY = 0; moved = true;
+                    }
                 }
             }
 
@@ -558,10 +582,12 @@
                 camera.position.copy(camTarget);
                 camera.position.y += 2.5; 
             } else {
-                const offset = new THREE.Vector3(Math.sin(cameraYaw)*8, 3 + Math.sin(cameraPitch)*5, Math.cos(cameraYaw)*8);
+                // 修正箇所2: TPSカメラを大きく引き、キャラクターを邪魔にならない位置に調整
+                const offset = new THREE.Vector3(Math.sin(cameraYaw)*14, 4 + Math.sin(cameraPitch)*8, Math.cos(cameraYaw)*14);
                 camera.position.copy(camTarget).add(offset);
-                camTarget.y += 2;
+                camTarget.y += 2.5;
             }
+            
             const lookDir = new THREE.Vector3(
                 -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                 Math.sin(cameraPitch),
