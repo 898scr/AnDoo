@@ -3,77 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map Loading & Collision Test</title>
+    <title>Metaverse - Synchronized Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #020617; color: #fff; }
         
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; display: none;}
+        /* ログイン画面 */
+        #login-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .panel { background: rgba(15, 23, 42, 0.85); padding: 30px; border-radius: 12px; border: 1px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); width: 320px; backdrop-filter: blur(10px);}
+        .panel h2 { margin-top: 0; color: #00ffff; text-align: center; letter-spacing: 2px; }
+        .panel input { width: 100%; box-sizing: border-box; padding: 12px; margin: 10px 0; border: 1px solid #38bdf8; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; outline: none; }
+        .panel button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: linear-gradient(90deg, #00ffff, #0284c7); color: #000; }
+        .btn-success { background: transparent; border: 1px solid #f472b6; color: #f472b6; }
+        .btn-success:hover { background: rgba(244, 114, 182, 0.2); }
+        .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
+
+        /* UIレイヤー (ポインターロック時に表示) */
+        #ui-layer { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; border: 2px solid rgba(0, 255, 255, 0.8); border-radius: 50%; }
         
-        #controls-help { position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.7); font-size: 0.8rem; line-height: 1.6; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;}
+        /* サイドバー (ステータス) */
+        #sidebar { position: absolute; top: 20px; left: 20px; width: 250px; background: rgba(15,23,42,0.8); border-left: 3px solid #00ffff; padding: 15px; border-radius: 0 8px 8px 0; pointer-events: auto; backdrop-filter: blur(5px);}
+        .money { font-size: 1.5rem; color: #00ffff; font-weight: bold; margin-top: 5px;}
         
+        /* チャット */
+        #chat-container { position: absolute; bottom: 120px; left: 20px; width: 300px; background: rgba(15,23,42,0.8); border-radius: 8px; pointer-events: auto; display: flex; flex-direction: column; }
+        #chat-messages { height: 120px; overflow-y: auto; padding: 10px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
+        #chat-input { padding: 8px; border: none; border-top: 1px solid #334155; background: transparent; color: white; outline: none; }
+        .chat-admin { color: #f43f5e; font-weight: bold; }
+        .chat-sys { color: #facc15; font-style: italic; }
+
+        /* インタラクション & 操作ヘルプ */
         #interaction-prompt { position: absolute; bottom: 20vh; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffff; padding: 10px 20px; border-radius: 20px; color: #00ffff; font-weight: bold; font-size: 1.2rem; display: none; }
         .key-btn { background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; margin-right: 8px; }
+        #controls-help { position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.7); font-size: 0.8rem; line-height: 1.6; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;}
 
-        #start-screen { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(10,15,30,0.9); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index: 100;}
-        #start-screen button { padding: 15px 30px; font-size: 1.2rem; background: #00ffff; color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #start-screen button:hover { background: #00cccc; }
-
+        /* パフォーマンス & Adminパネル */
+        #perf-panel { position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; text-align: right; pointer-events: none;}
+        #admin-panel { display: none; position: absolute; top: 20px; right: 20px; width: 200px; background: rgba(60, 10, 20, 0.9); border: 1px solid #f43f5e; padding: 15px; border-radius: 8px; pointer-events: auto; }
+        #admin-panel h3 { margin: 0 0 10px 0; color: #f43f5e; font-size: 1rem; }
+        .admin-input { width: 100%; box-sizing: border-box; padding: 5px; margin-bottom: 5px; background: #000; color: #fff; border: 1px solid #555;}
+        
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <div id="start-screen">
-        <h1 style="color:#00ffff; margin-bottom: 30px;">MAP & COLLISION TEST</h1>
-        <button onclick="startGame()">画面をクリックしてスタート</button>
-        <p style="margin-top: 20px; color:#aaa;">(ESCキーでマウスロック解除)</p>
+    <div id="login-screen">
+        <div class="panel">
+            <h2>META-SYNC LOG IN</h2>
+            <div id="auth-error" class="error-msg"></div>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <div style="font-size: 0.8rem; color:#aaa; margin: 5px 0;">
+                <label><input type="checkbox" id="as-admin"> 管理者モードでログイン</label>
+            </div>
+            <button class="btn-primary" onclick="attemptAuth('/api/login')">ENTER SYSTEM</button>
+            <button class="btn-success" onclick="attemptAuth('/api/register')">REGISTER</button>
+        </div>
     </div>
 
     <div id="ui-layer">
         <div id="crosshair"></div>
+        
+        <div id="sidebar">
+            <div style="font-size: 0.8rem; color:#94a3b8;">ID: <span id="ui-username">---</span></div>
+            <div class="money">CR: <span id="ui-money">0</span></div>
+            <div style="font-size: 0.8rem; margin-top:5px; color:#aaa;">Stock: <span id="ui-stocks">0</span> (<span id="ui-market-price">---</span>/株)</div>
+        </div>
+        
+        <div id="chat-container">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Message... (Enter to send)">
+        </div>
+
         <div id="controls-help">
+            [Click] マウスロック (Escで解除)<br>
             [W A S D] 移動<br>
             [Shift] ダッシュ<br>
             [V] FPS/TPS切替<br>
-            [F] インタラクト (ワープ)
+            [F] インタラクト (ワープ等)
         </div>
+        
         <div id="interaction-prompt"><span class="key-btn">F</span><span id="prompt-text">アクション</span></div>
+        
+        <div id="perf-panel">
+            FPS: <span id="perf-fps">0</span><br>
+            Ping: <span id="perf-ping">0</span> ms
+        </div>
+
+        <div id="admin-panel">
+            <h3>[ADMIN CONTROL]</h3>
+            <label style="font-size:0.8rem; color:#aaa;">Speed Multiplier:</label>
+            <input type="range" id="admin-speed" min="1" max="10" value="1" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="admin-target" class="admin-input" placeholder="Target Username">
+            <button onclick="sendAdminCmd('ban')" style="width:100%; background:#f43f5e; color:white; border:none; padding:5px; margin-bottom:5px; cursor:pointer;">BAN (凍結)</button>
+            <button onclick="sendAdminCmd('unban')" style="width:100%; background:#10b981; color:white; border:none; padding:5px; margin-bottom:5px; cursor:pointer;">UNBAN (解除)</button>
+            <button onclick="sendAdminCmd('grant')" style="width:100%; background:#0ea5e9; color:white; border:none; padding:5px; cursor:pointer;">GRANT ADMIN</button>
+        </div>
     </div>
 
     <div id="canvas-container"></div>
 
     <script>
-        let scene, camera, renderer, clock;
+        // --- システム・通信状態 ---
+        let currentUsername = null;
+        let socket = null;
+        let isAdmin = false;
+        let pingStart = 0;
+        let mapData = null;
+
+        // --- プレイヤー状態 ---
+        let userMoney = 0;
+        let userStocks = 0;
+        let speedMult = 1.0;
         
-        // プレイヤー状態
-        const keysPressed = {};
-        let cameraYaw = 0, cameraPitch = 0, isLocked = false, isFPS = true;
-        let playerLocalPos = new THREE.Vector3(0, 5, 50); // 初期位置
-        let playerVelocityY = 0;
+        // --- 3D状態 ---
+        let scene, camera, renderer, clock;
+        const otherPlayers = {};
         let localAvatar = null;
         
-        // マップデータ格納用
-        let mapData = null;
+        // --- 物理・入力状態 ---
+        const keysPressed = {};
+        let cameraYaw = 0, cameraPitch = 0, isLocked = false, isFPS = false;
+        let playerLocalPos = new THREE.Vector3(0, 5, 50); // スポーン位置
+        let playerVelocityY = 0;
         let isWarping = false;
-        let fKeyWasPressed = false;
-        let vKeyWasPressed = false;
+        let fKeyWasPressed = false, vKeyWasPressed = false;
+        let frames = 0, lastTime = 0;
 
-        async function loadMapData() {
+        // --- 1. 認証・ログイン処理 ---
+        async function attemptAuth(endpoint) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const asAdmin = document.getElementById('as-admin').checked;
+            
             try {
-                // サーバーからJSONを取得
-                const response = await fetch('/test_map.json');
-                if (!response.ok) throw new Error("Map load failed");
-                mapData = await response.json();
-                console.log("Map Loaded:", mapData.name);
-                buildSceneFromMap();
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, asAdmin })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    if(endpoint === '/api/login') {
+                        currentUsername = data.username;
+                        userMoney = data.cr;
+                        userStocks = data.stocks;
+                        speedMult = data.speedMult || 1.0;
+                        isAdmin = data.activeAdmin;
+                        
+                        document.getElementById('ui-username').innerText = currentUsername;
+                        document.getElementById('ui-money').innerText = userMoney;
+                        document.getElementById('ui-stocks').innerText = userStocks;
+                        if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+                        
+                        startGame();
+                    } else {
+                        document.getElementById('auth-error').style.color = '#f472b6';
+                        document.getElementById('auth-error').innerText = data.message;
+                    }
+                } else {
+                    document.getElementById('auth-error').style.color = '#f43f5e';
+                    document.getElementById('auth-error').innerText = data.message;
+                }
             } catch (e) {
                 console.error(e);
-                alert("マップデータの読み込みに失敗しました。");
+                document.getElementById('auth-error').innerText = "通信エラー。サーバーが起動しているか確認してください。";
             }
         }
 
+        function startGame() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.body.requestPointerLock();
+            
+            // 通信開始
+            socket = io({ auth: { username: currentUsername, activeAdmin: isAdmin } });
+            setupSocket();
+            
+            // 3D初期化 & マップ読み込み
+            if(!scene) initThreeJS();
+        }
+
+        // --- 2. 通信処理 (Socket.io) ---
+        function setupSocket() {
+            socket.on('initData', data => {
+                document.getElementById('ui-market-price').innerText = data.stockPrice;
+                Object.keys(data.players).forEach(id => {
+                    if (id !== socket.id) addOtherPlayer(data.players[id]);
+                });
+            });
+
+            socket.on('newPlayer', info => addOtherPlayer(info));
+
+            socket.on('playerMoved', info => {
+                if (otherPlayers[info.id]) {
+                    otherPlayers[info.id].position.set(info.x, info.y, info.z);
+                    otherPlayers[info.id].rotation.y = info.rotation;
+                }
+            });
+
+            socket.on('playerDisconnected', id => {
+                if (otherPlayers[id]) {
+                    scene.remove(otherPlayers[id]);
+                    delete otherPlayers[id];
+                }
+            });
+
+            socket.on('marketUpdate', data => {
+                document.getElementById('ui-market-price').innerText = data.price;
+            });
+
+            socket.on('crUpdated', newCr => {
+                userMoney = newCr;
+                document.getElementById('ui-money').innerText = userMoney;
+            });
+            
+            socket.on('tradeSuccess', data => {
+                userMoney = data.cr; userStocks = data.stocks;
+                document.getElementById('ui-money').innerText = userMoney;
+                document.getElementById('ui-stocks').innerText = userStocks;
+                appendChat('System', data.msg, true);
+            });
+
+            socket.on('sysMessage', msg => appendChat('System', msg.text, true));
+
+            socket.on('chatMessage', msg => {
+                const isSys = msg.username === 'System';
+                const adminCls = msg.isAdmin ? 'chat-admin' : '';
+                appendChat(msg.username, msg.text, isSys, adminCls);
+            });
+
+            socket.on('banned', () => {
+                alert("このアカウントは凍結されました。");
+                location.reload();
+            });
+
+            setInterval(() => {
+                pingStart = Date.now();
+                socket.emit('ping');
+            }, 2000);
+            socket.on('pong', () => {
+                document.getElementById('perf-ping').innerText = Date.now() - pingStart;
+            });
+        }
+
+        function appendChat(name, text, isSys=false, extraClass='') {
+            const div = document.createElement('div');
+            if (isSys) {
+                div.className = 'chat-sys';
+                div.innerText = `[INFO] ${text}`;
+            } else {
+                div.innerHTML = `<span class="${extraClass}">${name}:</span> ${text}`;
+            }
+            const container = document.getElementById('chat-messages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // --- 3. 3D初期化 & マップ読み込み ---
         function initThreeJS() {
             scene = new THREE.Scene(); 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
@@ -84,83 +275,107 @@
 
             clock = new THREE.Clock();
             
-            // プレイヤーアバター (TPS用)
-            localAvatar = new THREE.Mesh(
-                new THREE.BoxGeometry(1.5, 3, 1.5), 
-                new THREE.MeshStandardMaterial({color: 0x00ffff, wireframe:true})
-            );
+            // 自分のアバター (TPS用)
+            localAvatar = createAvatarMesh(0x00ffff);
             scene.add(localAvatar);
 
             setupInputHandlers();
             
-            // マップ読み込み開始
+            // マップ読み込み
             loadMapData();
+        }
+
+        function createAvatarMesh(colorHex) {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1.5), new THREE.MeshStandardMaterial({ color: colorHex }));
+            body.position.y = 1.0;
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0xffcc99 }));
+            head.position.y = 2.6;
+            group.add(body, head);
+            return group;
+        }
+
+        function addOtherPlayer(info) {
+            const mesh = createAvatarMesh(info.color || 0xffffff);
+            mesh.position.set(info.x, info.y, info.z);
+            mesh.rotation.y = info.rotation;
+            scene.add(mesh);
+            otherPlayers[info.id] = mesh;
+        }
+
+        async function loadMapData() {
+            try {
+                const response = await fetch('/test_map.json');
+                if (!response.ok) throw new Error("Map load failed");
+                mapData = await response.json();
+                console.log("Map Loaded:", mapData.name);
+                buildSceneFromMap();
+            } catch (e) {
+                console.error(e);
+                alert("マップデータの読み込みに失敗しました。public/test_map.json が存在するか確認してください。");
+            }
         }
 
         function buildSceneFromMap() {
             if (!mapData) return;
 
-            // 環境設定
             scene.background = new THREE.Color(mapData.environment.groundColor);
             scene.add(new THREE.AmbientLight(mapData.environment.ambientLight, 1.5));
             const dLight = new THREE.DirectionalLight(mapData.environment.directionalLight, 1.0);
             dLight.position.set(100, 200, 100);
             scene.add(dLight);
 
-            // 床 (Floors) の生成
+            // 床
             mapData.floors.forEach(f => {
                 let mesh;
                 const mat = new THREE.MeshStandardMaterial({color: f.color});
-                if (f.type === 'circle') {
-                    mesh = new THREE.Mesh(new THREE.CircleGeometry(f.radius, 32), mat);
+                if (f.type === 'circle') mesh = new THREE.Mesh(new THREE.CircleGeometry(f.radius, 32), mat);
+                else if (f.type === 'rect') mesh = new THREE.Mesh(new THREE.PlaneGeometry(f.width, f.depth), mat);
+                if(mesh) {
                     mesh.rotation.x = -Math.PI/2;
                     mesh.position.set(f.x, f.y, f.z);
-                } else if (f.type === 'rect') {
-                    mesh = new THREE.Mesh(new THREE.PlaneGeometry(f.width, f.depth), mat);
-                    mesh.rotation.x = -Math.PI/2;
-                    mesh.position.set(f.x, f.y, f.z);
+                    scene.add(mesh);
                 }
-                if(mesh) scene.add(mesh);
             });
 
-            // 壁 (Walls) の生成
+            // 壁
             mapData.walls.forEach(w => {
                 let mesh;
                 const height = w.maxY - w.minY;
                 const mat = new THREE.MeshStandardMaterial({color: w.color});
-                if (w.type === 'rect') {
-                    mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat);
+                if (w.type === 'rect') mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat);
+                else if (w.type === 'circle') mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 16), mat);
+                if(mesh) {
                     mesh.position.set(w.x, w.minY + height/2, w.z);
-                } else if (w.type === 'circle') {
-                    mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 16), mat);
-                    mesh.position.set(w.x, w.minY + height/2, w.z);
+                    scene.add(mesh);
                 }
-                if(mesh) scene.add(mesh);
             });
 
-            // ワープパッドの生成
+            // ワープパッド
             mapData.warpPads.forEach(wp => {
                 const pad = new THREE.Group();
                 pad.add(new THREE.Mesh(new THREE.RingGeometry(1.5, 2, 16), new THREE.MeshBasicMaterial({ color: wp.color, side: THREE.DoubleSide })).rotateX(Math.PI/2));
                 pad.add(new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 5, 8, 1, true), new THREE.MeshBasicMaterial({ color: wp.color, transparent: true, opacity: 0.3, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })).translateY(2.5));
                 pad.position.set(wp.x, wp.y + 0.1, wp.z);
                 scene.add(pad);
-                // Three.jsオブジェクト内にデータを保持させておく
-                pad.userData = wp;
-                wp.mesh = pad; // JSONデータ側にも参照を持たせる
+                wp.mesh = pad; // JSONデータにMesh参照を持たせる
             });
 
             animate();
         }
 
+        // --- 4. 入力とUI処理 ---
         function setupInputHandlers() {
-            window.addEventListener('keydown', e => keysPressed[e.key.toLowerCase()] = true);
+            window.addEventListener('keydown', e => {
+                if (document.activeElement === document.getElementById('chat-input') || 
+                    document.activeElement.tagName === 'INPUT') return;
+                keysPressed[e.key.toLowerCase()] = true;
+            });
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
             
             document.addEventListener('pointerlockchange', () => {
                 isLocked = document.pointerLockElement === document.body;
                 document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
-                if(!isLocked) document.getElementById('start-screen').style.display = 'flex';
             });
             
             document.addEventListener('mousemove', e => {
@@ -176,51 +391,44 @@
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
+
+            // チャット送信
+            document.getElementById('chat-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const text = e.target.value.trim();
+                    if (text && socket) { socket.emit('chatMessage', text); e.target.value = ''; }
+                }
+            });
         }
 
-        function startGame() {
-            document.getElementById('start-screen').style.display = 'none';
-            document.body.requestPointerLock();
-            if(!scene) initThreeJS();
+        function sendAdminCmd(type) {
+            if (!socket || !isAdmin) return;
+            const target = document.getElementById('admin-target').value;
+            socket.emit('adminCommand', { type, target });
         }
 
+        // --- 5. メインループ & 当たり判定 ---
         function checkCollision(nextX, nextY, nextZ) {
             if (!mapData) return { canMove: true, adjustedX: nextX, adjustedZ: nextZ };
-            
-            let finalX = nextX;
-            let finalZ = nextZ;
+            let finalX = nextX, finalZ = nextZ;
 
-            // 壁 (Walls) との当たり判定 (スライディング処理)
             for (let w of mapData.walls) {
-                // 高さが範囲内かチェック (プレイヤーの足元〜頭の高さが壁と被るか)
                 if (nextY + 3 > w.minY && nextY < w.maxY) {
-                    
                     if (w.type === 'rect') {
-                        const hw = w.width / 2;
-                        const hd = w.depth / 2;
-                        
-                        // 壁のローカル座標系での位置 (回転は未実装とする)
-                        const dx = finalX - w.x;
-                        const dz = finalZ - w.z;
-
-                        // AABBコリジョンチェック
-                        if (Math.abs(dx) < hw + 1.0 && Math.abs(dz) < hd + 1.0) { // +1.0はプレイヤーの半径（アタリ判定の大きさ）
-                            // どの面からぶつかったかを判定して押し出す
-                            const distLeft = dx - (-hw - 1.0);
-                            const distRight = (hw + 1.0) - dx;
-                            const distTop = dz - (-hd - 1.0);
-                            const distBottom = (hd + 1.0) - dz;
-
-                            const min = Math.min(Math.abs(distLeft), Math.abs(distRight), Math.abs(distTop), Math.abs(distBottom));
-
-                            if (min === Math.abs(distLeft)) finalX = w.x - hw - 1.0;
-                            else if (min === Math.abs(distRight)) finalX = w.x + hw + 1.0;
-                            else if (min === Math.abs(distTop)) finalZ = w.z - hd - 1.0;
-                            else if (min === Math.abs(distBottom)) finalZ = w.z + hd + 1.0;
+                        const hw = w.width / 2, hd = w.depth / 2;
+                        const dx = finalX - w.x, dz = finalZ - w.z;
+                        if (Math.abs(dx) < hw + 1.0 && Math.abs(dz) < hd + 1.0) {
+                            const dL = dx - (-hw - 1.0), dR = (hw + 1.0) - dx;
+                            const dT = dz - (-hd - 1.0), dB = (hd + 1.0) - dz;
+                            const min = Math.min(Math.abs(dL), Math.abs(dR), Math.abs(dT), Math.abs(dB));
+                            if (min === Math.abs(dL)) finalX = w.x - hw - 1.0;
+                            else if (min === Math.abs(dR)) finalX = w.x + hw + 1.0;
+                            else if (min === Math.abs(dT)) finalZ = w.z - hd - 1.0;
+                            else if (min === Math.abs(dB)) finalZ = w.z + hd + 1.0;
                         }
                     } else if (w.type === 'circle') {
                         const dist = Math.hypot(finalX - w.x, finalZ - w.z);
-                        const minRadius = w.radius + 1.0; // 壁の半径 + プレイヤー半径
+                        const minRadius = w.radius + 1.0;
                         if (dist < minRadius) {
                             const angle = Math.atan2(finalZ - w.z, finalX - w.x);
                             finalX = w.x + Math.cos(angle) * minRadius;
@@ -229,7 +437,6 @@
                     }
                 }
             }
-
             return { canMove: true, adjustedX: finalX, adjustedZ: finalZ };
         }
 
@@ -238,8 +445,15 @@
             if (!isLocked || !mapData) return;
 
             const delta = Math.min(clock.getDelta(), 0.1);
+            
+            // FPS計測
+            frames++;
+            if (performance.now() > lastTime + 1000) {
+                document.getElementById('perf-fps').innerText = frames;
+                frames = 0; lastTime = performance.now();
+            }
 
-            // FPS切替
+            // キー入力
             const vPressed = keysPressed['v'];
             if (vPressed && !vKeyWasPressed) { isFPS = !isFPS; localAvatar.visible = !isFPS; }
             vKeyWasPressed = vPressed;
@@ -248,8 +462,14 @@
             let tryInteract = fPressed && !fKeyWasPressed;
             fKeyWasPressed = fPressed;
 
-            // 移動ベクトル計算
-            const moveSpeed = (keysPressed['shift'] ? 30 : 10) * delta;
+            // 移動 (Adminスピード対応)
+            let adminSpeed = 1.0;
+            if(isAdmin) {
+                const sVal = document.getElementById('admin-speed');
+                if(sVal) adminSpeed = parseFloat(sVal.value);
+            }
+            
+            const moveSpeed = (keysPressed['shift'] ? 30 : 10) * speedMult * adminSpeed * delta;
             const fwd = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
             const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
             
@@ -260,50 +480,50 @@
             if (keysPressed['d']) mv.add(right);
             if (mv.lengthSq() > 0) mv.normalize().multiplyScalar(moveSpeed);
 
+            let moved = false;
+            
             if (!isWarping) {
-                // 次の予測位置
                 let nextX = playerLocalPos.x + mv.x;
                 let nextZ = playerLocalPos.z + mv.z;
                 
-                // --- 壁の当たり判定 ---
-                const collisionResult = checkCollision(nextX, playerLocalPos.y, nextZ);
-                playerLocalPos.x = collisionResult.adjustedX;
-                playerLocalPos.z = collisionResult.adjustedZ;
+                // 壁スライディング
+                const colRes = checkCollision(nextX, playerLocalPos.y, nextZ);
+                if(Math.abs(playerLocalPos.x - colRes.adjustedX) > 0.001 || Math.abs(playerLocalPos.z - colRes.adjustedZ) > 0.001) moved = true;
+                playerLocalPos.x = colRes.adjustedX;
+                playerLocalPos.z = colRes.adjustedZ;
 
-                // --- 床の当たり判定 (落下) ---
+                // 落下 (床サーチ)
                 let groundY = -5000;
                 for (let f of mapData.floors) {
-                    if (playerLocalPos.y >= f.y - 5 && playerLocalPos.y <= f.y + 10) { // y-5〜y+10の範囲で床をサーチ
+                    if (playerLocalPos.y >= f.y - 5 && playerLocalPos.y <= f.y + 10) {
                         let onFloor = false;
                         if (f.type === 'circle') {
                             if (Math.hypot(playerLocalPos.x - f.x, playerLocalPos.z - f.z) <= f.radius) onFloor = true;
                         } else if (f.type === 'rect') {
-                            const hw = f.width / 2; const hd = f.depth / 2;
+                            const hw = f.width / 2, hd = f.depth / 2;
                             if (Math.abs(playerLocalPos.x - f.x) <= hw && Math.abs(playerLocalPos.z - f.z) <= hd) onFloor = true;
                         }
                         if (onFloor && f.y > groundY) groundY = f.y;
                     }
                 }
 
-                // 重力処理
                 if (playerLocalPos.y > groundY + 0.1) {
-                    playerVelocityY -= 30 * delta; // 自由落下
+                    playerVelocityY -= 30 * delta; 
                     playerLocalPos.y += playerVelocityY * delta;
+                    moved = true;
                     if (playerLocalPos.y <= groundY) { playerLocalPos.y = groundY; playerVelocityY = 0; }
                 } else {
                     playerLocalPos.y = groundY; playerVelocityY = 0;
                 }
 
-                // 奈落リスポーン
                 if (playerLocalPos.y < -100) {
-                    playerLocalPos.set(0, 5, 50); playerVelocityY = 0;
+                    playerLocalPos.set(0, 5, 50); playerVelocityY = 0; moved = true;
                 }
             }
 
-            // ワープパッド判定
+            // ワープ判定
             let promptText = "";
             let interactTarget = null;
-
             if (!isWarping) {
                 for (let wp of mapData.warpPads) {
                     if (playerLocalPos.distanceTo(new THREE.Vector3(wp.x, wp.y, wp.z)) < 3) {
@@ -319,33 +539,29 @@
                 if (interactTarget && tryInteract) interactTarget();
             }
 
-            // UI更新
             const promptEl = document.getElementById('interaction-prompt');
-            if (promptText) {
-                document.getElementById('prompt-text').innerText = promptText;
-                promptEl.style.display = 'block';
-            } else {
-                promptEl.style.display = 'none';
-            }
+            if (promptText) { document.getElementById('prompt-text').innerText = promptText; promptEl.style.display = 'block'; }
+            else { promptEl.style.display = 'none'; }
 
-            // アバター位置更新
+            // 位置更新 & 同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
-                localAvatar.position.y += 1.5; // アバターの中心を上げる
                 localAvatar.rotation.y = cameraYaw;
+            }
+            if (moved && socket) {
+                socket.emit('playerMovement', { x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, rotation: cameraYaw });
             }
 
             // カメラ更新
             const camTarget = playerLocalPos.clone();
             if (isFPS) {
                 camera.position.copy(camTarget);
-                camera.position.y += 2.5; // 目の高さ
+                camera.position.y += 2.5; 
             } else {
                 const offset = new THREE.Vector3(Math.sin(cameraYaw)*8, 3 + Math.sin(cameraPitch)*5, Math.cos(cameraYaw)*8);
                 camera.position.copy(camTarget).add(offset);
                 camTarget.y += 2;
             }
-            
             const lookDir = new THREE.Vector3(
                 -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                 Math.sin(cameraPitch),
