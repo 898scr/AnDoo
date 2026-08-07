@@ -15,6 +15,8 @@
         .panel label { font-size: 0.85rem; color: #94a3b8; display: flex; align-items: center; gap: 8px; margin: 10px 0; }
         .panel button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: linear-gradient(90deg, #00ffff, #0284c7); color: #000; }
+        .btn-success { background: transparent; border: 1px solid #00ffff; color: #00ffff; }
+        .btn-success:hover { background: rgba(0, 255, 255, 0.1); }
         .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
 
         /* UIレイヤー */
@@ -49,8 +51,8 @@
             <div id="auth-error" class="error-msg"></div>
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
-            <label><input type="checkbox" id="as-admin"> 管理者モードでログイン (テスト用)</label>
-            <button class="btn-primary" onclick="attemptAuth()">ENTER SYSTEM</button>
+            <button class="btn-primary" onclick="attemptAuth('/api/login')">ENTER SYSTEM (ログイン)</button>
+            <button class="btn-success" onclick="attemptAuth('/api/register')">REGISTER (新規登録)</button>
         </div>
     </div>
 
@@ -102,30 +104,39 @@
         // マップデータ (JSONから読み込む)
         let mapData = { floors: [], walls: [], warpPads: [] };
 
-        async function attemptAuth() {
+        async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const asAdmin = document.getElementById('as-admin').checked;
 
             try {
-                const res = await fetch('/api/login', { 
+                const res = await fetch(endpoint, { 
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ username, password, asAdmin }) 
+                    body: JSON.stringify({ username, password }) 
                 });
                 const data = await res.json();
                 
                 if (data.success) {
-                    currentUsername = data.username;
-                    isAdmin = data.isAdmin || asAdmin; // テスト環境はチェックボックス優先
-                    document.getElementById('ui-username').innerText = currentUsername;
-                    document.getElementById('ui-money').innerText = data.cr;
-                    if (isAdmin) document.getElementById('admin-panel').style.display = 'block';
-                    
-                    startGame(); 
+                    if (endpoint === '/api/login') {
+                        currentUsername = data.username;
+                        isAdmin = data.isAdmin; // サーバー側から特権判定を受け取る
+                        document.getElementById('ui-username').innerText = currentUsername;
+                        document.getElementById('ui-money').innerText = data.cr;
+                        
+                        // Adminの場合のみパネルを表示
+                        if (isAdmin) document.getElementById('admin-panel').style.display = 'block';
+                        
+                        startGame(); 
+                    } else {
+                        // 登録成功メッセージを青色で表示
+                        document.getElementById('auth-error').style.color = '#00ffff';
+                        document.getElementById('auth-error').innerText = data.message;
+                    }
                 } else { 
+                    document.getElementById('auth-error').style.color = '#f43f5e';
                     document.getElementById('auth-error').innerText = data.message; 
                 }
             } catch (e) {
+                document.getElementById('auth-error').style.color = '#f43f5e';
                 document.getElementById('auth-error').innerText = "通信エラーが発生しました";
             }
         }
@@ -281,6 +292,7 @@
 
             socket = io();
             setupSocket();
+            socket.emit('joinGame'); // 参加をサーバーに通知
             animate();
         }
 
