@@ -147,44 +147,74 @@
         }
 
         // ==========================================
-        // ★ 外部モデル（GLB）の読み込み処理
+        // ★ 外部モデル（GLB）の読み込み処理 (超・安定版)
         // ==========================================
         function loadAvatarModel() {
             return new Promise((resolve, reject) => {
                 const loader = new THREE.GLTFLoader();
                 loader.load(
-                    'avatar.glb', // ★ publicフォルダにあるファイルを指定
+                    'avatar.glb',
                     function (gltf) {
                         const model = gltf.scene;
                         
-                        // モデルの大きさを調整（適宜変更してください）
-                        model.scale.set(0.02, 0.02, 0.02); 
-                        // モデルによってはY軸(高さ)のオフセット調整が必要な場合があります
-                        // model.position.y = -1;
+                        // --- 1. 自動センタリングと自動リサイズ ---
+                        // モデル全体を包む箱（バウンディングボックス）を計算
+                        const box = new THREE.Box3().setFromObject(model);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+
+                        // モデルの中心を (0, 0, 0) に合わせる（原点ズレを修正）
+                        model.position.x += (model.position.x - center.x);
+                        model.position.y += (model.position.y - center.y);
+                        model.position.z += (model.position.z - center.z);
+
+                        // メタバースの主人公としてちょうどいいサイズ（高さが約2.5になるよう）に縮尺を自動計算
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const targetHeight = 2.5; 
+                        const scale = targetHeight / size.y;
+                        model.scale.set(scale, scale, scale);
                         
-                        // 影を落とす設定
+                        // もう一度バウンディングボックスを計算し直して、足元が基準点(y=0)になるようにY軸をオフセット
+                        const newBox = new THREE.Box3().setFromObject(model);
+                        const bottomY = newBox.min.y;
+                        model.position.y -= bottomY; // 足の裏を原点に合わせる
+
+                        // 影の設定とマテリアルの明るさ補正
                         model.traverse(function (child) {
                             if (child.isMesh) {
                                 child.castShadow = true;
                                 child.receiveShadow = true;
+                                // 黒つぶれを防ぐため、メタルネスが強すぎる場合は少し弱める
+                                if (child.material) {
+                                    if(child.material.metalness > 0.8) child.material.metalness = 0.5;
+                                    // child.material.side = THREE.DoubleSide; // 必要に応じて両面描画
+                                }
                             }
                         });
-                        
-                        // ★ アニメーションのセットアップ
+
+                        // --- 2. アニメーションのセットアップ ---
                         mixer = new THREE.AnimationMixer(model);
                         const animations = gltf.animations;
+                        
                         if (animations && animations.length > 0) {
-                            // 最初の（0番目の）アニメーションを再生
+                            console.log("アバターのアニメーション数:", animations.length);
+                            // 最初の（0番目の）アニメーションを「歩き（Walk）」として取得し再生
                             walkAction = mixer.clipAction(animations[0]);
+                            // 最初は待機状態（再生しない）にしたい場合は walkAction.play() を呼ばない
+                            // 今回はテストのためとりあえず再生しておきます
                             walkAction.play();
                         } else {
-                            console.warn("アニメーションデータが見つかりませんでした。");
+                            console.warn("モデルにアニメーションデータが含まれていません。");
                         }
                         
-                        resolve(model);
+                        // 扱いやすいように Group に入れて返す
+                        const wrapper = new THREE.Group();
+                        wrapper.add(model);
+                        resolve(wrapper);
                     },
                     function (xhr) {
-                        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        document.getElementById('loading-screen').innerText = `Loading Avatar... ${percent}%`;
                     },
                     function (error) {
                         console.error('アバターの読み込みに失敗しました', error);
