@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAKUYARC Metaverse</title>
+    <title>HAKUYARC Metaverse (GLB Avatar Test)</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #020617; color: #fff; }
         
@@ -24,7 +24,6 @@
         #sidebar { position: absolute; top: 20px; left: 20px; width: 250px; background: rgba(15,23,42,0.8); border-left: 3px solid #00ffff; padding: 15px; border-radius: 0 8px 8px 0; pointer-events: auto;}
         .money { font-size: 1.5rem; color: #00ffff; font-weight: bold; }
 
-        /* Admin用パネル */
         #admin-panel { display: none; position: absolute; top: 20px; right: 20px; width: 250px; background: rgba(20,0,10,0.9); border: 1px solid #f43f5e; padding: 15px; border-radius: 8px; pointer-events: auto;}
         #admin-panel h3 { margin: 0 0 10px 0; color: #f43f5e; font-size: 1.1rem; }
         #admin-panel input { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; background:#000; color:#fff; border:1px solid #f43f5e;}
@@ -37,8 +36,13 @@
         #chat-input { padding: 8px; border: none; border-top: 1px solid #334155; background: transparent; color: white; outline: none; }
 
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #loading-screen { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; color: #fff; justify-content: center; align-items: center; z-index: 200; font-size: 1.5rem; }
     </style>
+    <!-- Three.js 本体と GLTFLoader の読み込み -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -53,6 +57,8 @@
             <button class="btn-success" onclick="attemptAuth('/api/register')">REGISTER (新規登録)</button>
         </div>
     </div>
+    
+    <div id="loading-screen">Loading Avatar Model...</div>
 
     <div id="ui-layer">
         <div id="crosshair"></div>
@@ -96,7 +102,11 @@
         let playerLocalPos = new THREE.Vector3(0, 5, 50);
         let playerVelocityY = 0;
         let isFlying = false;
+        
+        // ★ アバター・アニメーション関連変数
         let localAvatar = null;
+        let mixer = null; // アニメーションを制御するミキサー
+        let walkAction = null; // 歩行アニメーションの参照
 
         // マップデータ
         let mapData = { floors: [], walls: [], warpPads: [] };
@@ -136,6 +146,54 @@
             }
         }
 
+        // ==========================================
+        // ★ 外部モデル（GLB）の読み込み処理
+        // ==========================================
+        function loadAvatarModel() {
+            return new Promise((resolve, reject) => {
+                const loader = new THREE.GLTFLoader();
+                loader.load(
+                    'avatar.glb', // ★ publicフォルダにあるファイルを指定
+                    function (gltf) {
+                        const model = gltf.scene;
+                        
+                        // モデルの大きさを調整（適宜変更してください）
+                        model.scale.set(0.02, 0.02, 0.02); 
+                        // モデルによってはY軸(高さ)のオフセット調整が必要な場合があります
+                        // model.position.y = -1;
+                        
+                        // 影を落とす設定
+                        model.traverse(function (child) {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        
+                        // ★ アニメーションのセットアップ
+                        mixer = new THREE.AnimationMixer(model);
+                        const animations = gltf.animations;
+                        if (animations && animations.length > 0) {
+                            // 最初の（0番目の）アニメーションを再生
+                            walkAction = mixer.clipAction(animations[0]);
+                            walkAction.play();
+                        } else {
+                            console.warn("アニメーションデータが見つかりませんでした。");
+                        }
+                        
+                        resolve(model);
+                    },
+                    function (xhr) {
+                        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                    },
+                    function (error) {
+                        console.error('アバターの読み込みに失敗しました', error);
+                        reject(error);
+                    }
+                );
+            });
+        }
+
         function initThreeJS() {
             scene = new THREE.Scene(); 
             scene.background = new THREE.Color(0x0a1e3f);
@@ -145,60 +203,17 @@
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight); 
+            renderer.shadowMap.enabled = true; // 影を有効化
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
             scene.add(new THREE.AmbientLight(0xffffff, 0.7));
             const dirLight = new THREE.DirectionalLight(0x00ffff, 0.8);
             dirLight.position.set(100, 200, 50);
+            dirLight.castShadow = true;
             scene.add(dirLight);
 
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
-
-            // ==========================================
-            // ★ シンプル・バウンドアバター (球と円柱)
-            // ==========================================
-            window.createAvatarMesh = function(colorHex) {
-                const group = new THREE.Group();
-                
-                // サイバー・ホログラム風マテリアル
-                const matBody = new THREE.MeshStandardMaterial({ 
-                    color: colorHex, 
-                    roughness: 0.2, 
-                    metalness: 0.8,
-                    transparent: true,
-                    opacity: 0.9
-                }); 
-                
-                // 1. 胴体 (円柱)
-                const torsoGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.0, 16);
-                const torso = new THREE.Mesh(torsoGeo, matBody);
-                torso.position.y = 0.5; // 底面が0、中心が0.5
-                group.add(torso);
-
-                // 2. 頭部 (球)
-                const headGroup = new THREE.Group();
-                headGroup.position.y = 1.0; // 胴体の上
-                
-                const headGeo = new THREE.SphereGeometry(0.45, 16, 16);
-                const head = new THREE.Mesh(headGeo, matBody);
-                head.position.y = 0.45; // ピボットからのオフセット
-                
-                // 発光バイザー (サイバー感のアクセントとして維持)
-                const matVisor = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 1.0});
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.2), matVisor);
-                visor.position.set(0, 0.45, -0.4);
-                
-                headGroup.add(head, visor);
-                group.add(headGroup);
-
-                // アニメーション用に参照を保持
-                group.userData = { head: headGroup, torso: torso, walkTime: 0, movingTimer: 0 };
-                return group;
-            };
-
-            localAvatar = createAvatarMesh(0x00ffff);
-            scene.add(localAvatar);
 
             clock = new THREE.Clock();
             setupInputHandlers();
@@ -225,6 +240,7 @@
                         if (mesh) {
                             if(f.type==='circle') { mesh.rotation.x = -Math.PI/2; mesh.position.set(f.x, f.y, f.z); }
                             else mesh.position.set(f.x, f.y - 0.5, f.z);
+                            mesh.receiveShadow = true; // 床に影を落とす
                             mapGroup.add(mesh);
                         }
                     });
@@ -237,13 +253,19 @@
                         let mesh;
                         if (w.type === 'rect') mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), new THREE.MeshStandardMaterial({color: w.color, transparent:true, opacity:0.8}));
                         else if (w.type === 'circle') mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 16), new THREE.MeshStandardMaterial({color: w.color}));
-                        if (mesh) { mesh.position.set(w.x, yPos, w.z); mapGroup.add(mesh); }
+                        if (mesh) { 
+                            mesh.position.set(w.x, yPos, w.z); 
+                            mesh.castShadow = true;
+                            mesh.receiveShadow = true;
+                            mapGroup.add(mesh); 
+                        }
                     });
                 }
             } catch (error) {
-                // ロード失敗時の緊急フロア生成
+                console.log("マップ読み込みエラー。仮の床を生成します。");
                 const fallbackGround = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({color: 0x112233}));
                 fallbackGround.rotation.x = -Math.PI/2;
+                fallbackGround.receiveShadow = true;
                 mapGroup.add(fallbackGround);
                 mapData.floors.push({ type: 'rect', x: 0, y: 0, z: 0, width: 500, depth: 500 });
             }
@@ -251,14 +273,31 @@
 
         async function startGame() {
             document.getElementById('login-screen').style.display = 'none';
-            document.body.requestPointerLock();
+            document.getElementById('loading-screen').style.display = 'flex';
             
             initThreeJS();
             await loadMapData(); 
+            
+            try {
+                // ★ GLBアバターの読み込みを待つ
+                localAvatar = await loadAvatarModel();
+                scene.add(localAvatar);
+            } catch (e) {
+                // 失敗した場合はエラー表示
+                document.getElementById('loading-screen').innerText = "Avatar load failed. Please check avatar.glb";
+                return;
+            }
 
-            socket = io();
-            setupSocket();
-            socket.emit('joinGame');
+            document.getElementById('loading-screen').style.display = 'none';
+            
+            // 初回ポインターロックはユーザーのアクション（クリック）が必要なため
+            // 起動直後は強制ロックせず、ユーザーにクリックを促す仕組みにする
+            
+            // ※今回はテストのためマルチプレイ同期は一時的にコメントアウトしてあります
+            // socket = io();
+            // setupSocket();
+            // socket.emit('joinGame');
+            
             animate();
         }
 
@@ -270,7 +309,7 @@
             window.addEventListener('keyup', e => keysPressed[e.key.toLowerCase()] = false);
             
             document.addEventListener('click', () => {
-                if (!isLocked && document.getElementById('login-screen').style.display === 'none') {
+                if (!isLocked && document.getElementById('login-screen').style.display === 'none' && document.getElementById('loading-screen').style.display === 'none') {
                     document.body.requestPointerLock();
                 }
             });
@@ -284,78 +323,9 @@
                 if (isLocked) {
                     cameraYaw -= e.movementX * 0.002;
                     cameraPitch -= e.movementY * 0.002;
-                    // 見上げすぎ・見下ろしすぎを制限
                     cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
                 }
             });
-        }
-
-        function setupSocket() {
-            socket.on('initData', data => { 
-                Object.keys(data.players).forEach(id => {
-                    if (id !== socket.id) {
-                        const mesh = createAvatarMesh(data.players[id].color || 0xffffff);
-                        mesh.position.set(data.players[id].x, data.players[id].y, data.players[id].z);
-                        mesh.rotation.y = data.players[id].rotation;
-                        scene.add(mesh);
-                        otherPlayers[id] = mesh;
-                    }
-                });
-            });
-
-            socket.on('newPlayer', info => {
-                const mesh = createAvatarMesh(info.color || 0xffffff);
-                mesh.position.set(info.x, info.y, info.z);
-                mesh.rotation.y = info.rotation;
-                scene.add(mesh);
-                otherPlayers[info.id] = mesh;
-            });
-
-            socket.on('playerMoved', info => {
-                const op = otherPlayers[info.id];
-                if (op) {
-                    const dist = op.position.distanceTo(new THREE.Vector3(info.x, info.y, info.z));
-                    if (dist > 0.05) op.userData.movingTimer = 0.1;
-                    
-                    op.position.set(info.x, info.y, info.z);
-                    op.rotation.y = info.rotation;
-                    if (info.pitch !== undefined) op.userData.targetPitch = info.pitch;
-                }
-            });
-
-            socket.on('playerDisconnected', id => {
-                if (otherPlayers[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; }
-            });
-        }
-
-        function banUser() {
-            if (!isAdmin) return;
-            const target = document.getElementById('ban-target').value;
-            if (target) {
-                socket.emit('adminBan', target);
-                document.getElementById('ban-target').value = "";
-            }
-        }
-
-        function updateAvatarAnim(avatar, isMoving, delta, camPitch) {
-            if (!avatar || !avatar.userData.head) return;
-            const ud = avatar.userData;
-            
-            if (isMoving) {
-                ud.walkTime += delta * 15; 
-                // 上下にバウンドするアニメーション
-                const bounce = Math.abs(Math.sin(ud.walkTime)) * 0.4;
-                ud.torso.position.y = 0.5 + bounce;
-                ud.head.position.y = 1.0 + bounce;
-            } else {
-                ud.walkTime = 0; 
-                ud.torso.position.y = THREE.MathUtils.lerp(ud.torso.position.y, 0.5, 0.2);
-                ud.head.position.y = THREE.MathUtils.lerp(ud.head.position.y, 1.0, 0.2);
-            }
-            
-            // 首の可動範囲を制限（不自然に曲がりすぎないように）
-            const clampedPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, camPitch));
-            ud.head.rotation.x = clampedPitch;
         }
 
         let vKeyWasPressed = false, zKeyWasPressed = false;
@@ -363,7 +333,12 @@
         function animate() {
             requestAnimationFrame(animate);
             if (!isLocked) { renderer.render(scene, camera); return; }
+            
+            // ★ アニメーションの更新
             const delta = Math.min(clock.getDelta(), 0.1);
+            if (mixer) {
+                mixer.update(delta);
+            }
 
             // FPS/TPS切替
             if (keysPressed['v']) {
@@ -391,6 +366,8 @@
                 mv.normalize().multiplyScalar(moveSpeed);
                 moved = true;
             }
+            
+            // ★ （テスト）動いていなくても今回は「歩きっぱなし」モデルなので特にアニメーションは制御しません
 
             let nextX = playerLocalPos.x + mv.x;
             let nextZ = playerLocalPos.z + mv.z;
@@ -409,7 +386,7 @@
             if (!collidedX) playerLocalPos.x = nextX;
             if (!collidedZ) playerLocalPos.z = nextZ;
 
-            // 飛行・落下処理
+            // 落下・床判定
             if (isFlying && isAdmin) {
                 if (keysPressed['e']) { playerLocalPos.y += 20 * delta; moved = true; }
                 if (keysPressed['q']) { playerLocalPos.y -= 20 * delta; moved = true; }
@@ -431,52 +408,34 @@
                 if (playerLocalPos.y > groundY + 0.1) {
                     playerVelocityY -= 30 * delta; 
                     playerLocalPos.y += playerVelocityY * delta;
-                    moved = true;
                     if (playerLocalPos.y <= groundY) { playerLocalPos.y = groundY; playerVelocityY = 0; }
                 } else {
                     playerLocalPos.y = groundY; playerVelocityY = 0;
                 }
 
                 if (playerLocalPos.y < -100) {
-                    playerLocalPos.set(0, 5, 50); playerVelocityY = 0; moved = true;
+                    playerLocalPos.set(0, 5, 50); playerVelocityY = 0; 
                 }
             }
 
-            // アバター同期
+            // ★ GLBアバターの位置・回転を同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
-                localAvatar.rotation.y = cameraYaw;
-                updateAvatarAnim(localAvatar, moved, delta, cameraPitch);
+                // モデルが背中を向けるようにY軸回転を調整（モデルによって180度反転が必要な場合があります）
+                localAvatar.rotation.y = cameraYaw + Math.PI; 
                 localAvatar.visible = !isFPS; 
             }
 
-            Object.values(otherPlayers).forEach(op => {
-                let isOpMoving = false;
-                if (op.userData.movingTimer > 0) {
-                    isOpMoving = true;
-                    op.userData.movingTimer -= delta;
-                }
-                updateAvatarAnim(op, isOpMoving, delta, op.userData.targetPitch || 0);
-            });
-
-            if (moved && socket) {
-                socket.emit('playerMovement', { 
-                    x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
-                    rotation: cameraYaw, pitch: cameraPitch 
-                });
-            }
-
             // ==========================================
-            // ★ TPSカメラ (ゼルダ・フォートナイト仕様 調整版)
+            // ★ TPSカメラ処理 (改善版)
             // ==========================================
-            
-            // 注視点を頭の中心付近に
+            // 注視点を頭の中心付近に (アバターの背の高さに合わせて y を調整してください)
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 1.8; // アバターの身長変更に合わせて微調整
+            headTarget.y += 1.8; 
 
             if (isFPS) {
                 camera.position.copy(playerLocalPos);
-                camera.position.y += 1.5; // アバターの身長変更に合わせて微調整
+                camera.position.y += 1.5; 
                 const lookDir = new THREE.Vector3(
                     -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                     Math.sin(cameraPitch),
@@ -484,8 +443,8 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                // カメラの基本距離
-                const distance = 5.0; 
+                // カメラの距離（少し近づけました）
+                const distance = 4.0; 
                 
                 const horizontalDist = Math.cos(cameraPitch) * distance;
                 const verticalDist = Math.sin(cameraPitch) * distance;
@@ -498,20 +457,22 @@
                 
                 camera.position.copy(headTarget).add(offset);
                 
-                // 【修正】見上げた時の頭頂部めり込み防止を強化
+                // 見上げた時の頭頂部めり込み防止
                 if (cameraPitch > 0) {
-                    // 見上げるほどカメラを後ろに引く
-                    const pushBack = cameraPitch * 3.0; 
+                    const pushBack = cameraPitch * 2.0; 
                     const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     camera.position.addScaledVector(fwdVec, -pushBack);
                     
-                    // 高度の最低保証を少し高めに設定（頭がカメラを突き抜けないように）
-                    const minHeight = playerLocalPos.y + 1.0 + (cameraPitch * 1.5);
+                    const minHeight = playerLocalPos.y + 0.5 + (cameraPitch * 1.5);
                     if (camera.position.y < minHeight) {
                         camera.position.y = minHeight;
                     }
                 }
-
+                
+                // 少しだけカメラを右肩越しにずらす（オーバー・ザ・ショルダー）
+                const rightVec = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                camera.position.addScaledVector(rightVec, 0.8);
+                
                 if (camera.position.y < playerLocalPos.y + 0.2) {
                     camera.position.y = playerLocalPos.y + 0.2;
                 }
