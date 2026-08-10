@@ -59,7 +59,6 @@
         }
         #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1; }
     </style>
-    <!-- Three.js & Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -108,7 +107,6 @@
     <div id="canvas-container"></div>
 
     <script>
-        // === グローバル変数 ===
         let currentUser = null;
         let isAdmin = false;
         let socket = null;
@@ -139,7 +137,6 @@
         const jumpForce = 8.0;
         const gravity = -20.0;
 
-        // === 1. 認証システム ===
         async function attemptAuth(endpoint) {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -163,8 +160,6 @@
                         if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
                         
                         document.getElementById('login-screen').style.display = 'none';
-                        
-                        // 認証成功後、ゲーム初期化開始
                         initGame();
                     } else {
                         showError(data.message, '#10b981'); 
@@ -183,22 +178,23 @@
             errEl.style.color = color;
         }
 
-        // === 2. Three.js セットアップ ===
         function setupThreeJS() {
             scene = new THREE.Scene(); 
-            scene.background = new THREE.Color(0x0a1e3f);
-            scene.fog = new THREE.FogExp2(0x0a1e3f, 0.003);
+            scene.background = new THREE.Color(0x050814); // SFチックな暗い背景
+            scene.fog = new THREE.FogExp2(0x050814, 0.005);
 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight); 
+            renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const dirLight = new THREE.DirectionalLight(0x00ffff, 0.8);
-            dirLight.position.set(100, 200, 50);
+            // ライティングの強化
+            scene.add(new THREE.AmbientLight(0x223344, 1.5));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(50, 100, 70);
             dirLight.castShadow = true;
             scene.add(dirLight);
 
@@ -215,131 +211,135 @@
             });
         }
 
-        // ==========================================
-        // ★ 超精巧 プログラマブル・アバター生成 (角丸＆関節機構)
-        // ==========================================
-        // 角丸ボックスを生成するヘルパー関数
-        function createRoundedBox(width, height, depth, radius, smoothness) {
-            let shape = new THREE.Shape();
-            let eps = 0.00001;
-            let r = radius - eps;
-            shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
-            shape.absarc(eps, height - r * 2, eps, Math.PI, Math.PI / 2, true);
-            shape.absarc(width - r * 2, height - r * 2, eps, Math.PI / 2, 0, true);
-            shape.absarc(width - r * 2, eps, eps, 0, -Math.PI / 2, true);
-            let geometry = new THREE.ExtrudeGeometry(shape, {
-                depth: depth - radius * 2, bevelEnabled: true, bevelSegments: smoothness * 2,
-                steps: 1, bevelSize: r, bevelThickness: radius, curveSegments: smoothness
-            });
-            geometry.center();
-            return geometry;
-        }
-
-        // メインのアバター生成関数
         window.createAvatarMesh = function(colorHex) {
             const group = new THREE.Group();
             
-            // サイバー・ホログラム風マテリアル
-            const matBody = new THREE.MeshStandardMaterial({ 
-                color: colorHex, roughness: 0.2, metalness: 0.8,
-                transparent: true, opacity: 0.95
-            }); 
-            const matJoint = new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.9 }); 
-            
-            // 1. 胴体 (逆三角形フォルムでスタイリッシュに)
-            const torsoGeo = createRoundedBox(0.8, 1.1, 0.5, 0.1, 2);
-            const torso = new THREE.Mesh(torsoGeo, matBody);
-            torso.position.y = 1.25;
-            torso.castShadow = true; torso.receiveShadow = true;
-            group.add(torso);
+            // マテリアル設定（提示いただいたSF質感を再現）
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: 0xa0aab5, metalness: 0.8, roughness: 0.3, flatShading: true
+            });
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: colorHex // プレイヤーカラーを発光色に適用
+            });
+            const darkMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
+            });
 
-            // 2. 頭部 (首の付け根をピボットにして、上下を向けるように)
+            // 浮遊アニメーション用に全体を包むグループ
+            const baseGroup = new THREE.Group();
+            group.add(baseGroup);
+
+            // 【頭部】
             const headGroup = new THREE.Group();
-            headGroup.position.y = 1.9; // 首関節の高さ
-            
-            const headGeo = createRoundedBox(0.6, 0.55, 0.6, 0.15, 2);
-            const head = new THREE.Mesh(headGeo, matBody);
-            head.position.y = 0.25; // ピボットからの相対位置
-            head.castShadow = true;
-            
-            // 発光バイザー (目)
-            const matVisor = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: colorHex, emissiveIntensity: 1.5});
-            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.1), matVisor);
-            visor.position.set(0, 0.3, -0.32);
-            
-            headGroup.add(head, visor);
-            group.add(headGroup);
+            headGroup.position.y = 1.3; // 首のピボット（回転の支点）
+            baseGroup.add(headGroup);
 
-            // 3. 腕 (肩を支点にして前後に振れるように)
-            const armGeo = createRoundedBox(0.25, 0.9, 0.25, 0.08, 2);
+            // 多面体の頭（Icosahedron）
+            const headMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), bodyMaterial);
+            headMesh.position.y = 0.2; // ピボットからのオフセット
+            headMesh.castShadow = true;
+            headGroup.add(headMesh);
+
+            // 発光バイザー
+            const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMaterial);
+            visorMesh.position.set(0, 0.22, 0.32);
+            headGroup.add(visorMesh);
+
+            // サイドセンサー
+            const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
+            const leftSensor = new THREE.Mesh(sensorGeo, darkMaterial);
+            leftSensor.rotation.z = Math.PI / 2;
+            leftSensor.position.set(0.32, 0.2, 0);
+            headGroup.add(leftSensor);
+
+            const rightSensor = leftSensor.clone();
+            rightSensor.position.set(-0.32, 0.2, 0);
+            headGroup.add(rightSensor);
+
+            // 【胴体】
+            const torsoGroup = new THREE.Group();
+            torsoGroup.position.y = 0.6;
+            baseGroup.add(torsoGroup);
+
+            const chestMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), bodyMaterial);
+            chestMesh.position.y = 0.3;
+            chestMesh.castShadow = true;
+            torsoGroup.add(chestMesh);
+
+            const lineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.32), glowMaterial);
+            lineMesh.position.y = 0.25;
+            torsoGroup.add(lineMesh);
+
+            const waistMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5), bodyMaterial);
+            waistMesh.position.y = -0.15;
+            waistMesh.castShadow = true;
+            torsoGroup.add(waistMesh);
+
+            // 【腕】
+            const armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
             
             const armLGroup = new THREE.Group();
-            armLGroup.position.set(-0.55, 1.7, 0); // 左肩関節の高さ
-            const armL = new THREE.Mesh(armGeo, matJoint);
-            armL.position.y = -0.35; // 肩から下へ伸びる
-            armL.castShadow = true;
-            armLGroup.add(armL);
-            group.add(armLGroup);
+            armLGroup.position.set(0.35, 1.15, 0); // 左肩の支点
+            const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
+            leftArm.position.y = -0.25;
+            leftArm.castShadow = true;
+            armLGroup.add(leftArm);
+            baseGroup.add(armLGroup);
 
             const armRGroup = new THREE.Group();
-            armRGroup.position.set(0.55, 1.7, 0); // 右肩関節の高さ
-            const armR = new THREE.Mesh(armGeo, matJoint);
-            armR.position.y = -0.35; 
-            armR.castShadow = true;
-            armRGroup.add(armR);
-            group.add(armRGroup);
-
-            // 4. 足 (股関節を支点にして前後に振れるように)
-            const legGeo = createRoundedBox(0.3, 1.0, 0.3, 0.08, 2);
-
-            const legLGroup = new THREE.Group();
-            legLGroup.position.set(-0.2, 0.9, 0); // 左股関節
-            const legL = new THREE.Mesh(legGeo, matJoint);
-            legL.position.y = -0.45; // 股から下へ伸びる
-            legL.castShadow = true;
-            legLGroup.add(legL);
-            group.add(legLGroup);
-
-            const legRGroup = new THREE.Group();
-            legRGroup.position.set(0.2, 0.9, 0); // 右股関節
-            const legR = new THREE.Mesh(legGeo, matJoint);
-            legR.position.y = -0.45;
-            legR.castShadow = true;
-            legRGroup.add(legR);
-            group.add(legRGroup);
+            armRGroup.position.set(-0.35, 1.15, 0); // 右肩の支点
+            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
+            rightArm.position.y = -0.25;
+            rightArm.castShadow = true;
+            armRGroup.add(rightArm);
+            baseGroup.add(armRGroup);
 
             // アニメーション用に各パーツへの参照を保存
-            group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
+            // 初期状態として腕を少しハの字に開いておく
+            armLGroup.rotation.z = -0.15;
+            armRGroup.rotation.z = 0.15;
+
+            group.userData = { 
+                base: baseGroup, head: headGroup, torso: torsoGroup, 
+                armL: armLGroup, armR: armRGroup, 
+                walkTime: 0, movingTimer: 0 
+            };
             return group;
         };
 
-        // アニメーション更新関数 (歩行＆首の追従)
         function updateAvatarAnim(avatar, isMoving, delta, camPitch) {
             if (!avatar || !avatar.userData.head) return;
             const ud = avatar.userData;
             
-            // 1. 歩行アニメーション
+            // 待機時も常にフワフワと上下に浮遊させる（IDをシードにして位相をずらす）
+            const time = clock.getElapsedTime();
+            const phaseOffset = avatar.uuid ? avatar.uuid.charCodeAt(0) : 0;
+            ud.base.position.y = Math.sin(time * 2 + phaseOffset) * 0.05;
+
             if (isMoving) {
-                ud.walkTime += delta * 15; 
+                ud.walkTime += delta * 10; 
+                
+                // 移動時は体を前傾させる（SFドローン感）
+                ud.torso.rotation.x = THREE.MathUtils.lerp(ud.torso.rotation.x, 0.2, 0.1);
+                
+                // 腕はダッシュ感が出るように少し後ろに流しつつ、軽く振る
                 const swing = Math.sin(ud.walkTime);
-                ud.armL.rotation.x = swing * 0.8;
-                ud.armR.rotation.x = -swing * 0.8;
-                ud.legL.rotation.x = -swing * 0.8;
-                ud.legR.rotation.x = swing * 0.8;
+                ud.armL.rotation.x = swing * 0.2 - 0.3;
+                ud.armR.rotation.x = -swing * 0.2 - 0.3;
             } else {
                 ud.walkTime = 0; 
-                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.15);
-                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.15);
-                ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.15);
-                ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.15);
+                // 停止時は直立に戻る
+                ud.torso.rotation.x = THREE.MathUtils.lerp(ud.torso.rotation.x, 0, 0.1);
+                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
+                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
             }
             
-            // 2. 頭の追従 (上下の限界角度を設定)
-            const clampedPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, camPitch));
-            ud.head.rotation.x = clampedPitch;
+            // 【重要バグ修正】頭の追従を反転。カメラが上を向いた時に顔も上を向くように修正
+            // 角度の限界値も自然な範囲に設定
+            const clampedPitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, camPitch));
+            ud.head.rotation.x = -clampedPitch; 
         }
 
-        // === ゲーム初期化 ===
         function initGame() {
             document.getElementById('loading-screen').style.display = 'flex';
             socket = io(); 
@@ -347,8 +347,7 @@
             setupThreeJS();
             loadMapData(); 
             
-            // プログラムで作った超精巧アバターを生成
-            localAvatar = createAvatarMesh(0x00ffff); // 自分の色はシアン
+            localAvatar = createAvatarMesh(0x00f3ff);
             scene.add(localAvatar);
 
             document.getElementById('loading-screen').style.display = 'none';
@@ -358,7 +357,6 @@
             animate(); 
         }
 
-        // === マップ読み込み (test_map.json) ===
         async function loadMapData() {
             try {
                 const res = await fetch('/test_map.json');
@@ -372,8 +370,9 @@
         }
 
         function buildMap(mapData) {
-            if (mapData.environment) {
+            if (mapData.environment && mapData.environment.groundColor) {
                 scene.background = new THREE.Color(mapData.environment.groundColor);
+                scene.fog.color.set(mapData.environment.groundColor);
             }
 
             const matFloor = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9 });
@@ -436,7 +435,6 @@
             collisionBoxes.push(colBox);
         }
 
-        // === 入力制御 ===
         function setupInputHandlers() {
             window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
@@ -446,8 +444,6 @@
                 const sensitivity = 0.002;
                 cameraYaw -= e.movementX * sensitivity;
                 cameraPitch -= e.movementY * sensitivity;
-                
-                // ピッチ制限（真上や真下を向きすぎないように）
                 cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
             });
 
@@ -466,7 +462,6 @@
             document.getElementById('start-overlay').style.display = 'none';
         }
 
-        // === 通信処理 ===
         function setupSocketEvents() {
             socket.emit('joinGame', { username: currentUser });
 
@@ -482,7 +477,7 @@
                 if (otherPlayers[info.id]) {
                     otherPlayers[info.id].position.set(info.x, info.y, info.z);
                     otherPlayers[info.id].rotation.y = info.rotation; 
-                    otherPlayers[info.id].userData.movingTimer = 0.1; // 動いた判定
+                    otherPlayers[info.id].userData.movingTimer = 0.1; 
                     otherPlayers[info.id].userData.targetPitch = info.pitch || 0;
                 }
             });
@@ -503,12 +498,11 @@
             otherPlayers[info.id] = mesh;
         }
 
-        // === 当たり判定 ===
         function checkCollision(pos) {
             if (isGodMode) return { collided: false, safeY: pos.y };
 
-            const playerRadius = 0.4;
-            const playerHeight = 1.7;
+            const playerRadius = 0.3; // アバターサイズに合わせて少し細く
+            const playerHeight = 1.5;
             const pBox = new THREE.Box3(
                 new THREE.Vector3(pos.x - playerRadius, pos.y, pos.z - playerRadius),
                 new THREE.Vector3(pos.x + playerRadius, pos.y + playerHeight, pos.z + playerRadius)
@@ -532,20 +526,16 @@
 
         let vKeyWasPressed = false, zKeyWasPressed = false;
 
-        // === メインループ ===
         function animate() {
             requestAnimationFrame(animate);
             if (!isLocked) { renderer.render(scene, camera); return; }
             
             const delta = Math.min(clock.getDelta(), 0.1); 
 
-            // カメラ切替 (V)
             if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
-            
-            // Admin飛行切替 (Z)
             if (isAdmin && keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
 
-            // --- 移動処理 ---
+            // 移動計算
             let moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
             const mv = new THREE.Vector3(0, 0, 0);
             
@@ -566,14 +556,13 @@
             let nextX = playerLocalPos.x + mv.x;
             let nextZ = playerLocalPos.z + mv.z;
 
-            // 当たり判定適用
             let testPos = playerLocalPos.clone(); testPos.x = nextX;
             if (!checkCollision(testPos).collided) playerLocalPos.x = nextX;
 
             testPos = playerLocalPos.clone(); testPos.z = nextZ;
             if (!checkCollision(testPos).collided) playerLocalPos.z = nextZ;
 
-            // Y軸 (重力 または 飛行)
+            // Y軸（ジャンプと重力）
             if (isGodMode) {
                 if (keysPressed['e']) playerLocalPos.y += 10 * delta;
                 if (keysPressed['q']) playerLocalPos.y -= 10 * delta;
@@ -596,7 +585,7 @@
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
-            // --- アバターの同期とアニメーション更新 ---
+            // アバターの同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
@@ -612,7 +601,6 @@
                 updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, cameraPitch);
             }
 
-            // 他プレイヤーのアニメーションも更新
             Object.values(otherPlayers).forEach(op => {
                 let isOpMoving = false;
                 if (op.userData.movingTimer > 0) {
@@ -629,13 +617,13 @@
                 });
             }
 
-            // --- ★ 完璧なTPSカメラ (ゼルダ・フォートナイト仕様) ---
+            // --- 完璧なTPSカメラ ---
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 2.0; // カメラの注視点をキャラの頭より少し上に
+            headTarget.y += 1.4; // アバターの身長に合わせた注視点
 
             if (isFPS) {
                 camera.position.copy(playerLocalPos);
-                camera.position.y += 1.8; 
+                camera.position.y += 1.5; 
                 const lookDir = new THREE.Vector3(
                     -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                     Math.sin(cameraPitch),
@@ -643,7 +631,7 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                const distance = 4.0; // カメラの距離
+                const distance = 4.0; // カメラ距離
                 
                 const horizontalDist = Math.cos(cameraPitch) * distance;
                 const verticalDist = Math.sin(cameraPitch) * distance;
@@ -656,18 +644,20 @@
                 
                 camera.position.copy(headTarget).add(offset);
                 
-                // 見上げた時の頭頂部めり込み防止
+                // 見上げた時のカメラ食い込み防止を強化
                 if (cameraPitch > 0) {
                     const pushBack = cameraPitch * 2.0; 
                     const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     camera.position.addScaledVector(fwdVec, -pushBack);
                     
-                    const minHeight = playerLocalPos.y + 0.5 + (cameraPitch * 1.5);
-                    if (camera.position.y < minHeight) camera.position.y = minHeight;
+                    const minHeight = playerLocalPos.y + 0.3 + (cameraPitch * 1.0);
+                    if (camera.position.y < minHeight) {
+                        camera.position.y = minHeight;
+                    }
                 }
 
-                if (camera.position.y < playerLocalPos.y + 0.2) {
-                    camera.position.y = playerLocalPos.y + 0.2;
+                if (camera.position.y < playerLocalPos.y + 0.1) {
+                    camera.position.y = playerLocalPos.y + 0.1;
                 }
 
                 camera.lookAt(headTarget);
