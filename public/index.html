@@ -443,17 +443,181 @@
                 if (!isLocked) return;
                 const sensitivity = 0.002;
                 cameraYaw -= e.movementX * sensitivity;
+                // --- カメラ上下の限界を修正 ---
+                // 上を向ける角度を広げる (-Math.PI/2 = 真上)
                 cameraPitch -= e.movementY * sensitivity;
-                cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
+                cameraPitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, cameraPitch));
             });
 
             document.addEventListener('pointerlockchange', () => {
-                isLocked = (document.pointerLockElement === document.body);
-                document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
-                if(!isLocked) {
-                    document.getElementById('start-overlay').style.display = 'flex';
-                    document.getElementById('start-overlay').innerHTML = '<button class="start-btn" onclick="lockMouse()">画面をクリックして再開</button>';
+        window.createAvatarMesh = function(colorHex) {
+            const group = new THREE.Group();
+            
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: 0xa0aab5, metalness: 0.8, roughness: 0.3, flatShading: true
+            });
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: colorHex
+            });
+            const darkMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
+            });
+
+            // --- 階層構造の見直し ---
+            // 浮遊アニメーション用に全体を包むグループ
+            const baseGroup = new THREE.Group();
+            group.add(baseGroup);
+            
+            // 体の傾き（前傾姿勢）を制御するグループ。この中に頭・胴体・腕を入れることで、
+            // 前傾したときに腕や頭も一緒に傾き、位置関係が崩れないようにする。
+            const tiltGroup = new THREE.Group();
+            // 傾きの支点を腰のあたり（Y=0.6付近）に設定
+            tiltGroup.position.y = 0.6;
+            baseGroup.add(tiltGroup);
+
+            // 【頭部】
+            const headGroup = new THREE.Group();
+            // tiltGroup内のローカル座標として配置（以前の1.3から0.6引いた0.7）
+            headGroup.position.y = 0.7; 
+            tiltGroup.add(headGroup);
+
+            const headMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), bodyMaterial);
+            headMesh.position.y = 0.2; 
+            headMesh.castShadow = true;
+            headGroup.add(headMesh);
+
+            const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMaterial);
+            visorMesh.position.set(0, 0.22, 0.32);
+            headGroup.add(visorMesh);
+
+            const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
+            const leftSensor = new THREE.Mesh(sensorGeo, darkMaterial);
+            leftSensor.rotation.z = Math.PI / 2;
+            leftSensor.position.set(0.32, 0.2, 0);
+            headGroup.add(leftSensor);
+
+            const rightSensor = leftSensor.clone();
+            rightSensor.position.set(-0.32, 0.2, 0);
+            headGroup.add(rightSensor);
+
+            // 【胴体】
+            const torsoGroup = new THREE.Group();
+            // tiltGroupが既にY=0.6にあるため、胴体は原点(0,0,0)に配置
+            tiltGroup.add(torsoGroup);
+
+            const chestMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), bodyMaterial);
+            chestMesh.position.y = 0.3;
+            chestMesh.castShadow = true;
+            torsoGroup.add(chestMesh);
+
+            const lineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.32), glowMaterial);
+            lineMesh.position.y = 0.25;
+            torsoGroup.add(lineMesh);
+
+            const waistMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5), bodyMaterial);
+            waistMesh.position.y = -0.15;
+            waistMesh.castShadow = true;
+            torsoGroup.add(waistMesh);
+
+            // 【腕】
+            const armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
+            
+            const armLGroup = new THREE.Group();
+            // tiltGroupからの相対位置（以前の1.15から0.6引いた0.55）
+            armLGroup.position.set(0.35, 0.55, 0); 
+            const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
+            leftArm.position.y = -0.25;
+            leftArm.castShadow = true;
+            armLGroup.add(leftArm);
+            tiltGroup.add(armLGroup);
+
+            const armRGroup = new THREE.Group();
+            armRGroup.position.set(-0.35, 0.55, 0); 
+            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
+            rightArm.position.y = -0.25;
+            rightArm.castShadow = true;
+            armRGroup.add(rightArm);
+            tiltGroup.add(armRGroup);
+
+            armLGroup.rotation.z = -0.15;
+            armRGroup.rotation.z = 0.15;
+
+            group.userData = { 
+                base: baseGroup, head: headGroup, tilt: tiltGroup, 
+                armL: armLGroup, armR: armRGroup, 
+                walkTime: 0, movingTimer: 0, currentYaw: 0 
+            };
+            return group;
+        };
+
+        // 角度の差分を -PI から PI の範囲に収める関数
+        function deltaAngle(a, b) {
+            let diff = a - b;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            return diff;
+        }
+
+        function updateAvatarAnim(avatar, isMoving, delta, camYaw, camPitch) {
+            if (!avatar || !avatar.userData.head) return;
+            const ud = avatar.userData;
+            
+            const time = clock.getElapsedTime();
+            const phaseOffset = avatar.uuid ? avatar.uuid.charCodeAt(0) : 0;
+            ud.base.position.y = Math.sin(time * 2 + phaseOffset) * 0.05;
+
+            // --- 体の向きと顔の向きの制御 ---
+            // カメラのYaw（向いている方向）とアバターの体の向き（currentYaw）の差分を計算
+            let yawDiff = deltaAngle(camYaw, ud.currentYaw);
+            
+            // 左右60度 (Math.PI/3) が限界
+            const limit = Math.PI / 3;
+            
+            if (isMoving) {
+                // 移動中は体全体を進行方向（カメラの方向）に向ける
+                ud.currentYaw = THREE.MathUtils.lerp(ud.currentYaw, camYaw, 0.1);
+                // 体がカメラ方向を向くため、顔の左右のねじれは徐々にゼロになる
+                ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, 0, 0.1);
+            } else {
+                // 停止時
+                if (yawDiff > limit) {
+                    // 右に60度以上向いた場合、体ごと右に回す
+                    ud.currentYaw += (yawDiff - limit) * 0.1;
+                    ud.head.rotation.y = limit;
+                } else if (yawDiff < -limit) {
+                    // 左に60度以上向いた場合、体ごと左に回す
+                    ud.currentYaw += (yawDiff + limit) * 0.1;
+                    ud.head.rotation.y = -limit;
+                } else {
+                    // 制限内の場合は顔だけを動かす
+                    ud.head.rotation.y = yawDiff;
                 }
+            }
+            
+            // アバターの親グループの回転を更新
+            avatar.rotation.y = ud.currentYaw;
+
+            // 頭の上下（ピッチ）制御
+            // ピッチ限界を上向きにもう少し拡張 (Math.PI/2 = 真上)
+            const clampedPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camPitch));
+            ud.head.rotation.x = -clampedPitch; 
+
+            // --- 移動アニメーション（傾きと腕の振り） ---
+            if (isMoving) {
+                ud.walkTime += delta * 10; 
+                // 階層を修正したため、tiltGroupを傾けるだけで頭も腕も一緒に前傾する
+                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
+                
+                const swing = Math.sin(ud.walkTime);
+                ud.armL.rotation.x = swing * 0.2 - 0.2;
+                ud.armR.rotation.x = -swing * 0.2 - 0.2;
+            } else {
+                ud.walkTime = 0; 
+                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
+                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
+                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+            }
+        }
             });
         }
 
@@ -476,9 +640,10 @@
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
                     otherPlayers[info.id].position.set(info.x, info.y, info.z);
-                    otherPlayers[info.id].rotation.y = info.rotation; 
-                    otherPlayers[info.id].userData.movingTimer = 0.1; 
+                    // 他のプレイヤーの向き情報を更新
+                    otherPlayers[info.id].userData.targetYaw = info.rotation; 
                     otherPlayers[info.id].userData.targetPitch = info.pitch || 0;
+                    otherPlayers[info.id].userData.movingTimer = 0.1; 
                 }
             });
 
@@ -493,7 +658,8 @@
         function addOtherPlayer(info) {
             const mesh = createAvatarMesh(info.color || 0xffaa00);
             mesh.position.set(info.x, info.y, info.z);
-            mesh.rotation.y = info.rotation;
+            mesh.userData.currentYaw = info.rotation;
+            mesh.userData.targetYaw = info.rotation;
             scene.add(mesh);
             otherPlayers[info.id] = mesh;
         }
@@ -590,15 +756,14 @@
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
                 
+                // 体の向きを決定
                 if (moved && (mv.x !== 0 || mv.z !== 0)) {
-                    const targetAngle = Math.atan2(mv.x, mv.z);
-                    let diff = targetAngle - localAvatar.rotation.y;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    localAvatar.rotation.y += diff * 0.15; 
+                    targetAvatarRotation = Math.atan2(mv.x, mv.z);
+                } else {
+                    targetAvatarRotation = cameraYaw;
                 }
                 
-                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, cameraPitch);
+                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraPitch);
             }
 
             Object.values(otherPlayers).forEach(op => {
@@ -607,13 +772,13 @@
                     isOpMoving = true;
                     op.userData.movingTimer -= delta;
                 }
-                updateAvatarAnim(op, isOpMoving, delta, op.userData.targetPitch || 0);
+                updateAvatarAnim(op, isOpMoving, delta, op.userData.targetYaw || 0, op.userData.targetPitch || 0);
             });
 
             if (moved && socket) {
                 socket.emit('playerMovement', { 
                     x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
-                    rotation: localAvatar.rotation.y, pitch: cameraPitch 
+                    rotation: cameraYaw, pitch: cameraPitch 
                 });
             }
 
