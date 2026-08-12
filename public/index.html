@@ -7,21 +7,58 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
         
-        /* ログイン画面 */
-        #login-screen {
+        /* --- 認証・登録画面 共通コンテナ --- */
+        #auth-container {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(15, 23, 42, 0.95);
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px;}
-        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; }
-        .panel input { width: 100%; box-sizing: border-box; padding: 10px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; }
-        .panel button { width: 100%; padding: 10px; margin: 8px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        
+        .panel { 
+            background: rgba(30, 41, 59, 0.9); padding: 30px; border-radius: 12px; 
+            border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            width: 320px; transition: 0.3s; 
+        }
+        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; font-size: 1.4rem; letter-spacing: 1px;}
+        .panel input[type="text"], .panel input[type="password"] { 
+            width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; 
+            border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; transition: 0.2s;
+        }
+        .panel input:focus { border-color: #38bdf8; outline: none; box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);}
+        .panel button { 
+            width: 100%; padding: 12px; margin: 15px 0 5px 0; border: none; 
+            border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem;
+        }
         .btn-primary { background: #0ea5e9; color: white; }
         .btn-primary:hover { background: #0284c7; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
-        .error-msg { color: #f43f5e; font-size: 0.9rem; text-align: center; min-height: 20px; }
+        .error-msg { color: #f43f5e; font-size: 0.85rem; text-align: center; min-height: 20px; margin-bottom: 10px;}
+        
+        .link-text { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #94a3b8; }
+        .link-text a { color: #38bdf8; cursor: pointer; text-decoration: none; font-weight: bold; }
+        .link-text a:hover { text-decoration: underline; }
+
+        /* --- 個別パネルの表示制御 --- */
+        #login-panel { display: block; }
+        #register-panel { display: none; }
+        #avatar-setup-panel { display: none; }
+
+        /* --- 登録フロー専用パーツ --- */
+        .checkbox-container { display: flex; align-items: flex-start; margin: 15px 0 5px 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
+        .checkbox-container input { margin-right: 10px; margin-top: 2px; width: 16px; height: 16px; cursor: pointer; }
+        
+        .color-picker-title { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 10px; text-align: center;}
+        .color-picker-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .color-btn { width: 35px; height: 35px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); transform: scale(1.1); }
+        
+        .setup-preview { 
+            width: 100%; height: 120px; background: #0f172a; border-radius: 8px; 
+            border: 1px solid #475569; margin-bottom: 15px; display: flex; 
+            justify-content: center; align-items: center; color: #64748b; font-size: 0.8rem;
+        }
 
         /* ロード画面 */
         #loading-screen {
@@ -64,14 +101,56 @@
 </head>
 <body>
 
-    <div id="login-screen">
-        <div class="panel">
+    <div id="auth-container">
+        <!-- 1. ログイン画面 -->
+        <div class="panel" id="login-panel">
             <h2>HAKUYARC SYSTEM</h2>
-            <div id="auth-error" class="error-msg"></div>
-            <input type="text" id="username" placeholder="UserID" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button class="btn-primary" onclick="attemptAuth('/api/login')">ENTER SYSTEM</button>
-            <button class="btn-success" onclick="attemptAuth('/api/register')">REGISTER</button>
+            <div id="login-error" class="error-msg"></div>
+            <input type="text" id="login-username" placeholder="UserID" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button class="btn-primary" onclick="attemptLogin()">ENTER SYSTEM</button>
+            <div class="link-text">
+                アカウントをお持ちでないですか？ <a onclick="switchPanel('register-panel')">新規登録</a>
+            </div>
+        </div>
+
+        <!-- 2. 新規登録画面 (Step 1) -->
+        <div class="panel" id="register-panel">
+            <h2>CREATE ACCOUNT</h2>
+            <div id="reg-error" class="error-msg"></div>
+            <input type="text" id="reg-username" placeholder="New UserID" required>
+            <input type="password" id="reg-password" placeholder="New Password" required>
+            
+            <label class="checkbox-container">
+                <input type="checkbox" id="terms-checkbox">
+                <span>HAKUYARCの<a href="#" style="color:#38bdf8;">利用規約</a>およびプライバシーポリシーに同意します。</span>
+            </label>
+
+            <button class="btn-success" onclick="goToAvatarSetup()">次へ (アバター設定)</button>
+            <div class="link-text">
+                すでにアカウントをお持ちですか？ <a onclick="switchPanel('login-panel')">ログイン</a>
+            </div>
+        </div>
+
+        <!-- 3. アバター設定画面 (Step 2) -->
+        <div class="panel" id="avatar-setup-panel">
+            <h2>AVATAR SETUP</h2>
+            <div id="setup-error" class="error-msg"></div>
+            
+            <div class="setup-preview" id="setup-preview-box">
+                <!-- 簡易プレビュー領域 -->
+                <div id="preview-color-box" style="width: 40px; height: 60px; background-color: #00f3ff; border-radius: 4px; box-shadow: 0 0 15px #00f3ff;"></div>
+            </div>
+
+            <div class="color-picker-title">ベースカラーを選択</div>
+            <div class="color-picker-container" id="color-picker">
+                <!-- JavaScriptで生成 -->
+            </div>
+
+            <button class="btn-success" onclick="attemptRegister()">登録してダイブ</button>
+            <div class="link-text">
+                <a onclick="switchPanel('register-panel')">← 戻る</a>
+            </div>
         </div>
     </div>
 
@@ -110,42 +189,76 @@
         let currentUser = null;
         let isAdmin = false;
         let socket = null;
+        
+        let selectedAvatarColor = '#00f3ff'; // デフォルト色
 
         let scene, camera, renderer, clock;
         let mapGroup = null; 
         
-        let localAvatar = null;
-        const otherPlayers = {};
-        
-        // 物理・移動用
-        let playerLocalPos = new THREE.Vector3(0, 5, 0); 
-        let playerVelocity = new THREE.Vector3(0, 0, 0);
-        let isGrounded = false;
-        
-        let cameraYaw = 0; 
-        let cameraPitch = 0;
-        let isLocked = false;
-        let isFPS = false; 
-        
-        let isGodMode = false; 
-        
-        const keysPressed = {};
-        const collisionBoxes = []; 
-        
-        const speedWalk = 5.0;
-        const speedRun = 10.0;
-        const jumpForce = 8.0;
-        const gravity = -20.0;
-        
+        // アバターの向きをなめらかに補間するための目標角度
         let targetAvatarRotation = 0;
 
-        async function attemptAuth(endpoint) {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if(!username || !password) return showError('IDとパスワードを入力してください');
+        // --- UI表示切り替え用 ---
+        function switchPanel(panelId) {
+            document.getElementById('login-panel').style.display = 'none';
+            document.getElementById('register-panel').style.display = 'none';
+            document.getElementById('avatar-setup-panel').style.display = 'none';
+            
+            // エラーメッセージのクリア
+            document.getElementById('login-error').innerText = '';
+            document.getElementById('reg-error').innerText = '';
+            document.getElementById('setup-error').innerText = '';
+
+            document.getElementById(panelId).style.display = 'block';
+        }
+
+        // --- カラーピッカーの生成 ---
+        const avatarColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
+        const pickerContainer = document.getElementById('color-picker');
+        avatarColors.forEach(color => {
+            const btn = document.createElement('div');
+            btn.className = 'color-btn';
+            btn.style.backgroundColor = color;
+            if (color === selectedAvatarColor) btn.classList.add('selected');
+            
+            btn.onclick = () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedAvatarColor = color;
+                
+                // プレビューボックスの色と発光を更新
+                const previewBox = document.getElementById('preview-color-box');
+                previewBox.style.backgroundColor = color;
+                previewBox.style.boxShadow = `0 0 15px ${color}`;
+            };
+            pickerContainer.appendChild(btn);
+        });
+
+        // --- 登録フロー Step 1 -> 2 ---
+        function goToAvatarSetup() {
+            const user = document.getElementById('reg-username').value;
+            const pass = document.getElementById('reg-password').value;
+            const terms = document.getElementById('terms-checkbox').checked;
+
+            if(!user || !pass) {
+                document.getElementById('reg-error').innerText = 'IDとパスワードを入力してください';
+                return;
+            }
+            if(!terms) {
+                document.getElementById('reg-error').innerText = '利用規約への同意が必要です';
+                return;
+            }
+            switchPanel('avatar-setup-panel');
+        }
+
+        // --- ログイン処理 ---
+        async function attemptLogin() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            if(!username || !password) return showError('login-error', 'IDとパスワードを入力してください');
 
             try {
-                const res = await fetch(endpoint, {
+                const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -153,31 +266,58 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    if(endpoint === '/api/login') {
-                        currentUser = data.username;
-                        isAdmin = data.isAdmin;
-                        
-                        document.getElementById('ui-id').innerText = currentUser;
-                        document.getElementById('ui-money').innerText = data.cr;
-                        if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
-                        
-                        document.getElementById('login-screen').style.display = 'none';
-                        initGame();
-                    } else {
-                        showError(data.message, '#10b981'); 
-                    }
+                    currentUser = data.username;
+                    isAdmin = data.isAdmin;
+                    // ※実際の運用ではサーバーから保存されたアバター色を取得する
+                    selectedAvatarColor = data.avatarColor || '#00f3ff';
+                    
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-money').innerText = data.cr;
+                    if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+                    
+                    document.getElementById('auth-container').style.display = 'none';
+                    initGame();
                 } else {
-                    showError(data.message);
+                    showError('login-error', data.message);
                 }
             } catch (e) {
-                showError('サーバーに接続できません');
+                showError('login-error', 'サーバーに接続できません');
             }
         }
 
-        function showError(msg, color = '#f43f5e') {
-            const errEl = document.getElementById('auth-error');
-            errEl.innerText = msg;
-            errEl.style.color = color;
+        // --- 新規登録処理 ---
+        async function attemptRegister() {
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, avatarColor: selectedAvatarColor })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // 登録成功したらそのままログイン状態にしてゲーム開始
+                    currentUser = username;
+                    isAdmin = false; // 新規はデフォルトで非管理者
+                    
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-money').innerText = 1000; // 初期CR
+                    
+                    document.getElementById('auth-container').style.display = 'none';
+                    initGame();
+                } else {
+                    showError('setup-error', data.message);
+                }
+            } catch (e) {
+                showError('setup-error', 'サーバーに接続できません');
+            }
+        }
+
+        function showError(elementId, msg) {
+            document.getElementById(elementId).innerText = msg;
         }
 
         function setupThreeJS() {
@@ -213,13 +353,16 @@
         }
 
         window.createAvatarMesh = function(colorHex) {
+            // 文字列カラー('#00f3ff')をThree.js用のカラーオブジェクトに変換
+            const threeColor = new THREE.Color(colorHex);
+
             const group = new THREE.Group();
             
             const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: 0xa0aab5, metalness: 0.8, roughness: 0.3, flatShading: true
+                color: 0x555555, metalness: 0.8, roughness: 0.3, flatShading: true
             });
             const glowMaterial = new THREE.MeshBasicMaterial({
-                color: colorHex
+                color: threeColor
             });
             const darkMaterial = new THREE.MeshStandardMaterial({
                 color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
@@ -393,15 +536,22 @@
         }
 
         async function loadMapData() {
-            try {
-                const res = await fetch('/test_map.json');
-                if (!res.ok) throw new Error("Map file not found");
-                const mapData = await res.json();
-                buildMap(mapData);
-            } catch(e) {
-                console.warn("test_map.jsonが見つからないため、仮の地面を生成します。");
-                buildFallbackMap();
-            }
+        function initGame() {
+            document.getElementById('loading-screen').style.display = 'flex';
+            socket = io(); 
+            
+            setupThreeJS();
+            loadMapData(); 
+            
+            // ログイン/登録時に選択したカラーを反映
+            localAvatar = createAvatarMesh(selectedAvatarColor);
+            scene.add(localAvatar);
+
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('start-overlay').style.display = 'flex';
+            
+            setupSocketEvents();
+            animate(); 
         }
 
         function buildMap(mapData) {
@@ -526,7 +676,8 @@
         }
 
         function setupSocketEvents() {
-            socket.emit('joinGame', { username: currentUser });
+            // カラー情報も送信
+            socket.emit('joinGame', { username: currentUser, color: selectedAvatarColor });
 
             socket.on('initData', (data) => {
                 Object.keys(data.players).forEach(id => {
@@ -554,7 +705,8 @@
         }
 
         function addOtherPlayer(info) {
-            const mesh = createAvatarMesh(info.color || 0xffaa00);
+            // 他プレイヤーの色を反映。なければデフォルトオレンジ
+            const mesh = createAvatarMesh(info.color || '#ffaa00');
             mesh.position.set(info.x, info.y, info.z);
             mesh.userData.currentYaw = info.rotation;
             mesh.userData.targetYaw = info.rotation;
