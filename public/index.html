@@ -63,6 +63,7 @@
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+
     <div id="login-screen">
         <div class="panel">
             <h2>HAKUYARC SYSTEM</h2>
@@ -116,6 +117,7 @@
         let localAvatar = null;
         const otherPlayers = {};
         
+        // 物理・移動用
         let playerLocalPos = new THREE.Vector3(0, 5, 0); 
         let playerVelocity = new THREE.Vector3(0, 0, 0);
         let isGrounded = false;
@@ -223,13 +225,16 @@
                 color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
             });
 
+            // 浮遊アニメーション用に全体を包むグループ
             const baseGroup = new THREE.Group();
             group.add(baseGroup);
             
+            // 体の傾き（前傾姿勢）を制御するグループ
             const tiltGroup = new THREE.Group();
             tiltGroup.position.y = 0.6;
             baseGroup.add(tiltGroup);
 
+            // 【頭部】
             const headGroup = new THREE.Group();
             headGroup.position.y = 0.7; 
             tiltGroup.add(headGroup);
@@ -253,6 +258,7 @@
             rightSensor.position.set(-0.32, 0.2, 0);
             headGroup.add(rightSensor);
 
+            // 【胴体】
             const torsoGroup = new THREE.Group();
             tiltGroup.add(torsoGroup);
 
@@ -270,6 +276,7 @@
             waistMesh.castShadow = true;
             torsoGroup.add(waistMesh);
 
+            // 【腕】
             const armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
             
             const armLGroup = new THREE.Group();
@@ -299,6 +306,7 @@
             return group;
         };
 
+        // 角度の差分を -PI から PI の範囲に収める関数
         function deltaAngle(a, b) {
             let diff = a - b;
             while (diff < -Math.PI) diff += Math.PI * 2;
@@ -314,29 +322,50 @@
             const phaseOffset = avatar.uuid ? avatar.uuid.charCodeAt(0) : 0;
             ud.base.position.y = Math.sin(time * 2 + phaseOffset) * 0.05;
 
+            // --- 体の向きと顔の向きの制御 (大改修) ---
             let yawDiff = deltaAngle(camYaw, ud.currentYaw);
-            const limit = Math.PI / 3;
+            
+            // 首が回る限界（左右60度）
+            const limit = Math.PI / 3; 
             
             if (isMoving) {
-                ud.currentYaw = THREE.MathUtils.lerp(ud.currentYaw, camYaw, 0.1);
+                // 移動中: 体全体を素早く進行方向（targetAvatarRotation）に向ける
+                // 【修正】単純なlerpではなく、最短距離を計算して回転させることで「くるりんぱ」を防止
+                let moveDiff = deltaAngle(targetAvatarRotation, ud.currentYaw);
+                ud.currentYaw += moveDiff * 0.15; // 0.15は回転速度
+                
+                // 回転した結果を -PI から PI の範囲内に正規化
+                ud.currentYaw = ud.currentYaw % (Math.PI * 2);
+                if (ud.currentYaw > Math.PI) ud.currentYaw -= Math.PI * 2;
+                if (ud.currentYaw < -Math.PI) ud.currentYaw += Math.PI * 2;
+
+                // 移動中は顔は正面（体と同じ向き）
                 ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, 0, 0.1);
             } else {
+                // 停止中: 首だけがカメラの方向（camYaw）を追従する
                 if (yawDiff > limit) {
+                    // 右に60度以上向いた場合、体を右に回す
                     ud.currentYaw += (yawDiff - limit) * 0.1;
                     ud.head.rotation.y = limit;
                 } else if (yawDiff < -limit) {
+                    // 左に60度以上向いた場合、体を左に回す
                     ud.currentYaw += (yawDiff + limit) * 0.1;
                     ud.head.rotation.y = -limit;
                 } else {
-                    ud.head.rotation.y = yawDiff;
+                    // 制限内の場合は顔だけをカメラの方向へ
+                    ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, yawDiff, 0.1);
                 }
             }
             
+            // アバター全体の回転を適用
             avatar.rotation.y = ud.currentYaw;
 
-            const clampedPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camPitch));
-            ud.head.rotation.x = -clampedPitch; 
+            // 頭の上下（ピッチ）制御
+            // カメラが見上げている(camPitch > 0)ときは、頭も上を向く(rotation.x < 0)
+            const clampedPitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, camPitch));
+            ud.head.rotation.x = THREE.MathUtils.lerp(ud.head.rotation.x, -clampedPitch, 0.2); 
 
+            // --- 移動アニメーション（傾きと腕の振り） ---
             if (isMoving) {
                 ud.walkTime += delta * 10; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
@@ -455,8 +484,10 @@
                 if (!isLocked) return;
                 const sensitivity = 0.002;
                 cameraYaw -= e.movementX * sensitivity;
+                
+                // カメラの上下（ピッチ）制限を大幅に緩和し、ほぼ真上を見れるように
                 cameraPitch -= e.movementY * sensitivity;
-                cameraPitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, cameraPitch));
+                cameraPitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.1, cameraPitch));
             });
 
             document.addEventListener('pointerlockchange', () => {
@@ -548,6 +579,7 @@
             if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
             if (isAdmin && keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
 
+            // --- 移動計算 ---
             let moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
             const mv = new THREE.Vector3(0, 0, 0);
             
@@ -561,8 +593,12 @@
 
             let moved = false;
             if (mv.lengthSq() > 0) {
+                // 入力ベクトルを正規化して移動量を計算
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
+                
+                // 進行方向の角度を計算
+                targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
             let nextX = playerLocalPos.x + mv.x;
@@ -574,6 +610,7 @@
             testPos = playerLocalPos.clone(); testPos.z = nextZ;
             if (!checkCollision(testPos).collided) playerLocalPos.z = nextZ;
 
+            // Y軸（ジャンプと重力）
             if (isGodMode) {
                 if (keysPressed['e']) playerLocalPos.y += 10 * delta;
                 if (keysPressed['q']) playerLocalPos.y -= 10 * delta;
@@ -596,17 +633,12 @@
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
+            // アバターの同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
                 
-                if (moved && (mv.x !== 0 || mv.z !== 0)) {
-                    targetAvatarRotation = Math.atan2(mv.x, mv.z);
-                } else {
-                    targetAvatarRotation = cameraYaw;
-                }
-                
-                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraPitch);
+                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, cameraYaw, cameraPitch);
             }
 
             Object.values(otherPlayers).forEach(op => {
@@ -621,12 +653,13 @@
             if (moved && socket) {
                 socket.emit('playerMovement', { 
                     x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
-                    rotation: cameraYaw, pitch: cameraPitch 
+                    rotation: targetAvatarRotation, pitch: cameraPitch 
                 });
             }
 
+            // --- カメラ制御 (軌道の大改修) ---
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 1.4; 
+            headTarget.y += 1.4; // アバターの頭の高さ
 
             if (isFPS) {
                 camera.position.copy(playerLocalPos);
@@ -638,8 +671,10 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
+                // TPSの基本距離
                 const distance = 4.0;
                 
+                // ピッチ角度に応じてカメラの位置を球面的に計算 (見上げた時に上空へ回り込む)
                 const horizontalDist = Math.cos(cameraPitch) * distance;
                 const verticalDist = Math.sin(cameraPitch) * distance;
 
@@ -651,21 +686,12 @@
                 
                 camera.position.copy(headTarget).add(offset);
                 
-                if (cameraPitch > 0) {
-                    const pushBack = cameraPitch * 2.0; 
-                    const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-                    camera.position.addScaledVector(fwdVec, -pushBack);
-                    
-                    const minHeight = playerLocalPos.y + 0.3 + (cameraPitch * 1.0);
-                    if (camera.position.y < minHeight) {
-                        camera.position.y = minHeight;
-                    }
-                }
-
+                // 地面にカメラがめり込まないように最低高度を保証
                 if (camera.position.y < playerLocalPos.y + 0.1) {
                     camera.position.y = playerLocalPos.y + 0.1;
                 }
 
+                // 常に頭周辺を注視
                 camera.lookAt(headTarget);
             }
 
