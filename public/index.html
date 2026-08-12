@@ -15,7 +15,7 @@
         }
         .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 320px; transition: 0.3s; }
         .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; font-size: 1.2rem; letter-spacing: 1px;}
-        .panel input[type="text"], .panel input[type="password"] { width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; transition: 0.2s;}
+        .panel input[type="text"], .panel input[type="password"], .panel input[type="number"] { width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; transition: 0.2s;}
         .panel input:focus { border-color: #38bdf8; outline: none; box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);}
         .panel button { width: 100%; padding: 12px; margin: 10px 0 5px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem;}
         
@@ -23,6 +23,8 @@
         .btn-primary:hover { background: #0284c7; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
+        .btn-danger { background: #f43f5e; color: white; }
+        .btn-danger:hover { background: #be123c; }
         
         .error-msg { color: #f43f5e; font-size: 0.85rem; text-align: center; min-height: 20px; margin-bottom: 5px;}
         .link-text { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #94a3b8; }
@@ -33,7 +35,6 @@
         .checkbox-container { display: flex; align-items: flex-start; margin: 15px 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
         .checkbox-container input { margin-right: 8px; margin-top: 2px; width: 16px; height: 16px; cursor: pointer; }
 
-        /* 選択ボタン (操作方法・タイプ用) */
         .choice-btn { 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 15px;
@@ -43,24 +44,20 @@
         .choice-btn .icon { font-size: 1.5rem; margin-bottom: 5px; }
         .choice-btn.compact { padding: 10px; flex-direction: row; gap: 10px; justify-content: flex-start; }
 
-        /* カラーピッカー */
         .color-picker-title { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 10px; text-align: center;}
         .color-picker-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .color-btn { width: 35px; height: 35px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
         .color-btn:hover { transform: scale(1.1); }
         .color-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); transform: scale(1.1); }
         
-        /* 3Dプレビューとスライダー */
         .setup-preview { width: 100%; height: 200px; background: #050814; border-radius: 8px; border: 1px solid #475569; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px #000;}
         .slider-group { margin-bottom: 10px; text-align: left; }
         .slider-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;}
         .slider-group input[type="range"] { width: 100%; cursor: pointer; }
 
-        /* 各パネルの初期表示設定 */
         #login-panel { display: block; }
         #register-panel, #control-setup-panel, #avatar-type-panel, #avatar-visor-panel, #avatar-body-panel, #avatar-shape-panel { display: none; }
 
-        /* ロード画面など */
         #loading-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.8); z-index: 90;
@@ -80,15 +77,36 @@
         #ui-layer {
             position: absolute; top: 20px; left: 20px; z-index: 10; display: none;
             background: rgba(15, 23, 42, 0.7); padding: 15px; border-radius: 8px; backdrop-filter: blur(5px); border: 1px solid #334155;
-            pointer-events: none;
+            pointer-events: auto;
         }
-        #admin-panel { pointer-events: auto; }
         
         .ui-text { margin: 5px 0; font-size: 0.9rem; color: #cbd5e1; }
         .ui-value { font-weight: bold; color: #fff; font-size: 1.1rem; }
         
         #admin-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #475569; }
         .admin-title { color: #facc15; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
+
+        /* 送金用モーダル */
+        #transfer-modal {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.7); z-index: 110;
+            display: none; justify-content: center; align-items: center;
+        }
+
+        /* 通知トースト */
+        #notification-container {
+            position: absolute; top: 20px; right: 20px; z-index: 120;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            padding: 12px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        .toast.success { background-color: rgba(16, 185, 129, 0.9); border-left: 4px solid #059669; }
+        .toast.error { background-color: rgba(244, 63, 94, 0.9); border-left: 4px solid #be123c; }
+        .toast.info { background-color: rgba(56, 189, 248, 0.9); border-left: 4px solid #0284c7; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
 
         #crosshair {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -97,7 +115,7 @@
         }
         #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* --- バーチャルパッドUI --- */
+        /* バーチャルパッドUI */
         #virtual-pad-container {
             display: none;
             position: absolute; bottom: 0; left: 0; width: 100vw; height: 100vh;
@@ -129,8 +147,9 @@
         }
         .v-btn:active { background: rgba(0, 243, 255, 0.4); border-color: #00f3ff; }
     </style>
+    <!-- Three.js & Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script> window.io = function() { return { on: function(){}, emit: function(){} }; }; </script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -237,7 +256,6 @@
 
     </div>
 
-    <!-- その他UI -->
     <div id="loading-screen">
         <div class="spinner"></div>
         <div style="color: #00ffff; font-weight: bold; letter-spacing: 2px;">INITIALIZING WORLD...</div>
@@ -250,6 +268,8 @@
     <div id="ui-layer">
         <div class="ui-text">ID: <span id="ui-id" class="ui-value">---</span></div>
         <div class="ui-text">CR: <span id="ui-money" class="ui-value" style="color:#fbbf24;">0</span></div>
+        <button class="btn-success" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openTransferModal()">💸 CRを送金する</button>
+
         <div id="admin-panel">
             <div class="admin-title">👑 ADMIN CONTROLS</div>
             <div class="ui-text" style="font-size: 0.75rem;">[Z] Toggle Fly Mode</div>
@@ -263,6 +283,20 @@
             [Esc]: Free Mouse
         </div>
     </div>
+
+    <!-- 送金モーダル -->
+    <div id="transfer-modal">
+        <div class="panel">
+            <h2>💸 CRを送金</h2>
+            <input type="text" id="transfer-target" placeholder="相手のUserID">
+            <input type="number" id="transfer-amount" placeholder="金額 (CR)">
+            <button class="btn-primary" onclick="executeTransfer()">送金を実行</button>
+            <button class="btn-danger" onclick="closeTransferModal()">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- 通知エリア -->
+    <div id="notification-container"></div>
     
     <div id="crosshair"></div>
     <div id="canvas-container"></div>
@@ -278,17 +312,14 @@
     </div>
 
     <script>
-        // --- 登録フロー用変数 ---
         let regData = {
             username: '', password: '', controlMode: 'keyboard', 
             avatarType: 'A', colorVisor: '#00f3ff', colorBody: '#555555', 
             scaleH: 1.0, scaleW: 1.0
         };
-        // 初回表示用のデフォルト値
         let selectedVisorColor = regData.colorVisor;
         let selectedBodyColor = regData.colorBody;
         
-        // --- パネル切り替え処理 ---
         function switchPanel(panelId) {
             ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-type-panel', 'avatar-visor-panel', 'avatar-body-panel', 'avatar-shape-panel'].forEach(id => {
                 document.getElementById(id).style.display = 'none';
@@ -299,7 +330,6 @@
             document.getElementById(panelId).style.display = 'block';
         }
 
-        // --- 登録フロー制御 ---
         function goToControlSetup() {
             const user = document.getElementById('reg-username').value;
             const pass = document.getElementById('reg-password').value;
@@ -331,7 +361,6 @@
             setTimeout(initPreview, 50);
         }
 
-        // --- カラーピッカー生成 (バイザー用) ---
         const visorColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
         const visorContainer = document.getElementById('visor-color-picker');
         visorColors.forEach(color => {
@@ -347,7 +376,6 @@
             visorContainer.appendChild(btn);
         });
 
-        // --- カラーピッカー生成 (ボディ用) ---
         const bodyColors = ['#555555', '#222222', '#dddddd', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f'];
         const bodyContainer = document.getElementById('body-color-picker');
         bodyColors.forEach(color => {
@@ -363,7 +391,6 @@
             bodyContainer.appendChild(btn);
         });
 
-        // --- 3Dプレビュー用処理 ---
         let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
         
         function initPreview() {
@@ -411,7 +438,6 @@
             if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
-        // --- アバターメッシュ生成共通関数 ---
         window.createAvatarMesh = function(visorHex, bodyHex, avatarType = 'A') {
             const group = new THREE.Group();
             
@@ -432,14 +458,12 @@
             tiltGroup.position.y = 0.6;
             baseGroup.add(tiltGroup);
 
-            // --- タイプの分岐 ---
             let headGeo, chestGeo, armGeo, waistGeo;
             let lineScaleX = 1.0, lineScaleZ = 1.0;
             let visorY = 0.22, visorZ = 0.32;
             let headYOffset = 0.2;
 
             if (avatarType === 'B') {
-                // TYPE-B: Heavy (重装甲)
                 headGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.5, 8);
                 chestGeo = new THREE.BoxGeometry(0.7, 0.6, 0.5);
                 armGeo = new THREE.BoxGeometry(0.18, 0.5, 0.18);
@@ -448,7 +472,6 @@
                 visorY = 0.1; visorZ = 0.31;
                 headYOffset = 0.25;
             } else if (avatarType === 'C') {
-                // TYPE-C: Slim (スリム流線)
                 headGeo = new THREE.SphereGeometry(0.3, 16, 16);
                 chestGeo = new THREE.CylinderGeometry(0.3, 0.15, 0.6, 8);
                 armGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.5, 8);
@@ -457,14 +480,12 @@
                 visorY = 0.15; visorZ = 0.28;
                 headYOffset = 0.2;
             } else {
-                // TYPE-A: Standard (多面体)
                 headGeo = new THREE.IcosahedronGeometry(0.35, 0);
                 chestGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
                 armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
                 waistGeo = new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5);
             }
 
-            // 【頭部】
             const headGroup = new THREE.Group();
             headGroup.position.y = 0.7; 
             tiltGroup.add(headGroup);
@@ -488,7 +509,6 @@
             rightSensor.position.set(-0.32, visorY, 0);
             headGroup.add(rightSensor);
 
-            // 【胴体】
             const torsoGroup = new THREE.Group();
             tiltGroup.add(torsoGroup);
 
@@ -506,7 +526,6 @@
             waistMesh.castShadow = true;
             torsoGroup.add(waistMesh);
 
-            // 【腕】
             const armLGroup = new THREE.Group();
             armLGroup.position.set(0.35, 0.55, 0); 
             const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
@@ -534,8 +553,82 @@
             return group;
         };
 
-        // --- メインゲーム用変数 ---
         let currentUser = null, isAdmin = false, socket = null;
+        let userAvatarConfig = null;
+
+        async function attemptLogin() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            if(!username || !password) return document.getElementById('login-error').innerText = 'IDとパスワードを入力してください';
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentUser = data.username;
+                    isAdmin = data.isAdmin;
+                    userAvatarConfig = data.avatar || regData;
+
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-money').innerText = data.cr;
+                    if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+                    
+                    document.getElementById('auth-container').style.display = 'none';
+                    initGame();
+                } else {
+                    document.getElementById('login-error').innerText = data.message;
+                }
+            } catch (e) {
+                document.getElementById('login-error').innerText = 'サーバー通信エラーが発生しました';
+            }
+        }
+
+        async function attemptRegister() {
+            const avatarConfig = {
+                controlMode: regData.controlMode,
+                avatarType: regData.avatarType,
+                colorVisor: regData.colorVisor,
+                colorBody: regData.colorBody,
+                scaleH: regData.scaleH,
+                scaleW: regData.scaleW
+            };
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: regData.username,
+                        password: regData.password,
+                        avatar: avatarConfig
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentUser = data.username;
+                    isAdmin = data.isAdmin;
+                    userAvatarConfig = avatarConfig;
+
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-money').innerText = data.cr;
+                    if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+
+                    document.getElementById('auth-container').style.display = 'none';
+                    initGame();
+                } else {
+                    document.getElementById('setup-error').innerText = data.message;
+                }
+            } catch (e) {
+                document.getElementById('setup-error').innerText = 'サーバー登録通信エラーが発生しました';
+            }
+        }
+
         let scene, camera, renderer, clock, mapGroup = null; 
         let localAvatar = null;
         const otherPlayers = {};
@@ -548,38 +641,9 @@
         const collisionBoxes = []; 
         
         const speedWalk = 5.0, speedRun = 10.0, jumpForce = 8.0, gravity = -20.0;
-        
         let padMoveDir = new THREE.Vector2(0, 0);
-        let isPadJumping = false;
-        let padSpeedRatio = 0;
+        let isPadJumping = false, padSpeedRatio = 0;
 
-        // --- 認証通信処理 ---
-        async function attemptLogin() {
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            if(!username || !password) return document.getElementById('login-error').innerText = '入力してください';
-            
-            currentUser = username;
-            isAdmin = (username === 'admin');
-            document.getElementById('ui-id').innerText = currentUser;
-            document.getElementById('ui-money').innerText = "1000";
-            if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
-            
-            document.getElementById('auth-container').style.display = 'none';
-            initGame();
-        }
-
-        async function attemptRegister() {
-            currentUser = regData.username;
-            isAdmin = false;
-            document.getElementById('ui-id').innerText = currentUser;
-            document.getElementById('ui-money').innerText = "1000";
-            
-            document.getElementById('auth-container').style.display = 'none';
-            initGame();
-        }
-
-        // --- ゲームメイン処理 ---
         function setupThreeJS() {
             scene = new THREE.Scene(); 
             scene.background = new THREE.Color(0x050814);
@@ -603,7 +667,7 @@
             scene.add(mapGroup);
             clock = new THREE.Clock();
 
-            if (regData.controlMode === 'pad') {
+            if (userAvatarConfig.controlMode === 'pad') {
                 setupPadHandlers();
             } else {
                 setupInputHandlers();
@@ -621,18 +685,26 @@
             document.getElementById('loading-screen').style.display = 'flex';
             
             socket = io(); 
-            
+            setupSocketEvents();
+
             setupThreeJS();
             buildFallbackMap(); 
             
-            localAvatar = createAvatarMesh(regData.colorVisor, regData.colorBody, regData.avatarType);
-            localAvatar.scale.set(regData.scaleW, regData.scaleH, regData.scaleW);
+            const cfg = userAvatarConfig || regData;
+            localAvatar = createAvatarMesh(cfg.colorVisor, cfg.colorBody, cfg.avatarType);
+            localAvatar.scale.set(cfg.scaleW, cfg.scaleH, cfg.scaleW);
             scene.add(localAvatar);
 
+            // 自分の参加をサーバーへ送信
+            socket.emit('joinGame', {
+                username: currentUser,
+                avatar: cfg
+            });
+
             document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block';
             
-            if (regData.controlMode === 'pad') {
-                document.getElementById('ui-layer').style.display = 'block';
+            if (cfg.controlMode === 'pad') {
                 document.getElementById('pc-help').style.display = 'none'; 
                 document.getElementById('virtual-pad-container').style.display = 'block';
                 isLocked = true; 
@@ -641,6 +713,89 @@
             }
             
             animate(); 
+        }
+
+        function setupSocketEvents() {
+            socket.on('initData', (data) => {
+                Object.keys(data.players).forEach(id => {
+                    if (id !== socket.id) {
+                        addOtherPlayer(data.players[id]);
+                    }
+                });
+            });
+
+            socket.on('newPlayer', (info) => {
+                if (info.id !== socket.id) {
+                    addOtherPlayer(info);
+                }
+            });
+
+            socket.on('playerMoved', (info) => {
+                if (otherPlayers[info.id]) {
+                    otherPlayers[info.id].position.set(info.x, info.y, info.z);
+                    otherPlayers[info.id].userData.targetYaw = info.rotation;
+                    otherPlayers[info.id].userData.targetPitch = info.pitch;
+                    otherPlayers[info.id].userData.movingTimer = 0.1;
+                }
+            });
+
+            socket.on('playerDisconnected', (id) => {
+                if (otherPlayers[id]) {
+                    scene.remove(otherPlayers[id]);
+                    delete otherPlayers[id];
+                }
+            });
+
+            socket.on('moneyUpdated', (newCr) => {
+                document.getElementById('ui-money').innerText = newCr;
+            });
+
+            socket.on('notification', (msg) => {
+                showToast(msg.type, msg.text);
+            });
+        }
+
+        function addOtherPlayer(info) {
+            if (otherPlayers[info.id]) scene.remove(otherPlayers[info.id]);
+
+            const av = info.avatar || {};
+            const mesh = createAvatarMesh(av.colorVisor || '#00f3ff', av.colorBody || '#555555', av.avatarType || 'A');
+            mesh.scale.set(av.scaleW || 1.0, av.scaleH || 1.0, av.scaleW || 1.0);
+            mesh.position.set(info.x || 0, info.y || 5, info.z || 0);
+            mesh.userData.targetYaw = info.rotation || 0;
+            mesh.userData.targetPitch = info.pitch || 0;
+            
+            scene.add(mesh);
+            otherPlayers[info.id] = mesh;
+        }
+
+        function showToast(type, text) {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = text;
+            container.appendChild(toast);
+            setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
+        }
+
+        function openTransferModal() {
+            document.getElementById('transfer-modal').style.display = 'flex';
+        }
+        function closeTransferModal() {
+            document.getElementById('transfer-modal').style.display = 'none';
+        }
+        function executeTransfer() {
+            const targetUsername = document.getElementById('transfer-target').value.trim();
+            const amount = document.getElementById('transfer-amount').value.trim();
+
+            if (!targetUsername || !amount) {
+                return showToast('error', 'UserIDと金額を入力してください');
+            }
+
+            socket.emit('sendMoney', { targetUsername, amount });
+            document.getElementById('transfer-target').value = '';
+            document.getElementById('transfer-amount').value = '';
+            closeTransferModal();
         }
 
         function buildFallbackMap() {
@@ -658,7 +813,6 @@
             collisionBoxes.push(new THREE.Box3().setFromObject(box));
         }
 
-        // --- 入力制御 (キーボード＆マウス) ---
         function setupInputHandlers() {
             window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
@@ -686,7 +840,6 @@
             document.getElementById('start-overlay').style.display = 'none';
         }
 
-        // --- 入力制御 (バーチャルパッド) ---
         function setupPadHandlers() {
             const stickZone = document.getElementById('joystick-zone');
             const stickKnob = document.getElementById('joystick-knob');
@@ -849,10 +1002,7 @@
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
 
-                // --- 修正: 顔が常にカメラを追うように修正 ---
-                // Math.PI (180度) を足すことで、背中側（+Z）ではなくカメラ側（-Z）を向く
                 let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
-                
                 const limit = Math.PI / 3;
                 if (yawDiff > limit) {
                     avatar.rotation.y += (yawDiff - limit) * 0.1;
@@ -868,8 +1018,9 @@
         }
 
         function checkCollision(pos) {
+            const cfg = userAvatarConfig || regData;
             if (isGodMode) return { collided: false, safeY: pos.y };
-            const pRadius = 0.3 * regData.scaleW, pHeight = 1.5 * regData.scaleH;
+            const pRadius = 0.3 * cfg.scaleW, pHeight = 1.5 * cfg.scaleH;
             const pBox = new THREE.Box3(
                 new THREE.Vector3(pos.x - pRadius, pos.y, pos.z - pRadius),
                 new THREE.Vector3(pos.x + pRadius, pos.y + pHeight, pos.z + pRadius)
@@ -891,9 +1042,11 @@
             if (!isLocked) { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
 
-            if (regData.controlMode === 'keyboard') {
+            const cfg = userAvatarConfig || regData;
+
+            if (cfg.controlMode === 'keyboard') {
                 if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
-                if (keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
+                if (isAdmin && keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
             }
 
             const mv = new THREE.Vector3(0, 0, 0);
@@ -903,7 +1056,7 @@
             const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
             let wantsToJump = false;
 
-            if (regData.controlMode === 'keyboard') {
+            if (cfg.controlMode === 'keyboard') {
                 moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
                 if (keysPressed['w']) mv.add(forward);
                 if (keysPressed['s']) mv.sub(forward); 
@@ -925,8 +1078,6 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                
-                // ★修正: Z軸マイナス方向(画面奥)を向くための角度計算
                 targetAvatarRotation = Math.atan2(mv.x, mv.z);
             }
 
@@ -959,12 +1110,33 @@
                 updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
             }
 
+            // 他プレイヤーのアニメーションと補間更新
+            Object.values(otherPlayers).forEach(op => {
+                let isOpMoving = false;
+                if (op.userData.movingTimer > 0) {
+                    isOpMoving = true;
+                    op.userData.movingTimer -= delta;
+                }
+                updateAvatarAnim(op, isOpMoving, delta, op.userData.targetYaw || 0, cameraYaw, op.userData.targetPitch || 0);
+            });
+
+            // 位置情報の送信
+            if (socket) {
+                socket.emit('playerMovement', {
+                    x: playerLocalPos.x,
+                    y: playerLocalPos.y,
+                    z: playerLocalPos.z,
+                    rotation: cameraYaw,
+                    pitch: cameraPitch
+                });
+            }
+
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 1.4 * regData.scaleH; 
+            headTarget.y += 1.4 * cfg.scaleH; 
 
             if (isFPS) {
                 camera.position.copy(playerLocalPos);
-                camera.position.y += 1.5 * regData.scaleH; 
+                camera.position.y += 1.5 * cfg.scaleH; 
                 const lookDir = new THREE.Vector3(
                     -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                     Math.sin(cameraPitch),
@@ -978,7 +1150,6 @@
                 const offset = new THREE.Vector3(Math.sin(cameraYaw) * hDist, -vDist, Math.cos(cameraYaw) * hDist);
                 camera.position.copy(headTarget).add(offset);
                 
-                // 見上げた時に地面を這うようにする修正
                 if (cameraPitch > 0) {
                     const pushBack = cameraPitch * 3.0; 
                     const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
@@ -990,7 +1161,6 @@
                     }
                 }
 
-                // どんな角度でも最低限の高度を保証
                 if (camera.position.y < playerLocalPos.y + 0.1) camera.position.y = playerLocalPos.y + 0.1;
                 camera.lookAt(headTarget);
             }
