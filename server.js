@@ -27,7 +27,17 @@ function saveDB() {
 
 const adminUsers = ['admin', '898scr', '898sct', '8_98s'];
 
-// 1. 新規登録 API
+// 1. 新規登録前のユーザーID重複チェック API
+app.post('/api/check-username', (req, res) => {
+    const { username } = req.body;
+    if (!username) return res.json({ success: false, message: 'UserIDを入力してください' });
+    if (db.users[username]) {
+        return res.json({ success: false, message: 'そのUserIDは既に登録されています' });
+    }
+    res.json({ success: true });
+});
+
+// 2. 新規登録 API
 app.post('/api/register', (req, res) => {
     const { username, password, avatar } = req.body;
     if (!username || !password) {
@@ -63,7 +73,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// 2. ログイン API
+// 3. ログイン API
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     const user = db.users[username];
@@ -104,29 +114,35 @@ io.on('connection', (socket) => {
                 scaleH: 1.0,
                 scaleW: 1.0
             },
-            x: 0,
-            y: 5,
-            z: 0,
-            rotation: 0,
-            pitch: 0
+            x: 0, y: 5, z: 0,
+            bodyYaw: 0, camYaw: 0, pitch: 0,
+            isMoving: false
         };
 
-        // 既存プレイヤー情報を送信
         socket.emit('initData', { players });
-
-        // 他の全員に通知
         socket.broadcast.emit('newPlayer', players[socket.id]);
     });
 
+    // プレイヤーの移動同期（プロパティを追加）
     socket.on('playerMovement', (data) => {
         if (players[socket.id]) {
             players[socket.id].x = data.x;
             players[socket.id].y = data.y;
             players[socket.id].z = data.z;
-            players[socket.id].rotation = data.rotation;
+            players[socket.id].bodyYaw = data.bodyYaw;
+            players[socket.id].camYaw = data.camYaw;
             players[socket.id].pitch = data.pitch;
+            players[socket.id].isMoving = data.isMoving;
 
             socket.broadcast.emit('playerMoved', players[socket.id]);
+        }
+    });
+
+    // チャットメッセージの送受信
+    socket.on('chatMessage', (text) => {
+        const user = players[socket.id];
+        if (user) {
+            io.emit('chatMessage', { username: user.username, text: text });
         }
     });
 
@@ -148,25 +164,20 @@ io.on('connection', (socket) => {
         if (!targetUser) {
             return socket.emit('notification', { type: 'error', text: `ユーザー '${targetName}' は存在しません` });
         }
-
         if (senderName === targetName) {
             return socket.emit('notification', { type: 'error', text: '自分自身には送金できません' });
         }
-
         if (!senderUser || senderUser.cr < amount) {
             return socket.emit('notification', { type: 'error', text: 'CRが不足しています' });
         }
 
-        // 送金実行
         senderUser.cr -= amount;
         targetUser.cr += amount;
         saveDB();
 
-        // 自身の残高更新と通知
         socket.emit('moneyUpdated', senderUser.cr);
         socket.emit('notification', { type: 'success', text: `${targetName} に ${amount} CR 送金しました` });
 
-        // 送金先がオンラインならリアルタイムで受け取り通知＆残高更新
         for (const [sid, p] of Object.entries(players)) {
             if (p.username === targetName) {
                 io.to(sid).emit('moneyUpdated', targetUser.cr);

@@ -86,11 +86,37 @@
         #admin-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #475569; }
         .admin-title { color: #facc15; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
 
+        /* チャットUI */
+        #chat-container {
+            position: absolute; bottom: 20px; left: 20px; z-index: 15;
+            width: 320px; display: none; flex-direction: column; gap: 5px;
+            pointer-events: auto;
+        }
+        #chat-messages {
+            background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid #334155;
+            height: 150px; overflow-y: auto; color: white; font-size: 0.85rem;
+            display: flex; flex-direction: column; gap: 4px; backdrop-filter: blur(4px);
+        }
+        #chat-form input {
+            width: 100%; box-sizing: border-box; padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.8); border: 1px solid #475569;
+            border-radius: 6px; color: white; outline: none; transition: 0.2s;
+        }
+        #chat-form input:focus { border-color: #00f3ff; box-shadow: 0 0 5px rgba(0, 243, 255, 0.5); }
+        .chat-msg { word-wrap: break-word; }
+        .chat-msg .name { font-weight: bold; color: #00f3ff; margin-right: 5px; }
+
         /* 送金用モーダル */
         #transfer-modal {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.7); z-index: 110;
             display: none; justify-content: center; align-items: center;
+        }
+
+        /* 規約モーダル */
+        #terms-modal {
+            display:none; position:absolute; top:0; left:0; width:100vw; height:100vh; 
+            background:rgba(0,0,0,0.8); z-index:200; justify-content:center; align-items:center;
         }
 
         /* 通知トースト */
@@ -147,7 +173,6 @@
         }
         .v-btn:active { background: rgba(0, 243, 255, 0.4); border-color: #00f3ff; }
     </style>
-    <!-- Three.js & Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -174,7 +199,7 @@
             <input type="password" id="reg-password" placeholder="New Password" required>
             <label class="checkbox-container">
                 <input type="checkbox" id="terms-checkbox">
-                <span>HAKUYARCの利用規約およびプライバシーポリシーに同意します。</span>
+                <span><a onclick="document.getElementById('terms-modal').style.display='flex'">利用規約・プライバシーポリシー</a>に同意します。</span>
             </label>
             <button class="btn-success" onclick="goToControlSetup()">次へ (操作設定)</button>
             <div class="link-text"><a onclick="switchPanel('login-panel')">← ログインに戻る</a></div>
@@ -256,6 +281,25 @@
 
     </div>
 
+    <!-- 規約モーダル -->
+    <div id="terms-modal">
+        <div class="panel" style="width: 85%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <h2>利用規約・プライバシーポリシー</h2>
+            <p style="font-size:0.85rem; color:#cbd5e1; line-height:1.6;">
+                本サービス「HAKUYARC Metaverse」をご利用いただきありがとうございます。<br><br>
+                <strong style="color:#fff;">【利用規約】</strong><br>
+                1. 他のユーザーに対する誹謗中傷、迷惑行為を禁止します。<br>
+                2. 本サービス内で発生したトラブルについて、運営は一切の責任を負いません。<br>
+                3. システムの不正利用やバグの悪用を禁止します。<br><br>
+                <strong style="color:#fff;">【プライバシーポリシー】</strong><br>
+                1. ご登録いただいたユーザーIDやパスワード等の情報は、本サービスの提供・運営のみに使用します。<br>
+                2. 第三者への情報提供は行いません。<br>
+                3. チャットのログ等の情報は、公序良俗に反する行為の確認のために運営が閲覧する場合があります。<br>
+            </p>
+            <button class="btn-primary" onclick="document.getElementById('terms-modal').style.display='none'">閉じる</button>
+        </div>
+    </div>
+
     <div id="loading-screen">
         <div class="spinner"></div>
         <div style="color: #00ffff; font-weight: bold; letter-spacing: 2px;">INITIALIZING WORLD...</div>
@@ -280,8 +324,17 @@
             [Shift]: Sprint<br>
             [Space]: Jump<br>
             [V]: Toggle Camera<br>
-            [Esc]: Free Mouse
+            [Esc]: Free Mouse<br>
+            [Enter]: Chat
         </div>
+    </div>
+
+    <!-- チャットUI -->
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <form id="chat-form" onsubmit="sendChat(event)">
+            <input type="text" id="chat-input" placeholder="チャットを入力 (Enter)" autocomplete="off">
+        </form>
     </div>
 
     <!-- 送金モーダル -->
@@ -330,14 +383,32 @@
             document.getElementById(panelId).style.display = 'block';
         }
 
-        function goToControlSetup() {
+        async function goToControlSetup() {
             const user = document.getElementById('reg-username').value;
             const pass = document.getElementById('reg-password').value;
             const terms = document.getElementById('terms-checkbox').checked;
+            
             if(!user || !pass) return document.getElementById('reg-error').innerText = 'IDとパスワードを入力してください';
             if(!terms) return document.getElementById('reg-error').innerText = '利用規約への同意が必要です';
-            regData.username = user; regData.password = pass;
-            switchPanel('control-setup-panel');
+            
+            // サーバーに重複確認
+            try {
+                const res = await fetch('/api/check-username', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    return document.getElementById('reg-error').innerText = data.message;
+                }
+                
+                regData.username = user; regData.password = pass;
+                switchPanel('control-setup-panel');
+
+            } catch (e) {
+                document.getElementById('reg-error').innerText = 'サーバーとの通信に失敗しました';
+            }
         }
 
         function goToTypeSetup(mode) {
@@ -548,7 +619,7 @@
             group.userData = { 
                 base: baseGroup, head: headGroup, tilt: tiltGroup, 
                 armL: armLGroup, armR: armRGroup, 
-                walkTime: 0, movingTimer: 0
+                walkTime: 0
             };
             return group;
         };
@@ -693,9 +764,13 @@
             const cfg = userAvatarConfig || regData;
             localAvatar = createAvatarMesh(cfg.colorVisor, cfg.colorBody, cfg.avatarType);
             localAvatar.scale.set(cfg.scaleW, cfg.scaleH, cfg.scaleW);
+            
+            // ローカルアバター用の変数
+            localAvatar.userData.currentBodyYaw = 0;
+            localAvatar.userData.currentCamYaw = 0;
+
             scene.add(localAvatar);
 
-            // 自分の参加をサーバーへ送信
             socket.emit('joinGame', {
                 username: currentUser,
                 avatar: cfg
@@ -703,6 +778,7 @@
 
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block';
+            document.getElementById('chat-container').style.display = 'flex';
             
             if (cfg.controlMode === 'pad') {
                 document.getElementById('pc-help').style.display = 'none'; 
@@ -718,24 +794,21 @@
         function setupSocketEvents() {
             socket.on('initData', (data) => {
                 Object.keys(data.players).forEach(id => {
-                    if (id !== socket.id) {
-                        addOtherPlayer(data.players[id]);
-                    }
+                    if (id !== socket.id) addOtherPlayer(data.players[id]);
                 });
             });
 
-            socket.on('newPlayer', (info) => {
-                if (info.id !== socket.id) {
-                    addOtherPlayer(info);
-                }
-            });
+            socket.on('newPlayer', (info) => addOtherPlayer(info));
 
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
-                    otherPlayers[info.id].position.set(info.x, info.y, info.z);
-                    otherPlayers[info.id].userData.targetYaw = info.rotation;
-                    otherPlayers[info.id].userData.targetPitch = info.pitch;
-                    otherPlayers[info.id].userData.movingTimer = 0.1;
+                    const op = otherPlayers[info.id];
+                    op.position.set(info.x, info.y, info.z);
+                    // リモートのアバターには目標角度を渡す
+                    op.userData.targetBodyYaw = info.bodyYaw;
+                    op.userData.targetCamYaw = info.camYaw;
+                    op.userData.targetPitch = info.pitch;
+                    op.userData.isMoving = info.isMoving;
                 }
             });
 
@@ -744,6 +817,15 @@
                     scene.remove(otherPlayers[id]);
                     delete otherPlayers[id];
                 }
+            });
+
+            socket.on('chatMessage', (data) => {
+                const box = document.getElementById('chat-messages');
+                const el = document.createElement('div');
+                el.className = 'chat-msg';
+                el.innerHTML = `<span class="name">${data.username}:</span><span>${data.text}</span>`;
+                box.appendChild(el);
+                box.scrollTop = box.scrollHeight;
             });
 
             socket.on('moneyUpdated', (newCr) => {
@@ -762,11 +844,30 @@
             const mesh = createAvatarMesh(av.colorVisor || '#00f3ff', av.colorBody || '#555555', av.avatarType || 'A');
             mesh.scale.set(av.scaleW || 1.0, av.scaleH || 1.0, av.scaleW || 1.0);
             mesh.position.set(info.x || 0, info.y || 5, info.z || 0);
-            mesh.userData.targetYaw = info.rotation || 0;
+            
+            mesh.userData.targetBodyYaw = info.bodyYaw || 0;
+            mesh.userData.targetCamYaw = info.camYaw || 0;
             mesh.userData.targetPitch = info.pitch || 0;
+            mesh.userData.isMoving = info.isMoving || false;
             
             scene.add(mesh);
             otherPlayers[info.id] = mesh;
+        }
+
+        // チャット送信処理
+        function sendChat(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(text && socket) {
+                socket.emit('chatMessage', text);
+                input.value = '';
+                input.blur();
+                if(document.pointerLockElement !== document.body && userAvatarConfig.controlMode === 'keyboard') {
+                    // 入力完了後、自動的に画面ロックに戻る
+                    document.body.requestPointerLock();
+                }
+            }
         }
 
         function showToast(type, text) {
@@ -778,19 +879,13 @@
             setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
-        function openTransferModal() {
-            document.getElementById('transfer-modal').style.display = 'flex';
-        }
-        function closeTransferModal() {
-            document.getElementById('transfer-modal').style.display = 'none';
-        }
+        function openTransferModal() { document.getElementById('transfer-modal').style.display = 'flex'; }
+        function closeTransferModal() { document.getElementById('transfer-modal').style.display = 'none'; }
         function executeTransfer() {
             const targetUsername = document.getElementById('transfer-target').value.trim();
             const amount = document.getElementById('transfer-amount').value.trim();
 
-            if (!targetUsername || !amount) {
-                return showToast('error', 'UserIDと金額を入力してください');
-            }
+            if (!targetUsername || !amount) return showToast('error', 'UserIDと金額を入力してください');
 
             socket.emit('sendMoney', { targetUsername, amount });
             document.getElementById('transfer-target').value = '';
@@ -813,9 +908,28 @@
             collisionBoxes.push(new THREE.Box3().setFromObject(box));
         }
 
+        let isTyping = false;
+        
         function setupInputHandlers() {
-            window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
-            window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
+            const chatInput = document.getElementById('chat-input');
+            chatInput.addEventListener('focus', () => isTyping = true);
+            chatInput.addEventListener('blur', () => isTyping = false);
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    if (!isTyping && isLocked) {
+                        document.exitPointerLock();
+                        chatInput.focus();
+                    }
+                    return;
+                }
+                if (isTyping) return;
+                keysPressed[e.key.toLowerCase()] = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (isTyping) return;
+                keysPressed[e.key.toLowerCase()] = false;
+            });
             
             document.addEventListener('mousemove', (e) => {
                 if (!isLocked) return;
@@ -827,8 +941,8 @@
             
             document.addEventListener('pointerlockchange', () => {
                 isLocked = (document.pointerLockElement === document.body);
-                document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
-                if(!isLocked) {
+                // 入力状態でないかつロック解除されたらスタート画面を出す
+                if(!isLocked && !isTyping) {
                     document.getElementById('start-overlay').style.display = 'flex';
                     document.getElementById('start-overlay').innerHTML = '<button class="start-btn" onclick="lockMouse()">画面をクリックして再開</button>';
                 }
@@ -981,40 +1095,57 @@
             return start + deltaAngle(end, start) * t;
         }
 
-        function updateAvatarAnim(avatar, isMoving, delta, targetRot, camYaw, camPitch) {
+        function updateAvatarAnim(avatar, isMoving, delta, targetBodyYaw, camYaw, camPitch, isLocal = false) {
             if (!avatar || !avatar.userData.head) return;
             const ud = avatar.userData;
             const time = clock.getElapsedTime();
             
             ud.base.position.y = Math.sin(time * 2) * 0.05;
 
+            if (isLocal) {
+                // --- ローカル用の計算 ---
+                let yawDiff = deltaAngle(camYaw + Math.PI, ud.currentBodyYaw);
+                const limit = Math.PI / 3;
+
+                if (isMoving) {
+                    ud.currentBodyYaw = lerpAngle(ud.currentBodyYaw, targetBodyYaw, 0.15);
+                    ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
+                } else {
+                    if (yawDiff > limit) {
+                        ud.currentBodyYaw += (yawDiff - limit) * 0.1;
+                        ud.head.rotation.y = limit;
+                    } else if (yawDiff < -limit) {
+                        ud.currentBodyYaw += (yawDiff + limit) * 0.1;
+                        ud.head.rotation.y = -limit;
+                    } else {
+                        ud.head.rotation.y = yawDiff;
+                    }
+                }
+                avatar.rotation.y = ud.currentBodyYaw;
+                
+            } else {
+                // --- リモート（他プレイヤー）用の計算 ---
+                // 送信されてきた体の向き(targetBodyYaw)にそのまま追従
+                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetBodyYaw, 0.15);
+                // 顔の向きは、送信されてきたカメラ方向(camYaw)と体の向きの差分
+                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
+                ud.head.rotation.y = Math.max(-Math.PI/3, Math.min(Math.PI/3, yawDiff));
+            }
+
+            ud.head.rotation.x = -camPitch; 
+
+            // 移動アニメーション
             if (isMoving) {
-                ud.walkTime += delta * 10; 
+                ud.walkTime += delta * 15; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
                 ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.2 - 0.2;
                 ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.2 - 0.2;
-                
-                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
-                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else {
                 ud.walkTime = 0; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-
-                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
-                const limit = Math.PI / 3;
-                if (yawDiff > limit) {
-                    avatar.rotation.y += (yawDiff - limit) * 0.1;
-                    ud.head.rotation.y = limit;
-                } else if (yawDiff < -limit) {
-                    avatar.rotation.y += (yawDiff + limit) * 0.1;
-                    ud.head.rotation.y = -limit;
-                } else {
-                    ud.head.rotation.y = yawDiff;
-                }
             }
-            ud.head.rotation.x = -camPitch; 
         }
 
         function checkCollision(pos) {
@@ -1039,12 +1170,12 @@
         
         function animate() {
             requestAnimationFrame(animate);
-            if (!isLocked) { renderer.render(scene, camera); return; }
+            if (!isLocked && !isTyping) { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
 
             const cfg = userAvatarConfig || regData;
 
-            if (cfg.controlMode === 'keyboard') {
+            if (cfg.controlMode === 'keyboard' && !isTyping) {
                 if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
                 if (isAdmin && keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
             }
@@ -1056,15 +1187,14 @@
             const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
             let wantsToJump = false;
 
-            if (cfg.controlMode === 'keyboard') {
+            if (cfg.controlMode === 'keyboard' && !isTyping) {
                 moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
                 if (keysPressed['w']) mv.add(forward);
                 if (keysPressed['s']) mv.sub(forward); 
                 if (keysPressed['a']) mv.sub(right);   
                 if (keysPressed['d']) mv.add(right);   
-                
                 if (keysPressed[' ']) wantsToJump = true;
-            } else {
+            } else if (cfg.controlMode === 'pad') {
                 if (padSpeedRatio > 0) {
                     moveSpeed = (padSpeedRatio > 0.8 ? speedRun : speedWalk);
                     const fwComp = forward.clone().multiplyScalar(padMoveDir.y);
@@ -1078,7 +1208,7 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                targetAvatarRotation = Math.atan2(mv.x, mv.z);
+                targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
             let testPos = playerLocalPos.clone(); testPos.x += mv.x;
@@ -1104,31 +1234,30 @@
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
+            // ローカルアバターの同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
-                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
+                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch, true);
             }
 
-            // 他プレイヤーのアニメーションと補間更新
+            // 他のプレイヤーの同期
             Object.values(otherPlayers).forEach(op => {
-                let isOpMoving = false;
-                if (op.userData.movingTimer > 0) {
-                    isOpMoving = true;
-                    op.userData.movingTimer -= delta;
-                }
-                updateAvatarAnim(op, isOpMoving, delta, op.userData.targetYaw || 0, cameraYaw, op.userData.targetPitch || 0);
+                updateAvatarAnim(op, op.userData.isMoving, delta, op.userData.targetBodyYaw, op.userData.targetCamYaw, op.userData.targetPitch, false);
             });
 
-            // 位置情報の送信
-            if (socket) {
+            // サーバーへ情報送信
+            if (socket && (moved || cameraYaw !== localAvatar.userData.currentCamYaw)) {
                 socket.emit('playerMovement', {
                     x: playerLocalPos.x,
                     y: playerLocalPos.y,
                     z: playerLocalPos.z,
-                    rotation: cameraYaw,
-                    pitch: cameraPitch
+                    bodyYaw: localAvatar.rotation.y, // 実際の体の向き
+                    camYaw: cameraYaw,               // 顔の向き計算用
+                    pitch: cameraPitch,
+                    isMoving: moved
                 });
+                localAvatar.userData.currentCamYaw = cameraYaw;
             }
 
             const headTarget = playerLocalPos.clone();
