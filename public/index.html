@@ -195,6 +195,29 @@
         let scene, camera, renderer, clock;
         let mapGroup = null; 
         
+        let localAvatar = null;
+        const otherPlayers = {};
+        
+        // 物理・移動用
+        let playerLocalPos = new THREE.Vector3(0, 5, 0); 
+        let playerVelocity = new THREE.Vector3(0, 0, 0);
+        let isGrounded = false;
+        
+        let cameraYaw = 0; 
+        let cameraPitch = 0;
+        let isLocked = false;
+        let isFPS = false; 
+        
+        let isGodMode = false; 
+        
+        const keysPressed = {};
+        const collisionBoxes = []; 
+        
+        const speedWalk = 5.0;
+        const speedRun = 10.0;
+        const jumpForce = 8.0;
+        const gravity = -20.0;
+        
         // アバターの向きをなめらかに補間するための目標角度
         let targetAvatarRotation = 0;
 
@@ -470,8 +493,8 @@
             // カメラのYaw（向いている方向）とアバターの体の向き（currentYaw）の差分を計算
             let yawDiff = deltaAngle(camYaw, ud.currentYaw);
             
-            // 左右90度 (Math.PI/2) が限界
-            const limit = Math.PI / 2;
+            // 左右60度 (Math.PI/3) が限界
+            const limit = Math.PI / 3;
             
             if (isMoving) {
                 // 移動中は体全体を進行方向（targetAvatarRotation）に滑らかに向ける
@@ -482,11 +505,11 @@
             } else {
                 // 停止時
                 if (yawDiff > limit) {
-                    // 右に90度以上向いた場合、体ごと右に回す
+                    // 右に60度以上向いた場合、体ごと右に回す
                     ud.currentYaw += (yawDiff - limit) * 0.1;
                     ud.head.rotation.y = limit;
                 } else if (yawDiff < -limit) {
-                    // 左に90度以上向いた場合、体ごと左に回す
+                    // 左に60度以上向いた場合、体ごと左に回す
                     ud.currentYaw += (yawDiff + limit) * 0.1;
                     ud.head.rotation.y = -limit;
                 } else {
@@ -525,7 +548,8 @@
             setupThreeJS();
             loadMapData(); 
             
-            localAvatar = createAvatarMesh(0x00f3ff);
+            // ログイン/登録時に選択したカラーを反映
+            localAvatar = createAvatarMesh(selectedAvatarColor);
             scene.add(localAvatar);
 
             document.getElementById('loading-screen').style.display = 'none';
@@ -536,22 +560,15 @@
         }
 
         async function loadMapData() {
-        function initGame() {
-            document.getElementById('loading-screen').style.display = 'flex';
-            socket = io(); 
-            
-            setupThreeJS();
-            loadMapData(); 
-            
-            // ログイン/登録時に選択したカラーを反映
-            localAvatar = createAvatarMesh(selectedAvatarColor);
-            scene.add(localAvatar);
-
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('start-overlay').style.display = 'flex';
-            
-            setupSocketEvents();
-            animate(); 
+            try {
+                const res = await fetch('/test_map.json');
+                if (!res.ok) throw new Error("Map file not found");
+                const mapData = await res.json();
+                buildMap(mapData);
+            } catch(e) {
+                console.warn("test_map.jsonが見つからないため、仮の地面を生成します。");
+                buildFallbackMap();
+            }
         }
 
         function buildMap(mapData) {
