@@ -2,10 +2,10 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HAKUYARC Metaverse (IMMERSIVE完全版)</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; touch-action: none; }
         
         /* ログイン・登録画面共通 */
         #auth-container {
@@ -79,11 +79,12 @@
         #ui-layer {
             position: absolute; top: 20px; left: 20px; z-index: 10; display: none;
             background: rgba(15, 23, 42, 0.7); padding: 15px; border-radius: 8px; backdrop-filter: blur(5px); border: 1px solid #334155;
+            pointer-events: none;
         }
         .ui-text { margin: 5px 0; font-size: 0.9rem; color: #cbd5e1; }
         .ui-value { font-weight: bold; color: #fff; font-size: 1.1rem; }
         
-        #admin-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #475569; }
+        #admin-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #475569; pointer-events: auto;}
         .admin-title { color: #facc15; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
 
         #crosshair {
@@ -92,9 +93,40 @@
             pointer-events: none; z-index: 5;
         }
         #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* --- バーチャルパッド UI --- */
+        #virtual-pad-container {
+            display: none;
+            position: absolute; bottom: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 20;
+        }
+        #joystick-zone {
+            position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px;
+            background: rgba(255,255,255,0.05); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2);
+            pointer-events: auto; display: flex; justify-content: center; align-items: center;
+            touch-action: none; /* 重要: スワイプ時のスクロールを防止 */
+        }
+        #joystick-knob {
+            width: 50px; height: 50px; background: rgba(0, 243, 255, 0.4); border-radius: 50%;
+            border: 2px solid #00f3ff; pointer-events: none;
+        }
+        #camera-zone {
+            position: absolute; top: 0; right: 0; width: 50vw; height: 100vh;
+            pointer-events: auto; touch-action: none;
+        }
+        #action-buttons {
+            position: absolute; bottom: 30px; right: 30px;
+            display: flex; gap: 15px; pointer-events: auto;
+        }
+        .v-btn {
+            width: 60px; height: 60px; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%; color: white; font-weight: bold; font-size: 0.9rem;
+            display: flex; justify-content: center; align-items: center; user-select: none; touch-action: none;
+        }
+        .v-btn:active { background: rgba(0, 243, 255, 0.4); border-color: #00f3ff; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script> window.io = function() { return { on: function(){}, emit: function(){} }; }; </script>
 </head>
 <body>
 
@@ -181,9 +213,12 @@
         <div class="spinner"></div>
         <div style="color: #00ffff; font-weight: bold; letter-spacing: 2px;">INITIALIZING WORLD...</div>
     </div>
+    
     <div id="start-overlay">
+        <!-- キーボード操作の場合はここが表示され、マウスクリックでロックする -->
         <button class="start-btn" onclick="lockMouse()">システムにダイブする</button>
     </div>
+    
     <div id="ui-layer">
         <div class="ui-text">ID: <span id="ui-id" class="ui-value">---</span></div>
         <div class="ui-text">CR: <span id="ui-money" class="ui-value" style="color:#fbbf24;">0</span></div>
@@ -192,7 +227,7 @@
             <div class="ui-text" style="font-size: 0.75rem;">[Z] Toggle Fly Mode</div>
             <div class="ui-text" style="font-size: 0.75rem;">[Q]/[E] Down / Up</div>
         </div>
-        <div style="margin-top:15px; font-size: 0.75rem; color: #94a3b8;">
+        <div id="pc-help" style="margin-top:15px; font-size: 0.75rem; color: #94a3b8;">
             [W][A][S][D]: Move<br>
             [Shift]: Sprint<br>
             [Space]: Jump<br>
@@ -200,15 +235,32 @@
             [Esc]: Free Mouse
         </div>
     </div>
+    
     <div id="crosshair"></div>
     <div id="canvas-container"></div>
+
+    <!-- バーチャルパッドUI -->
+    <div id="virtual-pad-container">
+        <!-- 左スティック -->
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <!-- 右カメラ操作 -->
+        <div id="camera-zone"></div>
+        <!-- アクションボタン -->
+        <div id="action-buttons">
+            <div class="v-btn" id="v-btn-cam">CAM</div>
+            <div class="v-btn" id="v-btn-jump">JUMP</div>
+        </div>
+    </div>
 
     <script>
         // --- 登録フロー用変数 ---
         let regData = {
             username: '', password: '', controlMode: 'keyboard', color: '#00f3ff', scaleH: 1.0, scaleW: 1.0
         };
-        let selectedAvatarColor = '#00f3ff';
+        // 初回表示用のデフォルト値 (既に設定されていればそれを維持する)
+        let selectedAvatarColor = regData.color;
         
         // --- メインゲーム用変数 ---
         let currentUser = null, isAdmin = false, socket = null;
@@ -218,10 +270,17 @@
         let playerLocalPos = new THREE.Vector3(0, 5, 0); 
         let playerVelocity = new THREE.Vector3(0, 0, 0);
         let isGrounded = false, isGodMode = false, isLocked = false, isFPS = false; 
+        
         let cameraYaw = 0, cameraPitch = 0, targetAvatarRotation = 0; 
         const keysPressed = {};
         const collisionBoxes = []; 
+        
         const speedWalk = 5.0, speedRun = 10.0, jumpForce = 8.0, gravity = -20.0;
+        
+        // バーチャルパッド用入力変数
+        let padMoveDir = new THREE.Vector2(0, 0);
+        let isPadJumping = false;
+        let padSpeedRatio = 0;
 
         // --- パネル切り替え処理 ---
         function switchPanel(panelId) {
@@ -234,7 +293,6 @@
             document.getElementById(panelId).style.display = 'block';
         }
 
-        // --- 登録フロー制御 ---
         function goToControlSetup() {
             const user = document.getElementById('reg-username').value;
             const pass = document.getElementById('reg-password').value;
@@ -254,7 +312,6 @@
         function goToShapeSetup() {
             regData.color = selectedAvatarColor;
             switchPanel('avatar-shape-panel');
-            // パネルが表示されてから3Dプレビューを初期化
             setTimeout(initPreview, 50);
         }
 
@@ -296,7 +353,7 @@
                 function renderPreview() {
                     previewReqId = requestAnimationFrame(renderPreview);
                     if(previewAvatar) {
-                        previewAvatar.rotation.y += 0.015; // ゆっくり回転
+                        previewAvatar.rotation.y += 0.015; 
                     }
                     previewRenderer.render(previewScene, previewCamera);
                 }
@@ -305,8 +362,12 @@
             
             if(previewAvatar) previewScene.remove(previewAvatar);
             previewAvatar = createAvatarMesh(selectedAvatarColor);
-            previewAvatar.position.y = -0.5; // 位置調整
+            previewAvatar.position.y = -0.5; 
             previewScene.add(previewAvatar);
+            
+            // 以前設定した値があれば復元
+            document.getElementById('shape-height').value = regData.scaleH;
+            document.getElementById('shape-width').value = regData.scaleW;
             updateShapeParams();
         }
 
@@ -321,66 +382,86 @@
             if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
-        // --- アバターメッシュ生成共通関数 ---
+        // --- アバターメッシュ生成 ---
         window.createAvatarMesh = function(colorHex) {
             const group = new THREE.Group();
+            
             const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.3, flatShading: true });
             const glowMaterial = new THREE.MeshBasicMaterial({ color: colorHex });
             const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true });
 
             const baseGroup = new THREE.Group();
             group.add(baseGroup);
+            
             const tiltGroup = new THREE.Group();
             tiltGroup.position.y = 0.6;
             baseGroup.add(tiltGroup);
 
-            // 頭部
             const headGroup = new THREE.Group();
             headGroup.position.y = 0.7; 
             tiltGroup.add(headGroup);
+
             const headMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), bodyMaterial);
-            headMesh.position.y = 0.2; headMesh.castShadow = true;
+            headMesh.position.y = 0.2; 
+            headMesh.castShadow = true;
             headGroup.add(headMesh);
+
             const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMaterial);
             visorMesh.position.set(0, 0.22, 0.32);
             headGroup.add(visorMesh);
+
             const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
             const leftSensor = new THREE.Mesh(sensorGeo, darkMaterial);
-            leftSensor.rotation.z = Math.PI/2; leftSensor.position.set(0.32, 0.2, 0);
+            leftSensor.rotation.z = Math.PI / 2;
+            leftSensor.position.set(0.32, 0.2, 0);
             headGroup.add(leftSensor);
+
             const rightSensor = leftSensor.clone();
             rightSensor.position.set(-0.32, 0.2, 0);
             headGroup.add(rightSensor);
 
-            // 胴体
             const torsoGroup = new THREE.Group();
             tiltGroup.add(torsoGroup);
+
             const chestMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), bodyMaterial);
-            chestMesh.position.y = 0.3; chestMesh.castShadow = true;
+            chestMesh.position.y = 0.3;
+            chestMesh.castShadow = true;
             torsoGroup.add(chestMesh);
+
             const lineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.32), glowMaterial);
             lineMesh.position.y = 0.25;
             torsoGroup.add(lineMesh);
+
             const waistMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5), bodyMaterial);
-            waistMesh.position.y = -0.15; waistMesh.castShadow = true;
+            waistMesh.position.y = -0.15;
+            waistMesh.castShadow = true;
             torsoGroup.add(waistMesh);
 
-            // 腕
             const armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
-            const armLGroup = new THREE.Group(); armLGroup.position.set(0.35, 0.55, 0); 
+            
+            const armLGroup = new THREE.Group();
+            armLGroup.position.set(0.35, 0.55, 0); 
             const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
-            leftArm.position.y = -0.25; leftArm.castShadow = true;
-            armLGroup.add(leftArm); tiltGroup.add(armLGroup);
-            const armRGroup = new THREE.Group(); armRGroup.position.set(-0.35, 0.55, 0); 
-            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
-            rightArm.position.y = -0.25; rightArm.castShadow = true;
-            armRGroup.add(rightArm); tiltGroup.add(armRGroup);
+            leftArm.position.y = -0.25;
+            leftArm.castShadow = true;
+            armLGroup.add(leftArm);
+            tiltGroup.add(armLGroup);
 
-            armLGroup.rotation.z = -0.15; armRGroup.rotation.z = 0.15;
+            const armRGroup = new THREE.Group();
+            armRGroup.position.set(-0.35, 0.55, 0); 
+            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
+            rightArm.position.y = -0.25;
+            rightArm.castShadow = true;
+            armRGroup.add(rightArm);
+            tiltGroup.add(armRGroup);
+
+            armLGroup.rotation.z = -0.15;
+            armRGroup.rotation.z = 0.15;
 
             group.userData = { 
                 base: baseGroup, head: headGroup, tilt: tiltGroup, 
-                armL: armLGroup, armR: armRGroup, walkTime: 0, movingTimer: 0 
+                armL: armLGroup, armR: armRGroup, 
+                walkTime: 0, movingTimer: 0
             };
             return group;
         };
@@ -391,22 +472,19 @@
             const password = document.getElementById('login-password').value;
             if(!username || !password) return document.getElementById('login-error').innerText = '入力してください';
             
-            // --- 本来はAPI通信ですが、ここではモックとして直接ゲーム開始します ---
             currentUser = username;
             isAdmin = (username === 'admin');
             document.getElementById('ui-id').innerText = currentUser;
             document.getElementById('ui-money').innerText = "1000";
             if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
             
-            // ログイン時はデフォルトのスケール
-            regData.scaleH = 1.0; regData.scaleW = 1.0;
+            // 修正: 再ログイン時は、前回の設定（スケール、色、操作モード）をそのまま維持する。
             
             document.getElementById('auth-container').style.display = 'none';
             initGame();
         }
 
         async function attemptRegister() {
-            // --- 本来は regData をサーバーに送信します ---
             currentUser = regData.username;
             isAdmin = false;
             document.getElementById('ui-id').innerText = currentUser;
@@ -421,21 +499,32 @@
             scene = new THREE.Scene(); 
             scene.background = new THREE.Color(0x050814);
             scene.fog = new THREE.FogExp2(0x050814, 0.005);
+            
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight); 
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
+
             scene.add(new THREE.AmbientLight(0x223344, 1.5));
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
             dirLight.position.set(50, 100, 70);
             dirLight.castShadow = true;
             scene.add(dirLight);
+
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
             clock = new THREE.Clock();
-            setupInputHandlers();
+
+            // モードに応じたイベントのセットアップ
+            if (regData.controlMode === 'pad') {
+                setupPadHandlers();
+            } else {
+                setupInputHandlers();
+            }
+
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -444,22 +533,33 @@
         }
 
         function initGame() {
-            if(previewReqId) cancelAnimationFrame(previewReqId); // プレビューのレンダリングを停止
+            if(previewReqId) cancelAnimationFrame(previewReqId); 
             document.getElementById('loading-screen').style.display = 'flex';
             
-            // ソケットは環境がない場合はエラーになるためコメントアウトかMock化
-            // socket = io(); 
+            socket = io(); 
             
             setupThreeJS();
-            buildFallbackMap(); // 簡易マップを使用
+            buildFallbackMap(); 
             
             localAvatar = createAvatarMesh(regData.color || '#00f3ff');
-            // 設定したスケールを適用
             localAvatar.scale.set(regData.scaleW, regData.scaleH, regData.scaleW);
             scene.add(localAvatar);
 
             document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('start-overlay').style.display = 'flex';
+            
+            if (regData.controlMode === 'pad') {
+                // パッドモード
+                document.getElementById('ui-layer').style.display = 'block';
+                document.getElementById('pc-help').style.display = 'none'; 
+                document.getElementById('virtual-pad-container').style.display = 'block';
+                isLocked = true; 
+            } else {
+                // PCモード
+                document.getElementById('start-overlay').style.display = 'flex';
+                document.getElementById('pc-help').style.display = 'block';
+                document.getElementById('virtual-pad-container').style.display = 'none';
+                isLocked = false;
+            }
             
             animate(); 
         }
@@ -472,7 +572,6 @@
             mapGroup.add(floor);
             collisionBoxes.push(new THREE.Box3(new THREE.Vector3(-500, -10, -500), new THREE.Vector3(500, 0, 500)));
             
-            // オブジェ追加
             const boxMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff });
             const box = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), boxMat);
             box.position.set(10, 2.5, -10); box.castShadow = true;
@@ -480,20 +579,23 @@
             collisionBoxes.push(new THREE.Box3().setFromObject(box));
         }
 
+        // --- 入力制御 (キーボード＆マウス) ---
         function setupInputHandlers() {
             window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
+            
             document.addEventListener('mousemove', (e) => {
                 if (!isLocked) return;
                 const sensitivity = 0.002;
                 cameraYaw -= e.movementX * sensitivity;
                 cameraPitch -= e.movementY * sensitivity;
-                cameraPitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, cameraPitch));
+                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch));
             });
+            
             document.addEventListener('pointerlockchange', () => {
                 isLocked = (document.pointerLockElement === document.body);
                 document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
-                if(!isLocked) {
+                if(!isLocked && regData.controlMode === 'keyboard') {
                     document.getElementById('start-overlay').style.display = 'flex';
                     document.getElementById('start-overlay').innerHTML = '<button class="start-btn" onclick="lockMouse()">画面をクリックして再開</button>';
                 }
@@ -503,6 +605,129 @@
         window.lockMouse = function() {
             document.body.requestPointerLock();
             document.getElementById('start-overlay').style.display = 'none';
+        }
+
+        // --- 入力制御 (バーチャルパッド - PC/スマホ両対応版) ---
+        function setupPadHandlers() {
+            const stickZone = document.getElementById('joystick-zone');
+            const stickKnob = document.getElementById('joystick-knob');
+            const camZone = document.getElementById('camera-zone');
+            
+            const maxRadius = 45;
+            let stickActive = false;
+            let stickBase = { x: 0, y: 0 };
+            
+            // ジョイスティック操作 (Touch)
+            stickZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                stickActive = true;
+                const touch = e.changedTouches[0];
+                const rect = stickZone.getBoundingClientRect();
+                stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateStick(touch.clientX, touch.clientY);
+            });
+            stickZone.addEventListener('touchmove', (e) => {
+                if(!stickActive) return;
+                e.preventDefault();
+                updateStick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+            });
+            const endStickTouch = (e) => {
+                e.preventDefault();
+                stickActive = false;
+                padMoveDir.set(0, 0);
+                padSpeedRatio = 0;
+                stickKnob.style.transform = `translate(0px, 0px)`;
+            };
+            stickZone.addEventListener('touchend', endStickTouch);
+            stickZone.addEventListener('touchcancel', endStickTouch);
+
+            // ジョイスティック操作 (Mouse - PCテスト用)
+            stickZone.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                stickActive = true;
+                const rect = stickZone.getBoundingClientRect();
+                stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateStick(e.clientX, e.clientY);
+            });
+            document.addEventListener('mousemove', (e) => {
+                if(!stickActive) return;
+                updateStick(e.clientX, e.clientY);
+            });
+            document.addEventListener('mouseup', () => {
+                if(!stickActive) return;
+                stickActive = false;
+                padMoveDir.set(0, 0);
+                padSpeedRatio = 0;
+                stickKnob.style.transform = `translate(0px, 0px)`;
+            });
+            
+            function updateStick(clientX, clientY) {
+                let dx = clientX - stickBase.x;
+                let dy = clientY - stickBase.y;
+                let distance = Math.hypot(dx, dy);
+                
+                if (distance > maxRadius) {
+                    dx = (dx / distance) * maxRadius;
+                    dy = (dy / distance) * maxRadius;
+                    distance = maxRadius;
+                }
+                
+                stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+                padMoveDir.set(dx / maxRadius, -dy / maxRadius); 
+                padSpeedRatio = distance / maxRadius;
+            }
+
+            // カメラ操作 (Touch)
+            let camActive = false;
+            let lastCamPos = { x: 0, y: 0 };
+            
+            camZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                camActive = true;
+                lastCamPos = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            });
+            camZone.addEventListener('touchmove', (e) => {
+                if(!camActive) return;
+                e.preventDefault();
+                updateCam(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+            });
+            const endCamTouch = (e) => { e.preventDefault(); camActive = false; };
+            camZone.addEventListener('touchend', endCamTouch);
+            camZone.addEventListener('touchcancel', endCamTouch);
+
+            // カメラ操作 (Mouse - PCテスト用)
+            camZone.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                camActive = true;
+                lastCamPos = { x: e.clientX, y: e.clientY };
+            });
+            document.addEventListener('mousemove', (e) => {
+                if(!camActive || stickActive) return; // 左ドラッグ中は右の判定を避ける
+                updateCam(e.clientX, e.clientY);
+            });
+            document.addEventListener('mouseup', () => { camActive = false; });
+
+            function updateCam(clientX, clientY) {
+                const dx = clientX - lastCamPos.x;
+                const dy = clientY - lastCamPos.y;
+                const sensitivity = 0.005;
+                cameraYaw -= dx * sensitivity;
+                cameraPitch -= dy * sensitivity;
+                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch));
+                lastCamPos = { x: clientX, y: clientY };
+            }
+            
+            // アクションボタン
+            const btnJump = document.getElementById('v-btn-jump');
+            const btnCam = document.getElementById('v-btn-cam');
+            
+            btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); isPadJumping = true; });
+            btnJump.addEventListener('touchend', (e) => { e.preventDefault(); isPadJumping = false; });
+            btnJump.addEventListener('mousedown', (e) => { e.preventDefault(); isPadJumping = true; });
+            btnJump.addEventListener('mouseup', (e) => { e.preventDefault(); isPadJumping = false; });
+
+            btnCam.addEventListener('touchstart', (e) => { e.preventDefault(); isFPS = !isFPS; });
+            btnCam.addEventListener('mousedown', (e) => { e.preventDefault(); isFPS = !isFPS; });
         }
 
         function deltaAngle(a, b) {
@@ -570,23 +795,41 @@
         }
 
         let vKeyWasPressed = false, zKeyWasPressed = false;
+        
         function animate() {
             requestAnimationFrame(animate);
-            if (!isLocked) { renderer.render(scene, camera); return; }
+            if (!isLocked && regData.controlMode === 'keyboard') { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
 
-            if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
-            if (keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
+            if (regData.controlMode === 'keyboard') {
+                if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
+                if (keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
+            }
 
-            let moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
             const mv = new THREE.Vector3(0, 0, 0);
+            let moveSpeed = speedWalk;
+            
             const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
             const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+            let wantsToJump = false;
 
-            if (keysPressed['w']) mv.add(forward);
-            if (keysPressed['s']) mv.sub(forward);
-            if (keysPressed['a']) mv.sub(right);
-            if (keysPressed['d']) mv.add(right);
+            if (regData.controlMode === 'keyboard') {
+                moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
+                if (keysPressed['w']) mv.add(forward);
+                if (keysPressed['s']) mv.sub(forward); 
+                if (keysPressed['a']) mv.sub(right);   
+                if (keysPressed['d']) mv.add(right);   
+                
+                if (keysPressed[' ']) wantsToJump = true;
+            } else {
+                if (padSpeedRatio > 0) {
+                    moveSpeed = (padSpeedRatio > 0.8 ? speedRun : speedWalk);
+                    const fwComp = forward.clone().multiplyScalar(padMoveDir.y);
+                    const riComp = right.clone().multiplyScalar(padMoveDir.x);
+                    mv.add(fwComp).add(riComp);
+                }
+                if (isPadJumping) wantsToJump = true;
+            }
 
             let moved = false;
             if (mv.lengthSq() > 0) {
@@ -604,7 +847,7 @@
                 if (keysPressed['e']) playerLocalPos.y += 10 * delta;
                 if (keysPressed['q']) playerLocalPos.y -= 10 * delta;
             } else {
-                if (isGrounded && keysPressed[' ']) {
+                if (isGrounded && wantsToJump) {
                     playerVelocity.y = jumpForce; isGrounded = false;
                 }
                 playerVelocity.y += gravity * delta;
@@ -625,7 +868,6 @@
             }
 
             const headTarget = playerLocalPos.clone();
-            // 身長スケールに合わせて注視点の高さを変える
             headTarget.y += 1.4 * regData.scaleH; 
 
             if (isFPS) {
@@ -644,7 +886,17 @@
                 const offset = new THREE.Vector3(Math.sin(cameraYaw) * hDist, -vDist, Math.cos(cameraYaw) * hDist);
                 camera.position.copy(headTarget).add(offset);
                 
-                // めり込み防止もスケールに合わせる
+                if (cameraPitch > 0) {
+                    const pushBack = cameraPitch * 3.0; 
+                    const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+                    camera.position.addScaledVector(fwdVec, -pushBack);
+                    
+                    const minHeight = playerLocalPos.y + 0.3 + (cameraPitch * 1.5);
+                    if (camera.position.y < minHeight) {
+                        camera.position.y = minHeight;
+                    }
+                }
+
                 if (camera.position.y < playerLocalPos.y + 0.1) camera.position.y = playerLocalPos.y + 0.1;
                 camera.lookAt(headTarget);
             }
