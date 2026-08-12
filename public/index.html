@@ -323,47 +323,41 @@
             const phaseOffset = avatar.uuid ? avatar.uuid.charCodeAt(0) : 0;
             ud.base.position.y = Math.sin(time * 2 + phaseOffset) * 0.05;
 
-            // --- 体の向きと顔の向きの制御 (大改修) ---
+            // --- 体の向きと顔の向きの制御 ---
+            // カメラのYaw（向いている方向）とアバターの体の向き（currentYaw）の差分を計算
             let yawDiff = deltaAngle(camYaw, ud.currentYaw);
             
-            // 首が回る限界（左右90度に拡大し、真横に走った後にすぐ前を向く不自然さを防ぐ）
-            const limit = Math.PI / 2; 
+            // 左右90度 (Math.PI/2) が限界
+            const limit = Math.PI / 2;
             
             if (isMoving) {
-                // 移動中: 体全体を素早く進行方向（targetAvatarRotation）に向ける
-                let moveDiff = deltaAngle(targetAvatarRotation, ud.currentYaw);
-                ud.currentYaw += moveDiff * 0.15; // 0.15は回転速度
+                // 移動中は体全体を進行方向（targetAvatarRotation）に滑らかに向ける
+                ud.currentYaw = ud.currentYaw + deltaAngle(targetAvatarRotation, ud.currentYaw) * 0.15;
                 
-                // 回転した結果を -PI から PI の範囲内に正規化
-                ud.currentYaw = ud.currentYaw % (Math.PI * 2);
-                if (ud.currentYaw > Math.PI) ud.currentYaw -= Math.PI * 2;
-                if (ud.currentYaw < -Math.PI) ud.currentYaw += Math.PI * 2;
-
-                // 移動中は顔は正面（体と同じ向き）
+                // 体が進行方向を向くため、顔の左右のねじれはゼロ（正面）に戻す
                 ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, 0, 0.1);
             } else {
-                // 停止中: 首だけがカメラの方向（camYaw）を追従する
+                // 停止時
                 if (yawDiff > limit) {
-                    // 右に90度以上向いた場合、体を右に回す
+                    // 右に90度以上向いた場合、体ごと右に回す
                     ud.currentYaw += (yawDiff - limit) * 0.1;
                     ud.head.rotation.y = limit;
                 } else if (yawDiff < -limit) {
-                    // 左に90度以上向いた場合、体を左に回す
+                    // 左に90度以上向いた場合、体ごと左に回す
                     ud.currentYaw += (yawDiff + limit) * 0.1;
                     ud.head.rotation.y = -limit;
                 } else {
-                    // 制限内の場合は顔だけをカメラの方向へ
-                    ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, yawDiff, 0.1);
+                    // 制限内の場合は顔だけを動かす
+                    ud.head.rotation.y = yawDiff;
                 }
             }
             
-            // アバター全体の回転を適用
+            // アバターの親グループの回転を更新
             avatar.rotation.y = ud.currentYaw;
 
             // 頭の上下（ピッチ）制御
-            // カメラが見上げている(camPitch > 0)ときは、頭も上を向く(rotation.x < 0)
-            const clampedPitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, camPitch));
-            ud.head.rotation.x = THREE.MathUtils.lerp(ud.head.rotation.x, -clampedPitch, 0.2); 
+            const clampedPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camPitch));
+            ud.head.rotation.x = -clampedPitch; 
 
             // --- 移動アニメーション（傾きと腕の振り） ---
             if (isMoving) {
@@ -580,6 +574,7 @@
             if (isAdmin && keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
 
             // --- 移動計算 ---
+            // 移動計算
             let moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
             const mv = new THREE.Vector3(0, 0, 0);
             
@@ -593,11 +588,10 @@
 
             let moved = false;
             if (mv.lengthSq() > 0) {
-                // 入力ベクトルを正規化して移動量を計算
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
                 
-                // 進行方向の角度を計算して保存（停止時もこれを維持する）
+                // 進行方向の角度を計算して targetAvatarRotation に保存
                 targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
@@ -638,6 +632,8 @@
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
                 
+                // updateAvatarAnim には、targetAvatarRotation ではなく cameraYaw を渡す
+                // (顔をカメラの方向に向けるため)
                 updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, cameraYaw, cameraPitch);
             }
 
