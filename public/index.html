@@ -227,6 +227,7 @@
 
             // 浮遊アニメーション用に全体を包むグループ
             const baseGroup = new THREE.Group();
+            baseGroup.rotation.y = Math.PI; // ★アバターの正面(顔)をZ-方向に向ける
             group.add(baseGroup);
             
             // 体の傾き（前傾姿勢）を制御するグループ
@@ -325,8 +326,8 @@
             // --- 体の向きと顔の向きの制御 (大改修) ---
             let yawDiff = deltaAngle(camYaw, ud.currentYaw);
             
-            // 首が回る限界（左右60度）
-            const limit = Math.PI / 3; 
+            // 首が回る限界（左右90度に拡大し、真横に走った後にすぐ前を向く不自然さを防ぐ）
+            const limit = Math.PI / 2; 
             
             if (isMoving) {
                 // 移動中: 体全体を素早く進行方向（targetAvatarRotation）に向ける
