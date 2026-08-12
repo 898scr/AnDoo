@@ -331,7 +331,6 @@
             
             if (isMoving) {
                 // 移動中: 体全体を素早く進行方向（targetAvatarRotation）に向ける
-                // 【修正】単純なlerpではなく、最短距離を計算して回転させることで「くるりんぱ」を防止
                 let moveDiff = deltaAngle(targetAvatarRotation, ud.currentYaw);
                 ud.currentYaw += moveDiff * 0.15; // 0.15は回転速度
                 
@@ -345,11 +344,11 @@
             } else {
                 // 停止中: 首だけがカメラの方向（camYaw）を追従する
                 if (yawDiff > limit) {
-                    // 右に60度以上向いた場合、体を右に回す
+                    // 右に90度以上向いた場合、体を右に回す
                     ud.currentYaw += (yawDiff - limit) * 0.1;
                     ud.head.rotation.y = limit;
                 } else if (yawDiff < -limit) {
-                    // 左に60度以上向いた場合、体を左に回す
+                    // 左に90度以上向いた場合、体を左に回す
                     ud.currentYaw += (yawDiff + limit) * 0.1;
                     ud.head.rotation.y = -limit;
                 } else {
@@ -598,7 +597,7 @@
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
                 
-                // 進行方向の角度を計算
+                // 進行方向の角度を計算して保存（停止時もこれを維持する）
                 targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
