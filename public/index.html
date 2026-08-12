@@ -57,7 +57,7 @@
 
         /* 各パネルの初期表示設定 */
         #login-panel { display: block; }
-        #register-panel, #control-setup-panel, #avatar-color-panel, #avatar-shape-panel { display: none; }
+        #register-panel, #control-setup-panel, #avatar-visor-panel, #avatar-body-panel, #avatar-shape-panel { display: none; }
 
         /* ロード画面など */
         #loading-screen {
@@ -104,7 +104,7 @@
             position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px;
             background: rgba(255,255,255,0.05); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2);
             pointer-events: auto; display: flex; justify-content: center; align-items: center;
-            touch-action: none; /* 重要: スワイプ時のスクロールを防止 */
+            touch-action: none; 
         }
         #joystick-knob {
             width: 50px; height: 50px; background: rgba(0, 243, 255, 0.4); border-radius: 50%;
@@ -162,29 +162,40 @@
         <div class="panel" id="control-setup-panel">
             <h2>STEP 2: CONTROL</h2>
             <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">プレイスタイルを選択してください</p>
-            <div class="choice-btn" onclick="goToColorSetup('keyboard')">
+            <div class="choice-btn" onclick="goToVisorSetup('keyboard')">
                 <div class="icon">⌨️🖱️</div>
                 <div>キーボード ＆ マウス</div>
             </div>
-            <div class="choice-btn" onclick="goToColorSetup('pad')">
+            <div class="choice-btn" onclick="goToVisorSetup('pad')">
                 <div class="icon">📱🕹️</div>
                 <div>ヴァーチャルパッド (Touch)</div>
             </div>
             <div class="link-text"><a onclick="switchPanel('register-panel')">← 戻る</a></div>
         </div>
 
-        <!-- 4. 登録Step 3 (カラー設定) -->
-        <div class="panel" id="avatar-color-panel">
-            <h2>STEP 3: COLOR</h2>
-            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">ベースとなる発光色を選択</p>
-            <div class="color-picker-container" id="color-picker">
+        <!-- 4. 登録Step 3-1 (バイザーカラー設定) -->
+        <div class="panel" id="avatar-visor-panel">
+            <h2>STEP 3-1: VISOR</h2>
+            <p class="color-picker-title">発光部（バイザーやライン）の色</p>
+            <div class="color-picker-container" id="visor-color-picker">
                 <!-- JSで生成 -->
             </div>
-            <button class="btn-success" onclick="goToShapeSetup()">次へ (体形設定)</button>
+            <button class="btn-success" onclick="goToBodySetup()">次へ (ボディカラー)</button>
             <div class="link-text"><a onclick="switchPanel('control-setup-panel')">← 戻る</a></div>
         </div>
 
-        <!-- 5. 登録Step 4 (体形設定・プレビュー) -->
+        <!-- 5. 登録Step 3-2 (ボディカラー設定) -->
+        <div class="panel" id="avatar-body-panel">
+            <h2>STEP 3-2: BODY</h2>
+            <p class="color-picker-title">機体（ボディ）の色</p>
+            <div class="color-picker-container" id="body-color-picker">
+                <!-- JSで生成 -->
+            </div>
+            <button class="btn-success" onclick="goToShapeSetup()">次へ (体形プレビュー)</button>
+            <div class="link-text"><a onclick="switchPanel('avatar-visor-panel')">← 戻る</a></div>
+        </div>
+
+        <!-- 6. 登録Step 4 (体形設定・プレビュー) -->
         <div class="panel" id="avatar-shape-panel">
             <h2>STEP 4: SHAPE</h2>
             <div id="setup-error" class="error-msg"></div>
@@ -203,7 +214,7 @@
             </div>
 
             <button class="btn-primary" onclick="attemptRegister()">登録してダイブ</button>
-            <div class="link-text"><a onclick="switchPanel('avatar-color-panel')">← 戻る</a></div>
+            <div class="link-text"><a onclick="switchPanel('avatar-body-panel')">← 戻る</a></div>
         </div>
 
     </div>
@@ -215,7 +226,6 @@
     </div>
     
     <div id="start-overlay">
-        <!-- キーボード操作の場合はここが表示され、マウスクリックでロックする -->
         <button class="start-btn" onclick="lockMouse()">システムにダイブする</button>
     </div>
     
@@ -257,10 +267,12 @@
     <script>
         // --- 登録フロー用変数 ---
         let regData = {
-            username: '', password: '', controlMode: 'keyboard', color: '#00f3ff', scaleH: 1.0, scaleW: 1.0
+            username: '', password: '', controlMode: 'keyboard', 
+            colorVisor: '#00f3ff', colorBody: '#555555', scaleH: 1.0, scaleW: 1.0
         };
-        // 初回表示用のデフォルト値 (既に設定されていればそれを維持する)
-        let selectedAvatarColor = regData.color;
+        // 初回表示用のデフォルト値
+        let selectedVisorColor = regData.colorVisor;
+        let selectedBodyColor = regData.colorBody;
         
         // --- メインゲーム用変数 ---
         let currentUser = null, isAdmin = false, socket = null;
@@ -284,7 +296,7 @@
 
         // --- パネル切り替え処理 ---
         function switchPanel(panelId) {
-            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-color-panel', 'avatar-shape-panel'].forEach(id => {
+            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-visor-panel', 'avatar-body-panel', 'avatar-shape-panel'].forEach(id => {
                 document.getElementById(id).style.display = 'none';
             });
             document.getElementById('login-error').innerText = '';
@@ -304,31 +316,51 @@
             switchPanel('control-setup-panel');
         }
 
-        function goToColorSetup(mode) {
+        function goToVisorSetup(mode) {
             regData.controlMode = mode;
-            switchPanel('avatar-color-panel');
+            switchPanel('avatar-visor-panel');
+        }
+
+        function goToBodySetup() {
+            regData.colorVisor = selectedVisorColor;
+            switchPanel('avatar-body-panel');
         }
 
         function goToShapeSetup() {
-            regData.color = selectedAvatarColor;
+            regData.colorBody = selectedBodyColor;
             switchPanel('avatar-shape-panel');
             setTimeout(initPreview, 50);
         }
 
         // --- カラーピッカー生成 ---
-        const avatarColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
-        const pickerContainer = document.getElementById('color-picker');
-        avatarColors.forEach(color => {
+        const visorColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
+        const visorContainer = document.getElementById('visor-color-picker');
+        visorColors.forEach(color => {
             const btn = document.createElement('div');
             btn.className = 'color-btn';
             btn.style.backgroundColor = color;
-            if (color === selectedAvatarColor) btn.classList.add('selected');
+            if (color === selectedVisorColor) btn.classList.add('selected');
             btn.onclick = () => {
-                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+                document.querySelectorAll('#visor-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
-                selectedAvatarColor = color;
+                selectedVisorColor = color;
             };
-            pickerContainer.appendChild(btn);
+            visorContainer.appendChild(btn);
+        });
+
+        const bodyColors = ['#555555', '#222222', '#dddddd', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f'];
+        const bodyContainer = document.getElementById('body-color-picker');
+        bodyColors.forEach(color => {
+            const btn = document.createElement('div');
+            btn.className = 'color-btn';
+            btn.style.backgroundColor = color;
+            if (color === selectedBodyColor) btn.classList.add('selected');
+            btn.onclick = () => {
+                document.querySelectorAll('#body-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedBodyColor = color;
+            };
+            bodyContainer.appendChild(btn);
         });
 
         // --- 3Dプレビュー用処理 ---
@@ -361,11 +393,11 @@
             }
             
             if(previewAvatar) previewScene.remove(previewAvatar);
-            previewAvatar = createAvatarMesh(selectedAvatarColor);
+            // プレビューアバターを2つの色で生成
+            previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor);
             previewAvatar.position.y = -0.5; 
             previewScene.add(previewAvatar);
             
-            // 以前設定した値があれば復元
             document.getElementById('shape-height').value = regData.scaleH;
             document.getElementById('shape-width').value = regData.scaleW;
             updateShapeParams();
@@ -382,13 +414,21 @@
             if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
-        // --- アバターメッシュ生成 ---
-        window.createAvatarMesh = function(colorHex) {
+        // --- アバターメッシュ生成 (バイザー色, ボディ色の2引数に対応) ---
+        window.createAvatarMesh = function(visorHex, bodyHex) {
             const group = new THREE.Group();
             
-            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.3, flatShading: true });
-            const glowMaterial = new THREE.MeshBasicMaterial({ color: colorHex });
-            const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true });
+            // ボディ色を反映
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: bodyHex, metalness: 0.8, roughness: 0.3, flatShading: true
+            });
+            // バイザー色を反映
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: visorHex
+            });
+            const darkMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
+            });
 
             const baseGroup = new THREE.Group();
             group.add(baseGroup);
@@ -461,7 +501,7 @@
             group.userData = { 
                 base: baseGroup, head: headGroup, tilt: tiltGroup, 
                 armL: armLGroup, armR: armRGroup, 
-                walkTime: 0, movingTimer: 0
+                walkTime: 0, movingTimer: 0, currentYaw: 0 
             };
             return group;
         };
@@ -477,8 +517,6 @@
             document.getElementById('ui-id').innerText = currentUser;
             document.getElementById('ui-money').innerText = "1000";
             if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
-            
-            // 修正: 再ログイン時は、前回の設定（スケール、色、操作モード）をそのまま維持する。
             
             document.getElementById('auth-container').style.display = 'none';
             initGame();
@@ -518,7 +556,6 @@
             scene.add(mapGroup);
             clock = new THREE.Clock();
 
-            // モードに応じたイベントのセットアップ
             if (regData.controlMode === 'pad') {
                 setupPadHandlers();
             } else {
@@ -541,24 +578,20 @@
             setupThreeJS();
             buildFallbackMap(); 
             
-            localAvatar = createAvatarMesh(regData.color || '#00f3ff');
+            // アバター生成時に2つの色を渡す
+            localAvatar = createAvatarMesh(regData.colorVisor, regData.colorBody);
             localAvatar.scale.set(regData.scaleW, regData.scaleH, regData.scaleW);
             scene.add(localAvatar);
 
             document.getElementById('loading-screen').style.display = 'none';
             
             if (regData.controlMode === 'pad') {
-                // パッドモード
                 document.getElementById('ui-layer').style.display = 'block';
                 document.getElementById('pc-help').style.display = 'none'; 
                 document.getElementById('virtual-pad-container').style.display = 'block';
                 isLocked = true; 
             } else {
-                // PCモード
                 document.getElementById('start-overlay').style.display = 'flex';
-                document.getElementById('pc-help').style.display = 'block';
-                document.getElementById('virtual-pad-container').style.display = 'none';
-                isLocked = false;
             }
             
             animate(); 
@@ -607,59 +640,60 @@
             document.getElementById('start-overlay').style.display = 'none';
         }
 
-        // --- 入力制御 (バーチャルパッド - PC/スマホ両対応版) ---
+        // --- 入力制御 (バーチャルパッド) ---
         function setupPadHandlers() {
             const stickZone = document.getElementById('joystick-zone');
             const stickKnob = document.getElementById('joystick-knob');
             const camZone = document.getElementById('camera-zone');
             
-            const maxRadius = 45;
-            let stickActive = false;
+            const maxRadius = 45; 
+            let stickTouchId = null;
             let stickBase = { x: 0, y: 0 };
             
-            // ジョイスティック操作 (Touch)
+            const startStick = (clientX, clientY, identifier) => {
+                stickTouchId = identifier;
+                const rect = stickZone.getBoundingClientRect();
+                stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateStick(clientX, clientY);
+            };
+
             stickZone.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                stickActive = true;
-                const touch = e.changedTouches[0];
-                const rect = stickZone.getBoundingClientRect();
-                stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                updateStick(touch.clientX, touch.clientY);
+                startStick(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.changedTouches[0].identifier);
             });
-            stickZone.addEventListener('touchmove', (e) => {
-                if(!stickActive) return;
-                e.preventDefault();
-                updateStick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-            });
-            const endStickTouch = (e) => {
-                e.preventDefault();
-                stickActive = false;
-                padMoveDir.set(0, 0);
-                padSpeedRatio = 0;
-                stickKnob.style.transform = `translate(0px, 0px)`;
-            };
-            stickZone.addEventListener('touchend', endStickTouch);
-            stickZone.addEventListener('touchcancel', endStickTouch);
-
-            // ジョイスティック操作 (Mouse - PCテスト用)
             stickZone.addEventListener('mousedown', (e) => {
                 e.preventDefault();
-                stickActive = true;
-                const rect = stickZone.getBoundingClientRect();
-                stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                updateStick(e.clientX, e.clientY);
+                startStick(e.clientX, e.clientY, 'mouse');
+            });
+            
+            const moveStick = (clientX, clientY, identifier) => {
+                if (identifier === stickTouchId) updateStick(clientX, clientY);
+            };
+
+            stickZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                for (let i=0; i<e.changedTouches.length; i++) moveStick(e.changedTouches[i].clientX, e.changedTouches[i].clientY, e.changedTouches[i].identifier);
             });
             document.addEventListener('mousemove', (e) => {
-                if(!stickActive) return;
-                updateStick(e.clientX, e.clientY);
+                if (stickTouchId === 'mouse') moveStick(e.clientX, e.clientY, 'mouse');
             });
-            document.addEventListener('mouseup', () => {
-                if(!stickActive) return;
-                stickActive = false;
-                padMoveDir.set(0, 0);
-                padSpeedRatio = 0;
-                stickKnob.style.transform = `translate(0px, 0px)`;
+            
+            const endStick = (identifier) => {
+                if (identifier === stickTouchId || identifier === 'mouse') {
+                    stickTouchId = null;
+                    padMoveDir.set(0, 0);
+                    padSpeedRatio = 0;
+                    stickKnob.style.transform = `translate(0px, 0px)`;
+                }
+            };
+            
+            stickZone.addEventListener('touchend', (e) => {
+                for (let i=0; i<e.changedTouches.length; i++) endStick(e.changedTouches[i].identifier);
             });
+            stickZone.addEventListener('touchcancel', (e) => {
+                for (let i=0; i<e.changedTouches.length; i++) endStick(e.changedTouches[i].identifier);
+            });
+            document.addEventListener('mouseup', () => endStick('mouse'));
             
             function updateStick(clientX, clientY) {
                 let dx = clientX - stickBase.x;
@@ -677,55 +711,62 @@
                 padSpeedRatio = distance / maxRadius;
             }
 
-            // カメラ操作 (Touch)
-            let camActive = false;
+            let camTouchId = null;
             let lastCamPos = { x: 0, y: 0 };
             
+            const startCam = (clientX, clientY, identifier) => {
+                camTouchId = identifier;
+                lastCamPos = { x: clientX, y: clientY };
+            };
+
             camZone.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                camActive = true;
-                lastCamPos = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+                startCam(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.changedTouches[0].identifier);
             });
-            camZone.addEventListener('touchmove', (e) => {
-                if(!camActive) return;
-                e.preventDefault();
-                updateCam(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-            });
-            const endCamTouch = (e) => { e.preventDefault(); camActive = false; };
-            camZone.addEventListener('touchend', endCamTouch);
-            camZone.addEventListener('touchcancel', endCamTouch);
-
-            // カメラ操作 (Mouse - PCテスト用)
             camZone.addEventListener('mousedown', (e) => {
                 e.preventDefault();
-                camActive = true;
-                lastCamPos = { x: e.clientX, y: e.clientY };
+                startCam(e.clientX, e.clientY, 'mouse');
+            });
+            
+            const moveCam = (clientX, clientY, identifier) => {
+                if (identifier === camTouchId) {
+                    const dx = clientX - lastCamPos.x;
+                    const dy = clientY - lastCamPos.y;
+                    const sensitivity = 0.005;
+                    cameraYaw -= dx * sensitivity;
+                    cameraPitch -= dy * sensitivity;
+                    cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch));
+                    lastCamPos = { x: clientX, y: clientY };
+                }
+            };
+
+            camZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                for (let i=0; i<e.changedTouches.length; i++) moveCam(e.changedTouches[i].clientX, e.changedTouches[i].clientY, e.changedTouches[i].identifier);
             });
             document.addEventListener('mousemove', (e) => {
-                if(!camActive || stickActive) return; // 左ドラッグ中は右の判定を避ける
-                updateCam(e.clientX, e.clientY);
+                if (camTouchId === 'mouse') moveCam(e.clientX, e.clientY, 'mouse');
             });
-            document.addEventListener('mouseup', () => { camActive = false; });
+            
+            const endCam = (identifier) => {
+                if (identifier === camTouchId || identifier === 'mouse') camTouchId = null;
+            };
 
-            function updateCam(clientX, clientY) {
-                const dx = clientX - lastCamPos.x;
-                const dy = clientY - lastCamPos.y;
-                const sensitivity = 0.005;
-                cameraYaw -= dx * sensitivity;
-                cameraPitch -= dy * sensitivity;
-                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch));
-                lastCamPos = { x: clientX, y: clientY };
-            }
+            camZone.addEventListener('touchend', (e) => {
+                for (let i=0; i<e.changedTouches.length; i++) endCam(e.changedTouches[i].identifier);
+            });
+            camZone.addEventListener('touchcancel', (e) => {
+                for (let i=0; i<e.changedTouches.length; i++) endCam(e.changedTouches[i].identifier);
+            });
+            document.addEventListener('mouseup', () => endCam('mouse'));
             
-            // アクションボタン
             const btnJump = document.getElementById('v-btn-jump');
-            const btnCam = document.getElementById('v-btn-cam');
-            
             btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); isPadJumping = true; });
             btnJump.addEventListener('touchend', (e) => { e.preventDefault(); isPadJumping = false; });
             btnJump.addEventListener('mousedown', (e) => { e.preventDefault(); isPadJumping = true; });
             btnJump.addEventListener('mouseup', (e) => { e.preventDefault(); isPadJumping = false; });
 
+            const btnCam = document.getElementById('v-btn-cam');
             btnCam.addEventListener('touchstart', (e) => { e.preventDefault(); isFPS = !isFPS; });
             btnCam.addEventListener('mousedown', (e) => { e.preventDefault(); isFPS = !isFPS; });
         }
@@ -737,44 +778,50 @@
             return diff;
         }
 
-        function lerpAngle(start, end, t) {
-            return start + deltaAngle(end, start) * t;
-        }
-
-        function updateAvatarAnim(avatar, isMoving, delta, targetRot, camYaw, camPitch) {
+        function updateAvatarAnim(avatar, isMoving, delta, camYaw, camPitch) {
             if (!avatar || !avatar.userData.head) return;
             const ud = avatar.userData;
             const time = clock.getElapsedTime();
             
             ud.base.position.y = Math.sin(time * 2) * 0.05;
 
+            let yawDiff = deltaAngle(camYaw, ud.currentYaw);
+            const limit = Math.PI / 3;
+            
             if (isMoving) {
-                ud.walkTime += delta * 10; 
-                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
-                ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.2 - 0.2;
-                ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.2 - 0.2;
-                
-                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
-                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
+                // 移動中は進行方向を向く
+                // targetAvatarRotation との差分を計算して補間する
+                let bodyDiff = deltaAngle(targetAvatarRotation, ud.currentYaw);
+                ud.currentYaw += bodyDiff * 0.15; 
+                ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, 0, 0.1);
             } else {
-                ud.walkTime = 0; 
-                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
-                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
-                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-
-                let yawDiff = deltaAngle(camYaw, avatar.rotation.y);
-                const limit = Math.PI / 3;
                 if (yawDiff > limit) {
-                    avatar.rotation.y += (yawDiff - limit) * 0.1;
+                    ud.currentYaw += (yawDiff - limit) * 0.1;
                     ud.head.rotation.y = limit;
                 } else if (yawDiff < -limit) {
-                    avatar.rotation.y += (yawDiff + limit) * 0.1;
+                    ud.currentYaw += (yawDiff + limit) * 0.1;
                     ud.head.rotation.y = -limit;
                 } else {
                     ud.head.rotation.y = yawDiff;
                 }
             }
-            ud.head.rotation.x = -camPitch; 
+            
+            avatar.rotation.y = ud.currentYaw;
+            const clampedPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camPitch));
+            ud.head.rotation.x = -clampedPitch; 
+
+            if (isMoving) {
+                ud.walkTime += delta * 10; 
+                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
+                const swing = Math.sin(ud.walkTime);
+                ud.armL.rotation.x = swing * 0.2 - 0.2;
+                ud.armR.rotation.x = -swing * 0.2 - 0.2;
+            } else {
+                ud.walkTime = 0; 
+                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
+                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
+                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+            }
         }
 
         function checkCollision(pos) {
@@ -798,7 +845,7 @@
         
         function animate() {
             requestAnimationFrame(animate);
-            if (!isLocked && regData.controlMode === 'keyboard') { renderer.render(scene, camera); return; }
+            if (!isLocked) { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
 
             if (regData.controlMode === 'keyboard') {
@@ -815,6 +862,7 @@
 
             if (regData.controlMode === 'keyboard') {
                 moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
+                // 正しいカメラ方向ベクトルによる移動計算
                 if (keysPressed['w']) mv.add(forward);
                 if (keysPressed['s']) mv.sub(forward); 
                 if (keysPressed['a']) mv.sub(right);   
@@ -835,6 +883,7 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
+                // Zのマイナス方向が基準正面
                 targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
@@ -864,7 +913,7 @@
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
-                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
+                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, cameraYaw, cameraPitch);
             }
 
             const headTarget = playerLocalPos.clone();
