@@ -883,7 +883,10 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                // Zのマイナス方向が基準正面
+                
+                // 動いた方向を計算 (体の向きに使用)
+                // -Z方向が基準（前）であるため、atan2で角度を出す
+                // ★修正: mv.xとmv.zの符号をマイナスにすることで180度反転を修正
                 targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
