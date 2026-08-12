@@ -849,7 +849,10 @@
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
 
-                let yawDiff = deltaAngle(camYaw, avatar.rotation.y);
+                // --- 修正: 顔が常にカメラを追うように修正 ---
+                // Math.PI (180度) を足すことで、背中側（+Z）ではなくカメラ側（-Z）を向く
+                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
+                
                 const limit = Math.PI / 3;
                 if (yawDiff > limit) {
                     avatar.rotation.y += (yawDiff - limit) * 0.1;
@@ -975,6 +978,7 @@
                 const offset = new THREE.Vector3(Math.sin(cameraYaw) * hDist, -vDist, Math.cos(cameraYaw) * hDist);
                 camera.position.copy(headTarget).add(offset);
                 
+                // 見上げた時に地面を這うようにする修正
                 if (cameraPitch > 0) {
                     const pushBack = cameraPitch * 3.0; 
                     const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
@@ -986,6 +990,7 @@
                     }
                 }
 
+                // どんな角度でも最低限の高度を保証
                 if (camera.position.y < playerLocalPos.y + 0.1) camera.position.y = playerLocalPos.y + 0.1;
                 camera.lookAt(headTarget);
             }
