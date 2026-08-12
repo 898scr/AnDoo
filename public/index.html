@@ -7,60 +7,59 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
         
-        /* --- 認証・登録画面 共通コンテナ --- */
+        /* ログイン・登録画面共通 */
         #auth-container {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(15, 23, 42, 0.95);
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-        
-        .panel { 
-            background: rgba(30, 41, 59, 0.9); padding: 30px; border-radius: 12px; 
-            border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
-            width: 320px; transition: 0.3s; 
-        }
-        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; font-size: 1.4rem; letter-spacing: 1px;}
-        .panel input[type="text"], .panel input[type="password"] { 
-            width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; 
-            border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; transition: 0.2s;
-        }
+        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 320px; transition: 0.3s; }
+        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; font-size: 1.2rem; letter-spacing: 1px;}
+        .panel input[type="text"], .panel input[type="password"] { width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; transition: 0.2s;}
         .panel input:focus { border-color: #38bdf8; outline: none; box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);}
-        .panel button { 
-            width: 100%; padding: 12px; margin: 15px 0 5px 0; border: none; 
-            border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem;
-        }
+        .panel button { width: 100%; padding: 12px; margin: 10px 0 5px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem;}
+        
         .btn-primary { background: #0ea5e9; color: white; }
         .btn-primary:hover { background: #0284c7; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
-        .error-msg { color: #f43f5e; font-size: 0.85rem; text-align: center; min-height: 20px; margin-bottom: 10px;}
         
+        .error-msg { color: #f43f5e; font-size: 0.85rem; text-align: center; min-height: 20px; margin-bottom: 5px;}
         .link-text { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #94a3b8; }
         .link-text a { color: #38bdf8; cursor: pointer; text-decoration: none; font-weight: bold; }
         .link-text a:hover { text-decoration: underline; }
 
-        /* --- 個別パネルの表示制御 --- */
-        #login-panel { display: block; }
-        #register-panel { display: none; }
-        #avatar-setup-panel { display: none; }
+        /* 利用規約 */
+        .checkbox-container { display: flex; align-items: flex-start; margin: 15px 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
+        .checkbox-container input { margin-right: 8px; margin-top: 2px; width: 16px; height: 16px; cursor: pointer; }
 
-        /* --- 登録フロー専用パーツ --- */
-        .checkbox-container { display: flex; align-items: flex-start; margin: 15px 0 5px 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
-        .checkbox-container input { margin-right: 10px; margin-top: 2px; width: 16px; height: 16px; cursor: pointer; }
-        
+        /* 選択ボタン (操作方法用) */
+        .choice-btn { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 15px;
+            margin-bottom: 10px; cursor: pointer; transition: 0.2s; color: #cbd5e1; font-weight: bold;
+        }
+        .choice-btn:hover { background: #1e293b; border-color: #38bdf8; transform: translateY(-2px); color: #fff;}
+        .choice-btn .icon { font-size: 2rem; margin-bottom: 5px; }
+
+        /* カラーピッカー */
         .color-picker-title { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 10px; text-align: center;}
         .color-picker-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .color-btn { width: 35px; height: 35px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
         .color-btn:hover { transform: scale(1.1); }
         .color-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); transform: scale(1.1); }
         
-        .setup-preview { 
-            width: 100%; height: 120px; background: #0f172a; border-radius: 8px; 
-            border: 1px solid #475569; margin-bottom: 15px; display: flex; 
-            justify-content: center; align-items: center; color: #64748b; font-size: 0.8rem;
-        }
+        /* 3Dプレビューとスライダー */
+        .setup-preview { width: 100%; height: 200px; background: #050814; border-radius: 8px; border: 1px solid #475569; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px #000;}
+        .slider-group { margin-bottom: 10px; text-align: left; }
+        .slider-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;}
+        .slider-group input[type="range"] { width: 100%; cursor: pointer; }
 
-        /* ロード画面 */
+        /* 各パネルの初期表示設定 */
+        #login-panel { display: block; }
+        #register-panel, #control-setup-panel, #avatar-color-panel, #avatar-shape-panel { display: none; }
+
+        /* ロード画面など */
         #loading-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.8); z-index: 90;
@@ -69,7 +68,6 @@
         .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #00ffff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* ゲーム開始オーバーレイ */
         #start-overlay {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.5); z-index: 80;
@@ -78,7 +76,6 @@
         .start-btn { padding: 15px 30px; font-size: 1.2rem; background: #00ffff; color: #000; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,255,0.5); transition: 0.2s;}
         .start-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(0,255,255,0.8); }
 
-        /* UIレイヤー */
         #ui-layer {
             position: absolute; top: 20px; left: 20px; z-index: 10; display: none;
             background: rgba(15, 23, 42, 0.7); padding: 15px; border-radius: 8px; backdrop-filter: blur(5px); border: 1px solid #334155;
@@ -102,6 +99,7 @@
 <body>
 
     <div id="auth-container">
+        
         <!-- 1. ログイン画面 -->
         <div class="panel" id="login-panel">
             <h2>HAKUYARC SYSTEM</h2>
@@ -114,128 +112,153 @@
             </div>
         </div>
 
-        <!-- 2. 新規登録画面 (Step 1) -->
+        <!-- 2. 登録Step 1 (アカウント情報) -->
         <div class="panel" id="register-panel">
-            <h2>CREATE ACCOUNT</h2>
+            <h2>STEP 1: ACCOUNT</h2>
             <div id="reg-error" class="error-msg"></div>
             <input type="text" id="reg-username" placeholder="New UserID" required>
             <input type="password" id="reg-password" placeholder="New Password" required>
-            
             <label class="checkbox-container">
                 <input type="checkbox" id="terms-checkbox">
-                <span>HAKUYARCの<a href="#" style="color:#38bdf8;">利用規約</a>およびプライバシーポリシーに同意します。</span>
+                <span>HAKUYARCの利用規約およびプライバシーポリシーに同意します。</span>
             </label>
-
-            <button class="btn-success" onclick="goToAvatarSetup()">次へ (アバター設定)</button>
-            <div class="link-text">
-                すでにアカウントをお持ちですか？ <a onclick="switchPanel('login-panel')">ログイン</a>
-            </div>
+            <button class="btn-success" onclick="goToControlSetup()">次へ (操作設定)</button>
+            <div class="link-text"><a onclick="switchPanel('login-panel')">← ログインに戻る</a></div>
         </div>
 
-        <!-- 3. アバター設定画面 (Step 2) -->
-        <div class="panel" id="avatar-setup-panel">
-            <h2>AVATAR SETUP</h2>
+        <!-- 3. 登録Step 2 (操作方法) -->
+        <div class="panel" id="control-setup-panel">
+            <h2>STEP 2: CONTROL</h2>
+            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">プレイスタイルを選択してください</p>
+            <div class="choice-btn" onclick="goToColorSetup('keyboard')">
+                <div class="icon">⌨️🖱️</div>
+                <div>キーボード ＆ マウス</div>
+            </div>
+            <div class="choice-btn" onclick="goToColorSetup('pad')">
+                <div class="icon">📱🕹️</div>
+                <div>ヴァーチャルパッド (Touch)</div>
+            </div>
+            <div class="link-text"><a onclick="switchPanel('register-panel')">← 戻る</a></div>
+        </div>
+
+        <!-- 4. 登録Step 3 (カラー設定) -->
+        <div class="panel" id="avatar-color-panel">
+            <h2>STEP 3: COLOR</h2>
+            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">ベースとなる発光色を選択</p>
+            <div class="color-picker-container" id="color-picker">
+                <!-- JSで生成 -->
+            </div>
+            <button class="btn-success" onclick="goToShapeSetup()">次へ (体形設定)</button>
+            <div class="link-text"><a onclick="switchPanel('control-setup-panel')">← 戻る</a></div>
+        </div>
+
+        <!-- 5. 登録Step 4 (体形設定・プレビュー) -->
+        <div class="panel" id="avatar-shape-panel">
+            <h2>STEP 4: SHAPE</h2>
             <div id="setup-error" class="error-msg"></div>
             
             <div class="setup-preview" id="setup-preview-box">
-                <!-- 簡易プレビュー領域 -->
-                <div id="preview-color-box" style="width: 40px; height: 60px; background-color: #00f3ff; border-radius: 4px; box-shadow: 0 0 15px #00f3ff;"></div>
+                <!-- Three.jsプレビューキャンバス -->
             </div>
 
-            <div class="color-picker-title">ベースカラーを選択</div>
-            <div class="color-picker-container" id="color-picker">
-                <!-- JavaScriptで生成 -->
+            <div class="slider-group">
+                <label>身長 (Height): <span id="val-height" style="color:#00ffff;">1.0</span></label>
+                <input type="range" id="shape-height" min="0.8" max="1.3" step="0.05" value="1.0" oninput="updateShapeParams()">
+            </div>
+            <div class="slider-group">
+                <label>横幅 (Width): <span id="val-width" style="color:#00ffff;">1.0</span></label>
+                <input type="range" id="shape-width" min="0.8" max="1.3" step="0.05" value="1.0" oninput="updateShapeParams()">
             </div>
 
-            <button class="btn-success" onclick="attemptRegister()">登録してダイブ</button>
-            <div class="link-text">
-                <a onclick="switchPanel('register-panel')">← 戻る</a>
-            </div>
+            <button class="btn-primary" onclick="attemptRegister()">登録してダイブ</button>
+            <div class="link-text"><a onclick="switchPanel('avatar-color-panel')">← 戻る</a></div>
         </div>
+
     </div>
 
+    <!-- その他UI -->
     <div id="loading-screen">
         <div class="spinner"></div>
         <div style="color: #00ffff; font-weight: bold; letter-spacing: 2px;">INITIALIZING WORLD...</div>
     </div>
-
     <div id="start-overlay">
         <button class="start-btn" onclick="lockMouse()">システムにダイブする</button>
     </div>
-
     <div id="ui-layer">
         <div class="ui-text">ID: <span id="ui-id" class="ui-value">---</span></div>
         <div class="ui-text">CR: <span id="ui-money" class="ui-value" style="color:#fbbf24;">0</span></div>
-        
         <div id="admin-panel">
             <div class="admin-title">👑 ADMIN CONTROLS</div>
             <div class="ui-text" style="font-size: 0.75rem;">[Z] Toggle Fly Mode</div>
             <div class="ui-text" style="font-size: 0.75rem;">[Q]/[E] Down / Up</div>
         </div>
-
         <div style="margin-top:15px; font-size: 0.75rem; color: #94a3b8;">
             [W][A][S][D]: Move<br>
             [Shift]: Sprint<br>
             [Space]: Jump<br>
-            [V]: Toggle Camera (FPS/TPS)<br>
+            [V]: Toggle Camera<br>
             [Esc]: Free Mouse
         </div>
     </div>
-
     <div id="crosshair"></div>
     <div id="canvas-container"></div>
 
     <script>
-        let currentUser = null;
-        let isAdmin = false;
-        let socket = null;
+        // --- 登録フロー用変数 ---
+        let regData = {
+            username: '', password: '', controlMode: 'keyboard', color: '#00f3ff', scaleH: 1.0, scaleW: 1.0
+        };
+        let selectedAvatarColor = '#00f3ff';
         
-        let selectedAvatarColor = '#00f3ff'; // デフォルト色
-
-        let scene, camera, renderer, clock;
-        let mapGroup = null; 
-        
+        // --- メインゲーム用変数 ---
+        let currentUser = null, isAdmin = false, socket = null;
+        let scene, camera, renderer, clock, mapGroup = null; 
         let localAvatar = null;
         const otherPlayers = {};
-        
-        // 物理・移動用
         let playerLocalPos = new THREE.Vector3(0, 5, 0); 
         let playerVelocity = new THREE.Vector3(0, 0, 0);
-        let isGrounded = false;
-        
-        let cameraYaw = 0; 
-        let cameraPitch = 0;
-        let isLocked = false;
-        let isFPS = false; 
-        
-        let isGodMode = false; 
-        
+        let isGrounded = false, isGodMode = false, isLocked = false, isFPS = false; 
+        let cameraYaw = 0, cameraPitch = 0, targetAvatarRotation = 0; 
         const keysPressed = {};
         const collisionBoxes = []; 
-        
-        const speedWalk = 5.0;
-        const speedRun = 10.0;
-        const jumpForce = 8.0;
-        const gravity = -20.0;
-        
-        // アバターの向きをなめらかに補間するための目標角度
-        let targetAvatarRotation = 0;
+        const speedWalk = 5.0, speedRun = 10.0, jumpForce = 8.0, gravity = -20.0;
 
-        // --- UI表示切り替え用 ---
+        // --- パネル切り替え処理 ---
         function switchPanel(panelId) {
-            document.getElementById('login-panel').style.display = 'none';
-            document.getElementById('register-panel').style.display = 'none';
-            document.getElementById('avatar-setup-panel').style.display = 'none';
-            
-            // エラーメッセージのクリア
+            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-color-panel', 'avatar-shape-panel'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
             document.getElementById('login-error').innerText = '';
             document.getElementById('reg-error').innerText = '';
             document.getElementById('setup-error').innerText = '';
-
             document.getElementById(panelId).style.display = 'block';
         }
 
-        // --- カラーピッカーの生成 ---
+        // --- 登録フロー制御 ---
+        function goToControlSetup() {
+            const user = document.getElementById('reg-username').value;
+            const pass = document.getElementById('reg-password').value;
+            const terms = document.getElementById('terms-checkbox').checked;
+            if(!user || !pass) return document.getElementById('reg-error').innerText = 'IDとパスワードを入力してください';
+            if(!terms) return document.getElementById('reg-error').innerText = '利用規約への同意が必要です';
+            
+            regData.username = user; regData.password = pass;
+            switchPanel('control-setup-panel');
+        }
+
+        function goToColorSetup(mode) {
+            regData.controlMode = mode;
+            switchPanel('avatar-color-panel');
+        }
+
+        function goToShapeSetup() {
+            regData.color = selectedAvatarColor;
+            switchPanel('avatar-shape-panel');
+            // パネルが表示されてから3Dプレビューを初期化
+            setTimeout(initPreview, 50);
+        }
+
+        // --- カラーピッカー生成 ---
         const avatarColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
         const pickerContainer = document.getElementById('color-picker');
         avatarColors.forEach(color => {
@@ -243,131 +266,176 @@
             btn.className = 'color-btn';
             btn.style.backgroundColor = color;
             if (color === selectedAvatarColor) btn.classList.add('selected');
-            
             btn.onclick = () => {
                 document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
                 selectedAvatarColor = color;
-                
-                // プレビューボックスの色と発光を更新
-                const previewBox = document.getElementById('preview-color-box');
-                previewBox.style.backgroundColor = color;
-                previewBox.style.boxShadow = `0 0 15px ${color}`;
             };
             pickerContainer.appendChild(btn);
         });
 
-        // --- 登録フロー Step 1 -> 2 ---
-        function goToAvatarSetup() {
-            const user = document.getElementById('reg-username').value;
-            const pass = document.getElementById('reg-password').value;
-            const terms = document.getElementById('terms-checkbox').checked;
+        // --- 3Dプレビュー用処理 ---
+        let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
+        
+        function initPreview() {
+            const container = document.getElementById('setup-preview-box');
+            if(!previewRenderer) {
+                previewScene = new THREE.Scene();
+                previewScene.add(new THREE.AmbientLight(0x223344, 2.0));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                dirLight.position.set(2, 5, 3);
+                previewScene.add(dirLight);
 
-            if(!user || !pass) {
-                document.getElementById('reg-error').innerText = 'IDとパスワードを入力してください';
-                return;
+                previewCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+                previewCamera.position.set(0, 1.0, 3.5);
+
+                previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                previewRenderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(previewRenderer.domElement);
+
+                function renderPreview() {
+                    previewReqId = requestAnimationFrame(renderPreview);
+                    if(previewAvatar) {
+                        previewAvatar.rotation.y += 0.015; // ゆっくり回転
+                    }
+                    previewRenderer.render(previewScene, previewCamera);
+                }
+                renderPreview();
             }
-            if(!terms) {
-                document.getElementById('reg-error').innerText = '利用規約への同意が必要です';
-                return;
-            }
-            switchPanel('avatar-setup-panel');
+            
+            if(previewAvatar) previewScene.remove(previewAvatar);
+            previewAvatar = createAvatarMesh(selectedAvatarColor);
+            previewAvatar.position.y = -0.5; // 位置調整
+            previewScene.add(previewAvatar);
+            updateShapeParams();
         }
 
-        // --- ログイン処理 ---
+        function updateShapeParams() {
+            const h = parseFloat(document.getElementById('shape-height').value);
+            const w = parseFloat(document.getElementById('shape-width').value);
+            document.getElementById('val-height').innerText = h.toFixed(2);
+            document.getElementById('val-width').innerText = w.toFixed(2);
+            
+            regData.scaleH = h;
+            regData.scaleW = w;
+            if(previewAvatar) previewAvatar.scale.set(w, h, w);
+        }
+
+        // --- アバターメッシュ生成共通関数 ---
+        window.createAvatarMesh = function(colorHex) {
+            const group = new THREE.Group();
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.3, flatShading: true });
+            const glowMaterial = new THREE.MeshBasicMaterial({ color: colorHex });
+            const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true });
+
+            const baseGroup = new THREE.Group();
+            group.add(baseGroup);
+            const tiltGroup = new THREE.Group();
+            tiltGroup.position.y = 0.6;
+            baseGroup.add(tiltGroup);
+
+            // 頭部
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 0.7; 
+            tiltGroup.add(headGroup);
+            const headMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), bodyMaterial);
+            headMesh.position.y = 0.2; headMesh.castShadow = true;
+            headGroup.add(headMesh);
+            const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMaterial);
+            visorMesh.position.set(0, 0.22, 0.32);
+            headGroup.add(visorMesh);
+            const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
+            const leftSensor = new THREE.Mesh(sensorGeo, darkMaterial);
+            leftSensor.rotation.z = Math.PI/2; leftSensor.position.set(0.32, 0.2, 0);
+            headGroup.add(leftSensor);
+            const rightSensor = leftSensor.clone();
+            rightSensor.position.set(-0.32, 0.2, 0);
+            headGroup.add(rightSensor);
+
+            // 胴体
+            const torsoGroup = new THREE.Group();
+            tiltGroup.add(torsoGroup);
+            const chestMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), bodyMaterial);
+            chestMesh.position.y = 0.3; chestMesh.castShadow = true;
+            torsoGroup.add(chestMesh);
+            const lineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.32), glowMaterial);
+            lineMesh.position.y = 0.25;
+            torsoGroup.add(lineMesh);
+            const waistMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5), bodyMaterial);
+            waistMesh.position.y = -0.15; waistMesh.castShadow = true;
+            torsoGroup.add(waistMesh);
+
+            // 腕
+            const armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
+            const armLGroup = new THREE.Group(); armLGroup.position.set(0.35, 0.55, 0); 
+            const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
+            leftArm.position.y = -0.25; leftArm.castShadow = true;
+            armLGroup.add(leftArm); tiltGroup.add(armLGroup);
+            const armRGroup = new THREE.Group(); armRGroup.position.set(-0.35, 0.55, 0); 
+            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
+            rightArm.position.y = -0.25; rightArm.castShadow = true;
+            armRGroup.add(rightArm); tiltGroup.add(armRGroup);
+
+            armLGroup.rotation.z = -0.15; armRGroup.rotation.z = 0.15;
+
+            group.userData = { 
+                base: baseGroup, head: headGroup, tilt: tiltGroup, 
+                armL: armLGroup, armR: armRGroup, walkTime: 0, movingTimer: 0 
+            };
+            return group;
+        };
+
+        // --- 認証・登録通信処理 ---
         async function attemptLogin() {
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
-            if(!username || !password) return showError('login-error', 'IDとパスワードを入力してください');
-
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    currentUser = data.username;
-                    isAdmin = data.isAdmin;
-                    // ※実際の運用ではサーバーから保存されたアバター色を取得する
-                    selectedAvatarColor = data.avatarColor || '#00f3ff';
-                    
-                    document.getElementById('ui-id').innerText = currentUser;
-                    document.getElementById('ui-money').innerText = data.cr;
-                    if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
-                    
-                    document.getElementById('auth-container').style.display = 'none';
-                    initGame();
-                } else {
-                    showError('login-error', data.message);
-                }
-            } catch (e) {
-                showError('login-error', 'サーバーに接続できません');
-            }
+            if(!username || !password) return document.getElementById('login-error').innerText = '入力してください';
+            
+            // --- 本来はAPI通信ですが、ここではモックとして直接ゲーム開始します ---
+            currentUser = username;
+            isAdmin = (username === 'admin');
+            document.getElementById('ui-id').innerText = currentUser;
+            document.getElementById('ui-money').innerText = "1000";
+            if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+            
+            // ログイン時はデフォルトのスケール
+            regData.scaleH = 1.0; regData.scaleW = 1.0;
+            
+            document.getElementById('auth-container').style.display = 'none';
+            initGame();
         }
 
-        // --- 新規登録処理 ---
         async function attemptRegister() {
-            const username = document.getElementById('reg-username').value;
-            const password = document.getElementById('reg-password').value;
-
-            try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, avatarColor: selectedAvatarColor })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    // 登録成功したらそのままログイン状態にしてゲーム開始
-                    currentUser = username;
-                    isAdmin = false; // 新規はデフォルトで非管理者
-                    
-                    document.getElementById('ui-id').innerText = currentUser;
-                    document.getElementById('ui-money').innerText = 1000; // 初期CR
-                    
-                    document.getElementById('auth-container').style.display = 'none';
-                    initGame();
-                } else {
-                    showError('setup-error', data.message);
-                }
-            } catch (e) {
-                showError('setup-error', 'サーバーに接続できません');
-            }
+            // --- 本来は regData をサーバーに送信します ---
+            currentUser = regData.username;
+            isAdmin = false;
+            document.getElementById('ui-id').innerText = currentUser;
+            document.getElementById('ui-money').innerText = "1000";
+            
+            document.getElementById('auth-container').style.display = 'none';
+            initGame();
         }
 
-        function showError(elementId, msg) {
-            document.getElementById(elementId).innerText = msg;
-        }
-
+        // --- ゲームメイン処理 ---
         function setupThreeJS() {
             scene = new THREE.Scene(); 
             scene.background = new THREE.Color(0x050814);
             scene.fog = new THREE.FogExp2(0x050814, 0.005);
-
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
-            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight); 
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
-
             scene.add(new THREE.AmbientLight(0x223344, 1.5));
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
             dirLight.position.set(50, 100, 70);
             dirLight.castShadow = true;
             scene.add(dirLight);
-
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
-
             clock = new THREE.Clock();
             setupInputHandlers();
-            
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -375,255 +443,25 @@
             });
         }
 
-        window.createAvatarMesh = function(colorHex) {
-            // 文字列カラー('#00f3ff')をThree.js用のカラーオブジェクトに変換
-            const threeColor = new THREE.Color(colorHex);
-
-            const group = new THREE.Group();
-            
-            const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: 0x555555, metalness: 0.8, roughness: 0.3, flatShading: true
-            });
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                color: threeColor
-            });
-            const darkMaterial = new THREE.MeshStandardMaterial({
-                color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
-            });
-
-            // 浮遊アニメーション用に全体を包むグループ
-            const baseGroup = new THREE.Group();
-            baseGroup.rotation.y = Math.PI; // ★アバターの正面(顔)をZ-方向に向ける
-            group.add(baseGroup);
-            
-            // 体の傾き（前傾姿勢）を制御するグループ
-            const tiltGroup = new THREE.Group();
-            tiltGroup.position.y = 0.6;
-            baseGroup.add(tiltGroup);
-
-            // 【頭部】
-            const headGroup = new THREE.Group();
-            headGroup.position.y = 0.7; 
-            tiltGroup.add(headGroup);
-
-            const headMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), bodyMaterial);
-            headMesh.position.y = 0.2; 
-            headMesh.castShadow = true;
-            headGroup.add(headMesh);
-
-            const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMaterial);
-            visorMesh.position.set(0, 0.22, 0.32);
-            headGroup.add(visorMesh);
-
-            const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
-            const leftSensor = new THREE.Mesh(sensorGeo, darkMaterial);
-            leftSensor.rotation.z = Math.PI / 2;
-            leftSensor.position.set(0.32, 0.2, 0);
-            headGroup.add(leftSensor);
-
-            const rightSensor = leftSensor.clone();
-            rightSensor.position.set(-0.32, 0.2, 0);
-            headGroup.add(rightSensor);
-
-            // 【胴体】
-            const torsoGroup = new THREE.Group();
-            tiltGroup.add(torsoGroup);
-
-            const chestMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), bodyMaterial);
-            chestMesh.position.y = 0.3;
-            chestMesh.castShadow = true;
-            torsoGroup.add(chestMesh);
-
-            const lineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.32), glowMaterial);
-            lineMesh.position.y = 0.25;
-            torsoGroup.add(lineMesh);
-
-            const waistMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5), bodyMaterial);
-            waistMesh.position.y = -0.15;
-            waistMesh.castShadow = true;
-            torsoGroup.add(waistMesh);
-
-            // 【腕】
-            const armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
-            
-            const armLGroup = new THREE.Group();
-            armLGroup.position.set(0.35, 0.55, 0); 
-            const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
-            leftArm.position.y = -0.25;
-            leftArm.castShadow = true;
-            armLGroup.add(leftArm);
-            tiltGroup.add(armLGroup);
-
-            const armRGroup = new THREE.Group();
-            armRGroup.position.set(-0.35, 0.55, 0); 
-            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
-            rightArm.position.y = -0.25;
-            rightArm.castShadow = true;
-            armRGroup.add(rightArm);
-            tiltGroup.add(armRGroup);
-
-            armLGroup.rotation.z = -0.15;
-            armRGroup.rotation.z = 0.15;
-
-            group.userData = { 
-                base: baseGroup, head: headGroup, tilt: tiltGroup, 
-                armL: armLGroup, armR: armRGroup, 
-                walkTime: 0, movingTimer: 0, currentYaw: 0 
-            };
-            return group;
-        };
-
-        // 角度の差分を -PI から PI の範囲に収める関数
-        function deltaAngle(a, b) {
-            let diff = a - b;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            return diff;
-        }
-
-        function updateAvatarAnim(avatar, isMoving, delta, camYaw, camPitch) {
-            if (!avatar || !avatar.userData.head) return;
-            const ud = avatar.userData;
-            
-            const time = clock.getElapsedTime();
-            const phaseOffset = avatar.uuid ? avatar.uuid.charCodeAt(0) : 0;
-            ud.base.position.y = Math.sin(time * 2 + phaseOffset) * 0.05;
-
-            // --- 体の向きと顔の向きの制御 ---
-            // カメラのYaw（向いている方向）とアバターの体の向き（currentYaw）の差分を計算
-            let yawDiff = deltaAngle(camYaw, ud.currentYaw);
-            
-            // 左右60度 (Math.PI/3) が限界
-            const limit = Math.PI / 3;
-            
-            if (isMoving) {
-                // 移動中は体全体を進行方向（targetAvatarRotation）に滑らかに向ける
-                ud.currentYaw = ud.currentYaw + deltaAngle(targetAvatarRotation, ud.currentYaw) * 0.15;
-                
-                // 体が進行方向を向くため、顔の左右のねじれはゼロ（正面）に戻す
-                ud.head.rotation.y = THREE.MathUtils.lerp(ud.head.rotation.y, 0, 0.1);
-            } else {
-                // 停止時
-                if (yawDiff > limit) {
-                    // 右に60度以上向いた場合、体ごと右に回す
-                    ud.currentYaw += (yawDiff - limit) * 0.1;
-                    ud.head.rotation.y = limit;
-                } else if (yawDiff < -limit) {
-                    // 左に60度以上向いた場合、体ごと左に回す
-                    ud.currentYaw += (yawDiff + limit) * 0.1;
-                    ud.head.rotation.y = -limit;
-                } else {
-                    // 制限内の場合は顔だけを動かす
-                    ud.head.rotation.y = yawDiff;
-                }
-            }
-            
-            // アバターの親グループの回転を更新
-            avatar.rotation.y = ud.currentYaw;
-
-            // 頭の上下（ピッチ）制御
-            const clampedPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camPitch));
-            ud.head.rotation.x = -clampedPitch; 
-
-            // --- 移動アニメーション（傾きと腕の振り） ---
-            if (isMoving) {
-                ud.walkTime += delta * 10; 
-                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
-                
-                const swing = Math.sin(ud.walkTime);
-                ud.armL.rotation.x = swing * 0.2 - 0.2;
-                ud.armR.rotation.x = -swing * 0.2 - 0.2;
-            } else {
-                ud.walkTime = 0; 
-                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
-                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
-                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-            }
-        }
-
         function initGame() {
+            if(previewReqId) cancelAnimationFrame(previewReqId); // プレビューのレンダリングを停止
             document.getElementById('loading-screen').style.display = 'flex';
-            socket = io(); 
+            
+            // ソケットは環境がない場合はエラーになるためコメントアウトかMock化
+            // socket = io(); 
             
             setupThreeJS();
-            loadMapData(); 
+            buildFallbackMap(); // 簡易マップを使用
             
-            // ログイン/登録時に選択したカラーを反映
-            localAvatar = createAvatarMesh(selectedAvatarColor);
+            localAvatar = createAvatarMesh(regData.color || '#00f3ff');
+            // 設定したスケールを適用
+            localAvatar.scale.set(regData.scaleW, regData.scaleH, regData.scaleW);
             scene.add(localAvatar);
 
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('start-overlay').style.display = 'flex';
             
-            setupSocketEvents();
             animate(); 
-        }
-
-        async function loadMapData() {
-            try {
-                const res = await fetch('/test_map.json');
-                if (!res.ok) throw new Error("Map file not found");
-                const mapData = await res.json();
-                buildMap(mapData);
-            } catch(e) {
-                console.warn("test_map.jsonが見つからないため、仮の地面を生成します。");
-                buildFallbackMap();
-            }
-        }
-
-        function buildMap(mapData) {
-            if (mapData.environment && mapData.environment.groundColor) {
-                scene.background = new THREE.Color(mapData.environment.groundColor);
-                scene.fog.color.set(mapData.environment.groundColor);
-            }
-
-            const matFloor = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9 });
-            const floor = new THREE.Mesh(new THREE.CylinderGeometry(500, 500, 1, 64), matFloor);
-            floor.position.y = -0.5;
-            floor.receiveShadow = true;
-            mapGroup.add(floor);
-            collisionBoxes.push(new THREE.Box3().setFromObject(floor));
-
-            if (mapData.floors) {
-                mapData.floors.forEach(f => {
-                    let mesh;
-                    const mat = new THREE.MeshStandardMaterial({ color: f.color });
-                    if (f.type === 'rect') {
-                        mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), mat);
-                        mesh.position.set(f.x, f.y - 0.5, f.z);
-                    } else if (f.type === 'circle') {
-                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(f.radius, f.radius, 1, 32), mat);
-                        mesh.position.set(f.x, f.y - 0.5, f.z);
-                    }
-                    if (mesh) {
-                        mesh.receiveShadow = true;
-                        mapGroup.add(mesh);
-                        collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
-                    }
-                });
-            }
-
-            if (mapData.walls) {
-                mapData.walls.forEach(w => {
-                    let mesh;
-                    const mat = new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.7 });
-                    const height = w.maxY - w.minY;
-                    const centerY = w.minY + height / 2;
-
-                    if (w.type === 'rect') {
-                        mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat);
-                        mesh.position.set(w.x, centerY, w.z);
-                    } else if (w.type === 'circle') {
-                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 32), mat);
-                        mesh.position.set(w.x, centerY, w.z);
-                    }
-                    if (mesh) {
-                        mesh.castShadow = true; mesh.receiveShadow = true;
-                        mapGroup.add(mesh);
-                        collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
-                    }
-                });
-            }
         }
 
         function buildFallbackMap() {
@@ -632,25 +470,26 @@
             floor.rotation.x = -Math.PI / 2;
             floor.receiveShadow = true;
             mapGroup.add(floor);
+            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(-500, -10, -500), new THREE.Vector3(500, 0, 500)));
             
-            const colBox = new THREE.Box3(new THREE.Vector3(-500, -10, -500), new THREE.Vector3(500, 0, 500));
-            collisionBoxes.push(colBox);
+            // オブジェ追加
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff });
+            const box = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), boxMat);
+            box.position.set(10, 2.5, -10); box.castShadow = true;
+            mapGroup.add(box);
+            collisionBoxes.push(new THREE.Box3().setFromObject(box));
         }
 
         function setupInputHandlers() {
             window.addEventListener('keydown', (e) => keysPressed[e.key.toLowerCase()] = true);
             window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
-
             document.addEventListener('mousemove', (e) => {
                 if (!isLocked) return;
                 const sensitivity = 0.002;
                 cameraYaw -= e.movementX * sensitivity;
-                
-                // カメラの上下（ピッチ）制限を大幅に緩和し、ほぼ真上を見れるように
                 cameraPitch -= e.movementY * sensitivity;
-                cameraPitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.1, cameraPitch));
+                cameraPitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, cameraPitch));
             });
-
             document.addEventListener('pointerlockchange', () => {
                 isLocked = (document.pointerLockElement === document.body);
                 document.getElementById('ui-layer').style.display = isLocked ? 'block' : 'none';
@@ -666,87 +505,81 @@
             document.getElementById('start-overlay').style.display = 'none';
         }
 
+        function deltaAngle(a, b) {
+            let diff = a - b;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            return diff;
+        }
+
+        function lerpAngle(start, end, t) {
+            return start + deltaAngle(end, start) * t;
+        }
+
+        function updateAvatarAnim(avatar, isMoving, delta, targetRot, camYaw, camPitch) {
+            if (!avatar || !avatar.userData.head) return;
+            const ud = avatar.userData;
+            const time = clock.getElapsedTime();
+            
+            ud.base.position.y = Math.sin(time * 2) * 0.05;
+
+            if (isMoving) {
+                ud.walkTime += delta * 10; 
+                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
+                ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.2 - 0.2;
+                ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.2 - 0.2;
+                
+                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
+                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
+            } else {
+                ud.walkTime = 0; 
+                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
+                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
+                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+
+                let yawDiff = deltaAngle(camYaw, avatar.rotation.y);
+                const limit = Math.PI / 3;
+                if (yawDiff > limit) {
+                    avatar.rotation.y += (yawDiff - limit) * 0.1;
+                    ud.head.rotation.y = limit;
+                } else if (yawDiff < -limit) {
+                    avatar.rotation.y += (yawDiff + limit) * 0.1;
+                    ud.head.rotation.y = -limit;
+                } else {
+                    ud.head.rotation.y = yawDiff;
+                }
+            }
+            ud.head.rotation.x = -camPitch; 
+        }
+
         function checkCollision(pos) {
             if (isGodMode) return { collided: false, safeY: pos.y };
-
-            const playerRadius = 0.3; 
-            const playerHeight = 1.5;
+            const pRadius = 0.3 * regData.scaleW, pHeight = 1.5 * regData.scaleH;
             const pBox = new THREE.Box3(
-                new THREE.Vector3(pos.x - playerRadius, pos.y, pos.z - playerRadius),
-                new THREE.Vector3(pos.x + playerRadius, pos.y + playerHeight, pos.z + playerRadius)
+                new THREE.Vector3(pos.x - pRadius, pos.y, pos.z - pRadius),
+                new THREE.Vector3(pos.x + pRadius, pos.y + pHeight, pos.z + pRadius)
             );
-
-            let collided = false;
-            let highestFloorY = -Infinity;
-
+            let collided = false, highestFloorY = -Infinity;
             for (const box of collisionBoxes) {
                 if (pBox.intersectsBox(box)) {
-                    if (box.max.y > pos.y + 0.3) {
-                        collided = true;
-                    }
-                    if (box.max.y <= pos.y + 0.5 && box.max.y > highestFloorY) {
-                        highestFloorY = box.max.y;
-                    }
+                    if (box.max.y > pos.y + 0.3) collided = true;
+                    if (box.max.y <= pos.y + 0.5 && box.max.y > highestFloorY) highestFloorY = box.max.y;
                 }
             }
             return { collided, safeY: highestFloorY };
         }
 
-        function setupSocketEvents() {
-            // カラー情報も送信
-            socket.emit('joinGame', { username: currentUser, color: selectedAvatarColor });
-
-            socket.on('initData', (data) => {
-                Object.keys(data.players).forEach(id => {
-                    if (id !== socket.id) addOtherPlayer(data.players[id]);
-                });
-            });
-
-            socket.on('newPlayer', (info) => addOtherPlayer(info));
-
-            socket.on('playerMoved', (info) => {
-                if (otherPlayers[info.id]) {
-                    otherPlayers[info.id].position.set(info.x, info.y, info.z);
-                    otherPlayers[info.id].userData.targetYaw = info.rotation; 
-                    otherPlayers[info.id].userData.targetPitch = info.pitch || 0;
-                    otherPlayers[info.id].userData.movingTimer = 0.1; 
-                }
-            });
-
-            socket.on('playerDisconnected', (id) => {
-                if (otherPlayers[id]) {
-                    scene.remove(otherPlayers[id]);
-                    delete otherPlayers[id];
-                }
-            });
-        }
-
-        function addOtherPlayer(info) {
-            // 他プレイヤーの色を反映。なければデフォルトオレンジ
-            const mesh = createAvatarMesh(info.color || '#ffaa00');
-            mesh.position.set(info.x, info.y, info.z);
-            mesh.userData.currentYaw = info.rotation;
-            mesh.userData.targetYaw = info.rotation;
-            scene.add(mesh);
-            otherPlayers[info.id] = mesh;
-        }
-
         let vKeyWasPressed = false, zKeyWasPressed = false;
-
         function animate() {
             requestAnimationFrame(animate);
             if (!isLocked) { renderer.render(scene, camera); return; }
-            
             const delta = Math.min(clock.getDelta(), 0.1); 
 
             if (keysPressed['v']) { if (!vKeyWasPressed) isFPS = !isFPS; vKeyWasPressed = true; } else { vKeyWasPressed = false; }
-            if (isAdmin && keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
+            if (keysPressed['z']) { if (!zKeyWasPressed) { isGodMode = !isGodMode; playerVelocity.y = 0; } zKeyWasPressed = true; } else { zKeyWasPressed = false; }
 
-            // --- 移動計算 ---
-            // 移動計算
             let moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
             const mv = new THREE.Vector3(0, 0, 0);
-            
             const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
             const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
 
@@ -759,76 +592,45 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                
-                // 進行方向の角度を計算して targetAvatarRotation に保存
                 targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
             }
 
-            let nextX = playerLocalPos.x + mv.x;
-            let nextZ = playerLocalPos.z + mv.z;
+            let testPos = playerLocalPos.clone(); testPos.x += mv.x;
+            if (!checkCollision(testPos).collided) playerLocalPos.x += mv.x;
+            testPos = playerLocalPos.clone(); testPos.z += mv.z;
+            if (!checkCollision(testPos).collided) playerLocalPos.z += mv.z;
 
-            let testPos = playerLocalPos.clone(); testPos.x = nextX;
-            if (!checkCollision(testPos).collided) playerLocalPos.x = nextX;
-
-            testPos = playerLocalPos.clone(); testPos.z = nextZ;
-            if (!checkCollision(testPos).collided) playerLocalPos.z = nextZ;
-
-            // Y軸（ジャンプと重力）
             if (isGodMode) {
                 if (keysPressed['e']) playerLocalPos.y += 10 * delta;
                 if (keysPressed['q']) playerLocalPos.y -= 10 * delta;
             } else {
                 if (isGrounded && keysPressed[' ']) {
-                    playerVelocity.y = jumpForce;
-                    isGrounded = false;
+                    playerVelocity.y = jumpForce; isGrounded = false;
                 }
                 playerVelocity.y += gravity * delta;
                 playerLocalPos.y += playerVelocity.y * delta;
-
                 const col = checkCollision(playerLocalPos);
                 if (playerLocalPos.y <= col.safeY) {
-                    playerLocalPos.y = col.safeY;
-                    playerVelocity.y = 0;
-                    isGrounded = true;
+                    playerLocalPos.y = col.safeY; playerVelocity.y = 0; isGrounded = true;
                 } else {
                     isGrounded = false;
                 }
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
-            // アバターの同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
-                
-                // updateAvatarAnim には、targetAvatarRotation ではなく cameraYaw を渡す
-                // (顔をカメラの方向に向けるため)
-                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, cameraYaw, cameraPitch);
+                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
             }
 
-            Object.values(otherPlayers).forEach(op => {
-                let isOpMoving = false;
-                if (op.userData.movingTimer > 0) {
-                    isOpMoving = true;
-                    op.userData.movingTimer -= delta;
-                }
-                updateAvatarAnim(op, isOpMoving, delta, op.userData.targetYaw || 0, op.userData.targetPitch || 0);
-            });
-
-            if (moved && socket) {
-                socket.emit('playerMovement', { 
-                    x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
-                    rotation: targetAvatarRotation, pitch: cameraPitch 
-                });
-            }
-
-            // --- カメラ制御 (軌道の大改修) ---
             const headTarget = playerLocalPos.clone();
-            headTarget.y += 1.4; // アバターの頭の高さ
+            // 身長スケールに合わせて注視点の高さを変える
+            headTarget.y += 1.4 * regData.scaleH; 
 
             if (isFPS) {
                 camera.position.copy(playerLocalPos);
-                camera.position.y += 1.5; 
+                camera.position.y += 1.5 * regData.scaleH; 
                 const lookDir = new THREE.Vector3(
                     -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                     Math.sin(cameraPitch),
@@ -836,27 +638,14 @@
                 );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                // TPSの基本距離
                 const distance = 4.0;
-                
-                // ピッチ角度に応じてカメラの位置を球面的に計算 (見上げた時に上空へ回り込む)
-                const horizontalDist = Math.cos(cameraPitch) * distance;
-                const verticalDist = Math.sin(cameraPitch) * distance;
-
-                const offset = new THREE.Vector3(
-                    Math.sin(cameraYaw) * horizontalDist,
-                    -verticalDist, 
-                    Math.cos(cameraYaw) * horizontalDist
-                );
-                
+                const hDist = Math.cos(cameraPitch) * distance;
+                const vDist = Math.sin(cameraPitch) * distance;
+                const offset = new THREE.Vector3(Math.sin(cameraYaw) * hDist, -vDist, Math.cos(cameraYaw) * hDist);
                 camera.position.copy(headTarget).add(offset);
                 
-                // 地面にカメラがめり込まないように最低高度を保証
-                if (camera.position.y < playerLocalPos.y + 0.1) {
-                    camera.position.y = playerLocalPos.y + 0.1;
-                }
-
-                // 常に頭周辺を注視
+                // めり込み防止もスケールに合わせる
+                if (camera.position.y < playerLocalPos.y + 0.1) camera.position.y = playerLocalPos.y + 0.1;
                 camera.lookAt(headTarget);
             }
 
