@@ -21,6 +21,8 @@
         
         .btn-primary { background: #0ea5e9; color: white; }
         .btn-primary:hover { background: #0284c7; }
+        .btn-secondary { background: transparent; color: #94a3b8; border: 1px solid #475569; }
+        .btn-secondary:hover { background: #1e293b; color: #fff; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
         .btn-danger { background: #f43f5e; color: white; }
@@ -66,6 +68,17 @@
         .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #00ffff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* パフォーマンス & Ping 表示 */
+        #stats-container {
+            position: absolute; top: 15px; right: 20px; z-index: 100;
+            text-align: right; pointer-events: none;
+            background: rgba(15, 23, 42, 0.7); padding: 8px 12px; border-radius: 8px;
+            border: 1px solid #334155; backdrop-filter: blur(5px); display: none;
+        }
+        .stat-line { font-family: monospace; font-weight: bold; font-size: 0.9rem; margin: 2px 0;}
+        .stat-fps { color: #10b981; }
+        .stat-ping { color: #38bdf8; }
+
         #start-overlay {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.5); z-index: 80;
@@ -106,22 +119,15 @@
         .chat-msg { word-wrap: break-word; }
         .chat-msg .name { font-weight: bold; color: #00f3ff; margin-right: 5px; }
 
-        /* 送金用モーダル */
-        #transfer-modal {
+        /* 設定・送金モーダル類 */
+        .modal-bg {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.7); z-index: 110;
             display: none; justify-content: center; align-items: center;
         }
 
-        /* 規約モーダル */
-        #terms-modal {
-            display:none; position:absolute; top:0; left:0; width:100vw; height:100vh; 
-            background:rgba(0,0,0,0.8); z-index:200; justify-content:center; align-items:center;
-        }
-
-        /* 通知トースト */
         #notification-container {
-            position: absolute; top: 20px; right: 20px; z-index: 120;
+            position: absolute; top: 70px; right: 20px; z-index: 120;
             display: flex; flex-direction: column; gap: 10px; pointer-events: none;
         }
         .toast {
@@ -133,6 +139,26 @@
         .toast.info { background-color: rgba(56, 189, 248, 0.9); border-left: 4px solid #0284c7; }
 
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+
+        /* チャット吹き出し用 */
+        #bubble-container {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 10;
+        }
+        .chat-bubble {
+            position: absolute; transform: translate(-50%, -100%);
+            background: rgba(15, 23, 42, 0.85); border: 1px solid #475569;
+            border-radius: 8px; padding: 6px 12px; color: white; font-size: 0.85rem;
+            white-space: nowrap; pointer-events: none; transition: opacity 0.3s;
+            backdrop-filter: blur(4px); box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            margin-top: -10px;
+        }
+        .chat-bubble::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+            border-width: 6px 6px 0; border-style: solid;
+            border-color: rgba(15, 23, 42, 0.85) transparent transparent transparent;
+        }
+        .chat-bubble .author { font-weight: bold; margin-right: 5px; }
 
         #crosshair {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -282,7 +308,7 @@
     </div>
 
     <!-- 規約モーダル -->
-    <div id="terms-modal">
+    <div id="terms-modal" class="modal-bg">
         <div class="panel" style="width: 85%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
             <h2>利用規約・プライバシーポリシー</h2>
             <p style="font-size:0.85rem; color:#cbd5e1; line-height:1.6;">
@@ -294,7 +320,6 @@
                 <strong style="color:#fff;">【プライバシーポリシー】</strong><br>
                 1. ご登録いただいたユーザーIDやパスワード等の情報は、本サービスの提供・運営のみに使用します。<br>
                 2. 第三者への情報提供は行いません。<br>
-                3. チャットのログ等の情報は、公序良俗に反する行為の確認のために運営が閲覧する場合があります。<br>
             </p>
             <button class="btn-primary" onclick="document.getElementById('terms-modal').style.display='none'">閉じる</button>
         </div>
@@ -309,10 +334,17 @@
         <button class="start-btn" onclick="lockMouse()">システムにダイブする</button>
     </div>
     
+    <!-- パフォーマンス表示 UI -->
+    <div id="stats-container">
+        <div class="stat-line stat-fps">FPS: <span id="val-fps">0</span></div>
+        <div class="stat-line stat-ping">Ping: <span id="val-ping">--</span> ms</div>
+    </div>
+
     <div id="ui-layer">
         <div class="ui-text">ID: <span id="ui-id" class="ui-value">---</span></div>
         <div class="ui-text">CR: <span id="ui-money" class="ui-value" style="color:#fbbf24;">0</span></div>
-        <button class="btn-success" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openTransferModal()">💸 CRを送金する</button>
+        <button class="btn-success" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openTransferModal()">💸 CRを送金</button>
+        <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openSettingsModal()">⚙️ 設定</button>
 
         <div id="admin-panel">
             <div class="admin-title">👑 ADMIN CONTROLS</div>
@@ -320,12 +352,12 @@
             <div class="ui-text" style="font-size: 0.75rem;">[Q]/[E] Down / Up</div>
         </div>
         <div id="pc-help" style="margin-top:15px; font-size: 0.75rem; color: #94a3b8;">
-            [W][A][S][D]: Move<br>
-            [Shift]: Sprint<br>
-            [Space]: Jump<br>
-            [V]: Toggle Camera<br>
-            [Esc]: Free Mouse<br>
-            [Enter]: Chat
+            [W][A][S][D]: 移動<br>
+            [Shift]: ダッシュ<br>
+            [Space]: ジャンプ<br>
+            [V]: カメラ切替<br>
+            [Esc]: マウス/UI操作<br>
+            [Enter]: チャット
         </div>
     </div>
 
@@ -338,7 +370,7 @@
     </div>
 
     <!-- 送金モーダル -->
-    <div id="transfer-modal">
+    <div id="transfer-modal" class="modal-bg">
         <div class="panel">
             <h2>💸 CRを送金</h2>
             <input type="text" id="transfer-target" placeholder="相手のUserID">
@@ -348,9 +380,24 @@
         </div>
     </div>
 
+    <!-- 設定モーダル -->
+    <div id="settings-modal" class="modal-bg">
+        <div class="panel">
+            <h2>⚙️ SETTINGS</h2>
+            <div class="slider-group">
+                <label>描画距離 (Far Plane): <span id="val-draw-dist" style="color:#00ffff;">2000</span> m</label>
+                <input type="range" id="setting-draw-dist" min="500" max="5000" step="100" value="2000" oninput="updateSettings()">
+            </div>
+            <button class="btn-primary" onclick="closeSettingsModal()">閉じる</button>
+        </div>
+    </div>
+
     <!-- 通知エリア -->
     <div id="notification-container"></div>
     
+    <!-- 吹き出しエリア -->
+    <div id="bubble-container"></div>
+
     <div id="crosshair"></div>
     <div id="canvas-container"></div>
 
@@ -365,6 +412,7 @@
     </div>
 
     <script>
+        // --- 設定とステータス ---
         let regData = {
             username: '', password: '', controlMode: 'keyboard', 
             avatarType: 'A', colorVisor: '#00f3ff', colorBody: '#555555', 
@@ -373,6 +421,9 @@
         let selectedVisorColor = regData.colorVisor;
         let selectedBodyColor = regData.colorBody;
         
+        let frames = 0;
+        let lastFpsTime = performance.now();
+
         function switchPanel(panelId) {
             ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-type-panel', 'avatar-visor-panel', 'avatar-body-panel', 'avatar-shape-panel'].forEach(id => {
                 document.getElementById(id).style.display = 'none';
@@ -391,7 +442,6 @@
             if(!user || !pass) return document.getElementById('reg-error').innerText = 'IDとパスワードを入力してください';
             if(!terms) return document.getElementById('reg-error').innerText = '利用規約への同意が必要です';
             
-            // サーバーに重複確認
             try {
                 const res = await fetch('/api/check-username', {
                     method: 'POST',
@@ -399,9 +449,7 @@
                     body: JSON.stringify({ username: user })
                 });
                 const data = await res.json();
-                if (!data.success) {
-                    return document.getElementById('reg-error').innerText = data.message;
-                }
+                if (!data.success) return document.getElementById('reg-error').innerText = data.message;
                 
                 regData.username = user; regData.password = pass;
                 switchPanel('control-setup-panel');
@@ -509,6 +557,7 @@
             if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
+        // --- アバター生成 ---
         window.createAvatarMesh = function(visorHex, bodyHex, avatarType = 'A') {
             const group = new THREE.Group();
             
@@ -619,11 +668,12 @@
             group.userData = { 
                 base: baseGroup, head: headGroup, tilt: tiltGroup, 
                 armL: armLGroup, armR: armRGroup, 
-                walkTime: 0
+                walkTime: 0, movingTimer: 0
             };
             return group;
         };
 
+        // --- ゲーム進行制御 ---
         let currentUser = null, isAdmin = false, socket = null;
         let userAvatarConfig = null;
 
@@ -706,12 +756,11 @@
         let playerLocalPos = new THREE.Vector3(0, 5, 0); 
         let playerVelocity = new THREE.Vector3(0, 0, 0);
         let isGrounded = false, isGodMode = false, isLocked = false, isFPS = false; 
-        
         let cameraYaw = 0, cameraPitch = 0, targetAvatarRotation = 0; 
         const keysPressed = {};
         const collisionBoxes = []; 
-        
         const speedWalk = 5.0, speedRun = 10.0, jumpForce = 8.0, gravity = -20.0;
+        
         let padMoveDir = new THREE.Vector2(0, 0);
         let isPadJumping = false, padSpeedRatio = 0;
 
@@ -764,11 +813,6 @@
             const cfg = userAvatarConfig || regData;
             localAvatar = createAvatarMesh(cfg.colorVisor, cfg.colorBody, cfg.avatarType);
             localAvatar.scale.set(cfg.scaleW, cfg.scaleH, cfg.scaleW);
-            
-            // ローカルアバター用の変数
-            localAvatar.userData.currentBodyYaw = 0;
-            localAvatar.userData.currentCamYaw = 0;
-
             scene.add(localAvatar);
 
             socket.emit('joinGame', {
@@ -779,6 +823,7 @@
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block';
             document.getElementById('chat-container').style.display = 'flex';
+            document.getElementById('stats-container').style.display = 'block';
             
             if (cfg.controlMode === 'pad') {
                 document.getElementById('pc-help').style.display = 'none'; 
@@ -788,6 +833,15 @@
                 document.getElementById('start-overlay').style.display = 'flex';
             }
             
+            // Ping計測タイマー
+            setInterval(() => {
+                if (!socket || !socket.connected) return;
+                const start = Date.now();
+                socket.emit('ping_req', () => {
+                    document.getElementById('val-ping').innerText = Date.now() - start;
+                });
+            }, 2000);
+
             animate(); 
         }
 
@@ -802,18 +856,20 @@
 
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
-                    const op = otherPlayers[info.id];
-                    op.position.set(info.x, info.y, info.z);
-                    // リモートのアバターには目標角度を渡す
-                    op.userData.targetBodyYaw = info.bodyYaw;
-                    op.userData.targetCamYaw = info.camYaw;
-                    op.userData.targetPitch = info.pitch;
-                    op.userData.isMoving = info.isMoving;
+                    otherPlayers[info.id].position.set(info.x, info.y, info.z);
+                    otherPlayers[info.id].userData.targetYaw = info.rotation; 
+                    otherPlayers[info.id].userData.targetPitch = info.pitch || 0;
+                    otherPlayers[info.id].userData.isGrounded = info.isGrounded !== false;
+                    otherPlayers[info.id].userData.movingTimer = 0.1; 
                 }
             });
 
             socket.on('playerDisconnected', (id) => {
                 if (otherPlayers[id]) {
+                    if (otherPlayers[id].userData.bubbleEl) {
+                        otherPlayers[id].userData.bubbleEl.remove();
+                        clearTimeout(otherPlayers[id].userData.bubbleTimer);
+                    }
                     scene.remove(otherPlayers[id]);
                     delete otherPlayers[id];
                 }
@@ -823,9 +879,24 @@
                 const box = document.getElementById('chat-messages');
                 const el = document.createElement('div');
                 el.className = 'chat-msg';
-                el.innerHTML = `<span class="name">${data.username}:</span><span>${data.text}</span>`;
+                
+                let colorVisor = '#00f3ff';
+                if (data.username === currentUser && userAvatarConfig) {
+                    colorVisor = userAvatarConfig.colorVisor || '#00f3ff';
+                } else {
+                    for (let id in otherPlayers) {
+                        if (otherPlayers[id].userData.username === data.username) {
+                            colorVisor = otherPlayers[id].userData.colorVisor;
+                            break;
+                        }
+                    }
+                }
+
+                el.innerHTML = `<span class="name" style="color: ${colorVisor};">${data.username}:</span><span>${data.text}</span>`;
                 box.appendChild(el);
                 box.scrollTop = box.scrollHeight;
+                
+                showChatBubble(data.username, data.text, colorVisor);
             });
 
             socket.on('moneyUpdated', (newCr) => {
@@ -844,17 +915,18 @@
             const mesh = createAvatarMesh(av.colorVisor || '#00f3ff', av.colorBody || '#555555', av.avatarType || 'A');
             mesh.scale.set(av.scaleW || 1.0, av.scaleH || 1.0, av.scaleW || 1.0);
             mesh.position.set(info.x || 0, info.y || 5, info.z || 0);
-            
-            mesh.userData.targetBodyYaw = info.bodyYaw || 0;
-            mesh.userData.targetCamYaw = info.camYaw || 0;
+            mesh.userData.targetYaw = info.rotation || 0;
             mesh.userData.targetPitch = info.pitch || 0;
-            mesh.userData.isMoving = info.isMoving || false;
+            mesh.userData.isGrounded = true;
+            mesh.userData.username = info.username || 'Guest';
+            mesh.userData.colorVisor = av.colorVisor || '#00f3ff';
+            mesh.userData.scaleH = av.scaleH || 1.0;
             
             scene.add(mesh);
             otherPlayers[info.id] = mesh;
         }
 
-        // チャット送信処理
+        let isTyping = false;
         function sendChat(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
@@ -864,7 +936,6 @@
                 input.value = '';
                 input.blur();
                 if(document.pointerLockElement !== document.body && userAvatarConfig.controlMode === 'keyboard') {
-                    // 入力完了後、自動的に画面ロックに戻る
                     document.body.requestPointerLock();
                 }
             }
@@ -879,18 +950,92 @@
             setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
+        function showChatBubble(username, text, colorVisor) {
+            let targetMesh = null;
+            if (username === currentUser) targetMesh = localAvatar;
+            else {
+                for (let id in otherPlayers) {
+                    if (otherPlayers[id].userData.username === username) { targetMesh = otherPlayers[id]; break; }
+                }
+            }
+            if (!targetMesh) return;
+
+            if (targetMesh.userData.bubbleEl) {
+                targetMesh.userData.bubbleEl.remove();
+                clearTimeout(targetMesh.userData.bubbleTimer);
+            }
+
+            const container = document.getElementById('bubble-container');
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble';
+            const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            bubble.innerHTML = `<span class="author" style="color: ${colorVisor}">${username}</span>: <span>${safeText}</span>`;
+            container.appendChild(bubble);
+
+            targetMesh.userData.bubbleEl = bubble;
+            targetMesh.userData.bubbleTimer = setTimeout(() => {
+                bubble.style.opacity = '0';
+                setTimeout(() => bubble.remove(), 300);
+                targetMesh.userData.bubbleEl = null;
+            }, 6000);
+        }
+
+        function updateBubbles() {
+            const updateBubble = (mesh) => {
+                if (mesh && mesh.userData.bubbleEl) {
+                    const el = mesh.userData.bubbleEl;
+                    const pos = mesh.position.clone();
+                    const cfg = userAvatarConfig || regData;
+                    
+                    let height = 2.0; 
+                    if (mesh === localAvatar) height = 1.6 * cfg.scaleH;
+                    else height = 1.6 * (mesh.userData.scaleH || 1.0);
+                    pos.y += height;
+
+                    const tempV = pos.clone();
+                    tempV.project(camera);
+                    
+                    if (tempV.z > 1) {
+                        el.style.display = 'none';
+                        return;
+                    }
+                    el.style.display = 'block';
+
+                    const x = (tempV.x * .5 + .5) * window.innerWidth;
+                    const y = (tempV.y * -.5 + .5) * window.innerHeight;
+                    el.style.left = `${x}px`;
+                    el.style.top = `${y}px`;
+                }
+            };
+            updateBubble(localAvatar);
+            Object.values(otherPlayers).forEach(updateBubble);
+        }
+
+        // --- モーダル制御 ---
         function openTransferModal() { document.getElementById('transfer-modal').style.display = 'flex'; }
         function closeTransferModal() { document.getElementById('transfer-modal').style.display = 'none'; }
         function executeTransfer() {
             const targetUsername = document.getElementById('transfer-target').value.trim();
             const amount = document.getElementById('transfer-amount').value.trim();
-
             if (!targetUsername || !amount) return showToast('error', 'UserIDと金額を入力してください');
-
             socket.emit('sendMoney', { targetUsername, amount });
             document.getElementById('transfer-target').value = '';
             document.getElementById('transfer-amount').value = '';
             closeTransferModal();
+        }
+
+        function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
+        function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
+        function updateSettings() {
+            const dist = parseInt(document.getElementById('setting-draw-dist').value);
+            document.getElementById('val-draw-dist').innerText = dist;
+            if (camera) {
+                camera.far = dist;
+                camera.updateProjectionMatrix();
+            }
+            if (scene && scene.fog) {
+                scene.fog.far = dist;
+            }
         }
 
         function buildFallbackMap() {
@@ -908,8 +1053,6 @@
             collisionBoxes.push(new THREE.Box3().setFromObject(box));
         }
 
-        let isTyping = false;
-        
         function setupInputHandlers() {
             const chatInput = document.getElementById('chat-input');
             chatInput.addEventListener('focus', () => isTyping = true);
@@ -941,17 +1084,13 @@
             
             document.addEventListener('pointerlockchange', () => {
                 isLocked = (document.pointerLockElement === document.body);
-                // 入力状態でないかつロック解除されたらスタート画面を出す
-                if(!isLocked && !isTyping) {
-                    document.getElementById('start-overlay').style.display = 'flex';
-                    document.getElementById('start-overlay').innerHTML = '<button class="start-btn" onclick="lockMouse()">画面をクリックして再開</button>';
+            });
+            
+            document.getElementById('canvas-container').addEventListener('mousedown', () => {
+                if (!isLocked && userAvatarConfig && userAvatarConfig.controlMode === 'keyboard' && !isTyping) {
+                    lockMouse();
                 }
             });
-        }
-
-        window.lockMouse = function() {
-            document.body.requestPointerLock();
-            document.getElementById('start-overlay').style.display = 'none';
         }
 
         function setupPadHandlers() {
@@ -1095,57 +1234,56 @@
             return start + deltaAngle(end, start) * t;
         }
 
-        function updateAvatarAnim(avatar, isMoving, delta, targetBodyYaw, camYaw, camPitch, isLocal = false) {
+        function updateAvatarAnim(avatar, isMoving, grounded, delta, targetRot, camYaw, camPitch) {
             if (!avatar || !avatar.userData.head) return;
             const ud = avatar.userData;
             const time = clock.getElapsedTime();
             
-            ud.base.position.y = Math.sin(time * 2) * 0.05;
-
-            if (isLocal) {
-                // --- ローカル用の計算 ---
-                let yawDiff = deltaAngle(camYaw + Math.PI, ud.currentBodyYaw);
-                const limit = Math.PI / 3;
-
-                if (isMoving) {
-                    ud.currentBodyYaw = lerpAngle(ud.currentBodyYaw, targetBodyYaw, 0.15);
-                    ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
-                } else {
-                    if (yawDiff > limit) {
-                        ud.currentBodyYaw += (yawDiff - limit) * 0.1;
-                        ud.head.rotation.y = limit;
-                    } else if (yawDiff < -limit) {
-                        ud.currentBodyYaw += (yawDiff + limit) * 0.1;
-                        ud.head.rotation.y = -limit;
-                    } else {
-                        ud.head.rotation.y = yawDiff;
-                    }
-                }
-                avatar.rotation.y = ud.currentBodyYaw;
-                
+            if (grounded) {
+                ud.base.position.y = Math.sin(time * 2) * 0.05;
             } else {
-                // --- リモート（他プレイヤー）用の計算 ---
-                // 送信されてきた体の向き(targetBodyYaw)にそのまま追従
-                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetBodyYaw, 0.15);
-                // 顔の向きは、送信されてきたカメラ方向(camYaw)と体の向きの差分
-                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
-                ud.head.rotation.y = Math.max(-Math.PI/3, Math.min(Math.PI/3, yawDiff));
+                ud.base.position.y = 0;
             }
 
-            ud.head.rotation.x = -camPitch; 
-
-            // 移動アニメーション
-            if (isMoving) {
+            if (!grounded) {
+                // ジャンプ（空中）ポーズ
+                ud.walkTime = 0;
+                ud.tilt.rotation.x = 0.2; 
+                ud.armL.rotation.x = -Math.PI / 3; 
+                ud.armR.rotation.x = -Math.PI / 3;
+                
+                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
+                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
+            } else if (isMoving) {
+                // 歩行ポーズ
                 ud.walkTime += delta * 15; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
-                ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.2 - 0.2;
-                ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.2 - 0.2;
+                ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.4 - 0.1;
+                ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.4 - 0.1;
+                
+                avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
+                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else {
+                // 待機ポーズ
                 ud.walkTime = 0; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+
+                // 顔をカメラ方向（奥）に向ける
+                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
+                const limit = Math.PI / 3;
+                if (yawDiff > limit) {
+                    avatar.rotation.y += (yawDiff - limit) * 0.1;
+                    ud.head.rotation.y = limit;
+                } else if (yawDiff < -limit) {
+                    avatar.rotation.y += (yawDiff + limit) * 0.1;
+                    ud.head.rotation.y = -limit;
+                } else {
+                    ud.head.rotation.y = yawDiff;
+                }
             }
+            ud.head.rotation.x = -camPitch; 
         }
 
         function checkCollision(pos) {
@@ -1172,6 +1310,15 @@
             requestAnimationFrame(animate);
             if (!isLocked && !isTyping) { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
+
+            // --- パフォーマンス計測 ---
+            frames++;
+            const now = performance.now();
+            if (now - lastFpsTime >= 1000) {
+                document.getElementById('val-fps').innerText = frames;
+                frames = 0;
+                lastFpsTime = now;
+            }
 
             const cfg = userAvatarConfig || regData;
 
@@ -1208,7 +1355,8 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
+                // --- 修正: Wを押した際にカメラの奥方向(-Z)を正しく向く ---
+                targetAvatarRotation = Math.atan2(mv.x, mv.z);
             }
 
             let testPos = playerLocalPos.clone(); testPos.x += mv.x;
@@ -1234,30 +1382,27 @@
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
-            // ローカルアバターの同期
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
-                updateAvatarAnim(localAvatar, moved && !isGodMode && isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch, true);
+                updateAvatarAnim(localAvatar, moved && !isGodMode, isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
             }
 
-            // 他のプレイヤーの同期
             Object.values(otherPlayers).forEach(op => {
-                updateAvatarAnim(op, op.userData.isMoving, delta, op.userData.targetBodyYaw, op.userData.targetCamYaw, op.userData.targetPitch, false);
+                let isOpMoving = false;
+                if (op.userData.movingTimer > 0) {
+                    isOpMoving = true;
+                    op.userData.movingTimer -= delta;
+                }
+                updateAvatarAnim(op, isOpMoving, op.userData.isGrounded, delta, op.userData.targetYaw || 0, op.userData.targetYaw || 0, op.userData.targetPitch || 0);
             });
 
-            // サーバーへ情報送信
-            if (socket && (moved || cameraYaw !== localAvatar.userData.currentCamYaw)) {
-                socket.emit('playerMovement', {
-                    x: playerLocalPos.x,
-                    y: playerLocalPos.y,
-                    z: playerLocalPos.z,
-                    bodyYaw: localAvatar.rotation.y, // 実際の体の向き
-                    camYaw: cameraYaw,               // 顔の向き計算用
-                    pitch: cameraPitch,
-                    isMoving: moved
+            if ((moved || !isGrounded) && socket) {
+                socket.emit('playerMovement', { 
+                    x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
+                    rotation: localAvatar.rotation.y, pitch: cameraPitch,
+                    isGrounded: isGrounded
                 });
-                localAvatar.userData.currentCamYaw = cameraYaw;
             }
 
             const headTarget = playerLocalPos.clone();
@@ -1294,6 +1439,7 @@
                 camera.lookAt(headTarget);
             }
 
+            updateBubbles();
             renderer.render(scene, camera);
         }
     </script>

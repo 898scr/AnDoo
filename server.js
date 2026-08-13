@@ -97,7 +97,7 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-const players = {}; // socket.id -> player info
+const players = {}; 
 
 io.on('connection', (socket) => {
     console.log(`[CONNECT] Socket connected: ${socket.id}`);
@@ -123,7 +123,7 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('newPlayer', players[socket.id]);
     });
 
-    // プレイヤーの移動同期（プロパティを追加）
+    // プレイヤーの移動同期
     socket.on('playerMovement', (data) => {
         if (players[socket.id]) {
             players[socket.id].x = data.x;
@@ -138,11 +138,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    // チャットメッセージの送受信
+    // チャットメッセージの送受信 (発言者の色とIDも送信)
     socket.on('chatMessage', (text) => {
         const user = players[socket.id];
         if (user) {
-            io.emit('chatMessage', { username: user.username, text: text });
+            io.emit('chatMessage', { 
+                id: socket.id, 
+                username: user.username, 
+                text: text, 
+                color: user.avatar.colorVisor 
+            });
         }
     });
 
@@ -191,6 +196,13 @@ io.on('connection', (socket) => {
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
     });
+
+    // --- ここから追加：Ping計測用の応答処理 ---
+    socket.on('ping_req', (callback) => {
+        if (typeof callback === 'function') callback();
+    });
+    // --- ここまで追加 ---
+
 });
 
 const PORT = process.env.PORT || 3000;
