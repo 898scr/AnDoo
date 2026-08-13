@@ -696,8 +696,9 @@
             armRGroup.add(rightArm);
             tiltGroup.add(armRGroup);
 
-            armLGroup.rotation.z = -0.15;
-            armRGroup.rotation.z = 0.15;
+            // ★修正: 腕が内側に曲がって胴体と干渉するのを防ぐため、少し外側に開く
+            armLGroup.rotation.z = 0.05;
+            armRGroup.rotation.z = -0.05;
 
             group.userData = { 
                 base: baseGroup, head: headGroup, tilt: tiltGroup, 
@@ -1457,40 +1458,36 @@
             }
 
             if (!grounded) {
-                // ジャンプ（空中）ポーズ
-                ud.walkTime = 0;
+                // ★修正: ジャンプ（空中）ポーズ。腕を前で組むのをやめ、バランスを取るように横に広げる
+                ud.walkTime += delta * 5; // 完全に硬直させず、空中で少し揺らす
                 ud.tilt.rotation.x = 0.2; 
-                ud.armL.rotation.x = -Math.PI / 3; 
-                ud.armR.rotation.x = -Math.PI / 3;
+                ud.armL.rotation.x = -0.2 + Math.sin(ud.walkTime) * 0.1; 
+                ud.armR.rotation.x = -0.2 - Math.sin(ud.walkTime) * 0.1;
+                ud.armL.rotation.z = 0.15; // 空中では腕を少し広げる
+                ud.armR.rotation.z = -0.15;
                 
                 // 空中でも移動方向に向きを変える
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
-                
-                // ★修正: 空中では顔を正面（カメラの方向）に向ける
-                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
-                const limit = Math.PI / 3;
-                ud.head.rotation.y = Math.max(-limit, Math.min(limit, yawDiff));
-                
+                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else if (isMoving) {
                 // 歩行ポーズ
                 ud.walkTime += delta * 15; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
                 ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.4 - 0.1;
                 ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.4 - 0.1;
+                ud.armL.rotation.z = 0.05; // 走る時も胴体に干渉しないよう外側をキープ
+                ud.armR.rotation.z = -0.05;
                 
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
-                
-                // ★修正: 移動中も顔を進行方向ではなく正面（カメラの方向）に向ける
-                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
-                const limit = Math.PI / 3;
-                ud.head.rotation.y = Math.max(-limit, Math.min(limit, yawDiff));
-
+                ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else {
                 // 待機ポーズ
                 ud.walkTime = 0; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+                ud.armL.rotation.z = 0.05; // 待機時も外側をキープ
+                ud.armR.rotation.z = -0.05;
 
                 // 顔をカメラ方向（奥）に向ける
                 let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
@@ -1505,7 +1502,8 @@
                     ud.head.rotation.y = yawDiff;
                 }
             }
-            ud.head.rotation.x = camPitch; // ★修正: 首の上下を逆に (- を外した)
+            // ★修正: 首の上下が逆転していたのを修正 (マイナスを外す)
+            ud.head.rotation.x = camPitch; 
         }
 
         function checkCollision(pos) {
