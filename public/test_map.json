@@ -1,24 +1,44 @@
 {
-"name": "Collision Test Map",
+"name": "HAKUYARC Central Square",
 "baseY": 0,
 "environment": {
-"groundRadius": 500,
-"groundColor": "#1a1a2e",
-"ambientLight": "#222233",
-"directionalLight": "#ffffff"
+"groundColor": "#050814",
+"fogDensity": 0.005
 },
 "floors": [
-{ "id": "f1", "type": "circle", "x": 0, "z": 0, "radius": 500, "y": 0, "color": "#050510" },
-{ "id": "f2", "type": "rect", "x": 100, "z": 100, "width": 50, "depth": 50, "y": 10, "color": "#ff00ff", "desc": "高台の床" }
+{ "id": "floor1", "type": "rect", "x": 0, "z": 0, "width": 100, "depth": 100, "y": -0.5, "color": "#113355" },
+{ "id": "floor2", "type": "rect", "x": 150, "z": 150, "width": 40, "depth": 40, "y": 10, "color": "#225522", "desc": "ワープ先の高台" }
 ],
 "walls": [
-{ "id": "w1", "type": "rect", "x": 0, "z": -50, "width": 40, "depth": 10, "minY": 0, "maxY": 50, "color": "#00ffff", "desc": "正面の壁" },
-{ "id": "w2", "type": "rect", "x": -50, "z": 0, "width": 10, "depth": 40, "minY": 0, "maxY": 50, "color": "#00ffff", "desc": "左の壁" },
-{ "id": "w3", "type": "circle", "x": 50, "z": 50, "radius": 15, "minY": 0, "maxY": 100, "color": "#ffff00", "desc": "丸い柱" },
-{ "id": "w4", "type": "rect", "x": 100, "z": 100, "width": 50, "depth": 50, "minY": 0, "maxY": 10, "color": "#444444", "desc": "高台の土台" }
+{ "id": "w1", "type": "rect", "x": -20, "z": -20, "width": 10, "depth": 10, "minY": 0, "maxY": 30, "color": "#00f3ff", "desc": "青いビル" },
+{ "id": "w2", "type": "circle", "x": 30, "z": 30, "radius": 5, "minY": 0, "maxY": 50, "color": "#facc15", "desc": "黄色い塔" },
+{ "id": "w3", "type": "rect", "x": 150, "z": 130, "width": 40, "depth": 5, "minY": 0, "maxY": 15, "color": "#888888", "desc": "高台の壁" }
 ],
 "warpPads": [
-{ "id": "wp1", "x": -20, "y": 0, "z": -20, "targetX": 100, "targetY": 10.5, "targetZ": 100, "color": "#ff0000", "label": "高台へワープ" },
-{ "id": "wp2", "x": 100, "y": 10, "z": 100, "targetX": 0, "targetY": 0.5, "targetZ": 0, "color": "#00ff00", "label": "地上へ戻る" }
+{
+"id": "wp1",
+"x": -10, "y": 0, "z": 20,
+"targetX": 150, "targetY": 10, "targetZ": 150,
+"color": "#00ff00",
+"label": "高台へワープ"
+},
+{
+"id": "wp2",
+"x": 150, "y": 10.5, "z": 160,
+"targetX": 0, "targetY": 0, "targetZ": 0,
+"color": "#ff00ff",
+"label": "広場へ戻る"
+}
+],
+"gameTerminals": [
+{
+"id": "game_dice",
+"x": 15, "y": 0, "z": -15,
+"width": 3, "height": 4, "depth": 3,
+"color": "#ff0055",
+"label": "サイバーダイス",
+"url": "/games/dice.html",
+"triggerDistance": 5.0
+}
 ]
 }
