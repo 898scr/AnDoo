@@ -14,7 +14,7 @@ let db = { users: {}, logs: { chat: [], auth: [], move: [] } };
 if (fs.existsSync(DB_FILE)) {
     try {
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        if (!db.logs) db.logs = { chat: [], auth: [], move: [] }; // 古いDBファイル互換用
+        if (!db.logs) db.logs = { chat: [], auth: [], move: [] }; 
     } catch (e) {
         console.error("Database read error, initializing new DB");
     }
@@ -26,36 +26,40 @@ function saveDB() {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
-// ログ追加ユーティリティ
 function addLog(type, data) {
     db.logs[type].push({ time: new Date().toISOString(), ...data });
-    // メモリパンク防止のため各ログを最新1000件に制限
     if (db.logs[type].length > 1000) db.logs[type].shift();
     saveDB();
 }
 
-// ★ 管理者アカウントの指定
 const adminUsers = ['898scr'];
 
-// 1. 新規登録前のユーザーID重複チェック API
+// --- ★ マップデータの読み込み (追加) ---
+let currentMapData = null;
+const MAP_FILE = path.join(__dirname, 'public', 'test_map.json');
+try {
+    if (fs.existsSync(MAP_FILE)) {
+        currentMapData = JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'));
+        console.log("Map data loaded successfully.");
+    } else {
+        console.warn("No map file found at " + MAP_FILE);
+    }
+} catch (e) {
+    console.error("Failed to load map data:", e);
+}
+
+
 app.post('/api/check-username', (req, res) => {
     const { username } = req.body;
     if (!username) return res.json({ success: false, message: 'UserIDを入力してください' });
-    if (db.users[username]) {
-        return res.json({ success: false, message: 'そのUserIDは既に登録されています' });
-    }
+    if (db.users[username]) return res.json({ success: false, message: 'そのUserIDは既に登録されています' });
     res.json({ success: true });
 });
 
-// 2. 新規登録 API
 app.post('/api/register', (req, res) => {
     const { username, password, avatar } = req.body;
-    if (!username || !password) {
-        return res.json({ success: false, message: 'UserIDとパスワードを入力してください' });
-    }
-    if (db.users[username]) {
-        return res.json({ success: false, message: 'そのUserIDは既に登録されています' });
-    }
+    if (!username || !password) return res.json({ success: false, message: 'UserIDとパスワードを入力してください' });
+    if (db.users[username]) return res.json({ success: false, message: 'そのUserIDは既に登録されています' });
     
     const isAdmin = adminUsers.includes(username);
     
@@ -63,58 +67,35 @@ app.post('/api/register', (req, res) => {
         password: password, 
         cr: 1000, 
         isAdmin: isAdmin,
-        isBanned: false, // BANステータス追加
+        isBanned: false, 
         avatar: avatar
     };
     saveDB();
-    
     addLog('auth', { user: username, action: 'REGISTER' });
 
-    res.json({ 
-        success: true, 
-        message: '登録完了！',
-        username: username,
-        cr: db.users[username].cr,
-        isAdmin: isAdmin,
-        avatar: db.users[username].avatar
-    });
+    res.json({ success: true, message: '登録完了！', username: username, cr: db.users[username].cr, isAdmin: isAdmin, avatar: db.users[username].avatar });
 });
 
-// 3. ログイン API
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     const user = db.users[username];
     
-    if (!user) {
-        return res.json({ success: false, message: 'ユーザーが登録されていません。新規登録を行ってください。' });
-    }
-    if (user.password !== password) {
-        return res.json({ success: false, message: 'パスワードが間違っています。' });
-    }
-    if (user.isBanned) {
-        return res.json({ success: false, message: 'このアカウントは管理者により停止(BAN)されています。' });
-    }
+    if (!user) return res.json({ success: false, message: 'ユーザーが登録されていません。新規登録を行ってください。' });
+    if (user.password !== password) return res.json({ success: false, message: 'パスワードが間違っています。' });
+    if (user.isBanned) return res.json({ success: false, message: 'このアカウントは管理者により停止(BAN)されています。' });
     
     user.isAdmin = adminUsers.includes(username);
     saveDB();
-
     addLog('auth', { user: username, action: 'LOGIN' });
 
-    res.json({ 
-        success: true, 
-        username: username, 
-        cr: user.cr, 
-        isAdmin: user.isAdmin,
-        avatar: user.avatar
-    });
+    res.json({ success: true, username: username, cr: user.cr, isAdmin: user.isAdmin, avatar: user.avatar });
 });
 
 const players = {}; 
-const lastMoveLogTime = {}; // 移動ログの頻度制限用
+const lastMoveLogTime = {}; 
 
 io.on('connection', (socket) => {
     
-    // ゲーム参加
     socket.on('joinGame', (data) => {
         players[socket.id] = {
             id: socket.id,
@@ -125,24 +106,22 @@ io.on('connection', (socket) => {
             isGrounded: true
         };
 
-        socket.emit('initData', { players });
+        // --- ★ プレイヤーにマップデータも一緒に送信する (追加) ---
+        socket.emit('initData', { 
+            players: players,
+            customMap: currentMapData 
+        });
+        
         socket.broadcast.emit('newPlayer', players[socket.id]);
     });
 
-    // プレイヤーの移動同期
     socket.on('playerMovement', (data) => {
         const user = players[socket.id];
         if (user) {
-            user.x = data.x;
-            user.y = data.y;
-            user.z = data.z;
-            user.rotation = data.rotation;
-            user.pitch = data.pitch;
-            user.isGrounded = data.isGrounded;
-
+            user.x = data.x; user.y = data.y; user.z = data.z;
+            user.rotation = data.rotation; user.pitch = data.pitch; user.isGrounded = data.isGrounded;
             socket.broadcast.emit('playerMoved', user);
 
-            // 移動ログ記録 (5秒に1回に制限)
             const now = Date.now();
             if (!lastMoveLogTime[user.username] || now - lastMoveLogTime[user.username] > 5000) {
                 addLog('move', { user: user.username, x: data.x, y: data.y, z: data.z });
@@ -151,20 +130,14 @@ io.on('connection', (socket) => {
         }
     });
 
-    // チャットメッセージ
     socket.on('chatMessage', (text) => {
         const user = players[socket.id];
         if (user) {
-            io.emit('chatMessage', { 
-                id: socket.id, 
-                username: user.username, 
-                text: text 
-            });
+            io.emit('chatMessage', { id: socket.id, username: user.username, text: text });
             addLog('chat', { user: user.username, text: text });
         }
     });
 
-    // 送金機能
     socket.on('sendMoney', (data) => {
         const senderInfo = players[socket.id];
         if (!senderInfo) return;
@@ -182,8 +155,7 @@ io.on('connection', (socket) => {
         if (senderName === targetName) return socket.emit('notification', { type: 'error', text: '自分自身には送金できません' });
         if (!senderUser || senderUser.cr < amount) return socket.emit('notification', { type: 'error', text: 'CRが不足しています' });
 
-        senderUser.cr -= amount;
-        targetUser.cr += amount;
+        senderUser.cr -= amount; targetUser.cr += amount;
         saveDB();
 
         socket.emit('moneyUpdated', senderUser.cr);
@@ -197,15 +169,12 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ★ アドミンコマンド処理
     socket.on('adminCmd', (cmd) => {
         const user = players[socket.id];
         if (!user || !adminUsers.includes(user.username)) return;
 
         switch(cmd.action) {
-            case 'getLogs':
-                socket.emit('adminLogs', db.logs);
-                break;
+            case 'getLogs': socket.emit('adminLogs', db.logs); break;
             case 'setMoney':
                 if (db.users[cmd.target]) {
                     db.users[cmd.target].cr = Number(cmd.amount);
@@ -234,9 +203,7 @@ io.on('connection', (socket) => {
         io.emit('playerDisconnected', socket.id);
     });
 
-    socket.on('ping_req', (callback) => {
-        if (typeof callback === 'function') callback();
-    });
+    socket.on('ping_req', (callback) => { if (typeof callback === 'function') callback(); });
 });
 
 const PORT = process.env.PORT || 3000;
