@@ -46,19 +46,24 @@
         .choice-btn .icon { font-size: 1.5rem; margin-bottom: 5px; }
         .choice-btn.compact { padding: 10px; flex-direction: row; gap: 10px; justify-content: flex-start; }
 
-        .color-picker-title { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 10px; text-align: center;}
+        /* カラーピッカー用 */
+        .setup-preview { width: 100%; height: 250px; background: #050814; border-radius: 8px; border: 1px solid #475569; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px #000;}
+        
+        .part-tabs { display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;}
+        .part-tab { flex: 1; padding: 5px; font-size: 0.8rem; background: transparent; border: none; color: #94a3b8; cursor: pointer; text-align: center; }
+        .part-tab.active { color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: bold;}
+        
         .color-picker-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .color-btn { width: 35px; height: 35px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
         .color-btn:hover { transform: scale(1.1); }
         .color-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); transform: scale(1.1); }
         
-        .setup-preview { width: 100%; height: 200px; background: #1e293b; border-radius: 8px; border: 1px solid #475569; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px #000;}
         .slider-group { margin-bottom: 10px; text-align: left; }
         .slider-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;}
         .slider-group input[type="range"] { width: 100%; cursor: pointer; }
 
         #login-panel { display: block; }
-        #register-panel, #control-setup-panel, #avatar-type-panel, #avatar-visor-panel, #avatar-body-panel, #avatar-shape-panel { display: none; }
+        #register-panel, #control-setup-panel, #avatar-type-panel, #avatar-custom-panel, #avatar-shape-panel { display: none; }
 
         #loading-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -81,7 +86,7 @@
 
         #start-overlay {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.5); z-index: 8; /* UIの後ろに隠れるように */
+            background: rgba(0,0,0,0.5); z-index: 8; 
             justify-content: center; align-items: center; backdrop-filter: blur(2px);
         }
         .start-btn { padding: 15px 30px; font-size: 1.2rem; background: #00ffff; color: #000; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,255,0.5); transition: 0.2s;}
@@ -247,45 +252,46 @@
         <div class="panel" id="avatar-type-panel">
             <h2>STEP 3: TYPE</h2>
             <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">ベース機体を選択してください</p>
-            <div class="choice-btn compact" onclick="goToVisorSetup('A')">
+            <div class="choice-btn compact" onclick="goToCustomSetup('A')">
                 <div class="icon">🤖</div>
                 <div>TYPE-A (Standard)</div>
             </div>
-            <div class="choice-btn compact" onclick="goToVisorSetup('B')">
+            <div class="choice-btn compact" onclick="goToCustomSetup('B')">
                 <div class="icon">🪨</div>
                 <div>TYPE-B (Heavy)</div>
             </div>
-            <div class="choice-btn compact" onclick="goToVisorSetup('C')">
+            <div class="choice-btn compact" onclick="goToCustomSetup('C')">
                 <div class="icon">⚡</div>
                 <div>TYPE-C (Slim)</div>
             </div>
             <div class="link-text"><a onclick="switchPanel('control-setup-panel')">← 戻る</a></div>
         </div>
 
-        <!-- 5. 登録Step 4-1 (バイザーカラー設定) -->
-        <div class="panel" id="avatar-visor-panel">
-            <h2>STEP 4-1: VISOR</h2>
-            <p class="color-picker-title">発光部（バイザーやライン）の色</p>
-            <div class="color-picker-container" id="visor-color-picker"></div>
-            <button class="btn-success" onclick="goToBodySetup()">次へ (ボディカラー)</button>
+        <!-- 5. 登録Step 4 (パーツカラー設定＆プレビュー統合) -->
+        <div class="panel" id="avatar-custom-panel" style="width: 400px;">
+            <h2>STEP 4: CUSTOMIZE</h2>
+            
+            <div class="setup-preview" id="setup-preview-box"></div>
+
+            <div class="part-tabs">
+                <button class="part-tab active" onclick="switchColorTab('visor')">発光</button>
+                <button class="part-tab" onclick="switchColorTab('head')">頭部</button>
+                <button class="part-tab" onclick="switchColorTab('body')">胴体</button>
+                <button class="part-tab" onclick="switchColorTab('arm')">両腕</button>
+            </div>
+
+            <div class="color-picker-container" id="dynamic-color-picker"></div>
+
+            <button class="btn-success" onclick="goToShapeSetup()">次へ (体形調整)</button>
             <div class="link-text"><a onclick="switchPanel('avatar-type-panel')">← 戻る</a></div>
         </div>
 
-        <!-- 6. 登録Step 4-2 (ボディカラー設定) -->
-        <div class="panel" id="avatar-body-panel">
-            <h2>STEP 4-2: BODY</h2>
-            <p class="color-picker-title">機体（ボディ）の色</p>
-            <div class="color-picker-container" id="body-color-picker"></div>
-            <button class="btn-success" onclick="goToShapeSetup()">次へ (体形プレビュー)</button>
-            <div class="link-text"><a onclick="switchPanel('avatar-visor-panel')">← 戻る</a></div>
-        </div>
-
-        <!-- 7. 登録Step 5 (体形設定・プレビュー) -->
+        <!-- 6. 登録Step 5 (体形設定) -->
         <div class="panel" id="avatar-shape-panel">
             <h2>STEP 5: SHAPE</h2>
             <div id="setup-error" class="error-msg"></div>
             
-            <div class="setup-preview" id="setup-preview-box"></div>
+            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">※プレビューは前画面で行っています</p>
 
             <div class="slider-group">
                 <label>身長 (Height): <span id="val-height" style="color:#00ffff;">1.0</span></label>
@@ -297,7 +303,7 @@
             </div>
 
             <button class="btn-primary" onclick="attemptRegister()">登録してダイブ</button>
-            <div class="link-text"><a onclick="switchPanel('avatar-body-panel')">← 戻る</a></div>
+            <div class="link-text"><a onclick="switchPanel('avatar-custom-panel')">← 戻る</a></div>
         </div>
 
     </div>
@@ -449,17 +455,17 @@
         // --- 設定とステータス ---
         let regData = {
             username: '', password: '', controlMode: 'keyboard', 
-            avatarType: 'A', colorVisor: '#00f3ff', colorBody: '#555555', 
+            avatarType: 'A', 
+            colorVisor: '#00f3ff', colorHead: '#dddddd', colorBody: '#555555', colorArm: '#111622', 
             scaleH: 1.0, scaleW: 1.0
         };
-        let selectedVisorColor = regData.colorVisor;
-        let selectedBodyColor = regData.colorBody;
         
+        let currentEditingPart = 'visor';
         let frames = 0;
         let lastFpsTime = performance.now();
 
         function switchPanel(panelId) {
-            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-type-panel', 'avatar-visor-panel', 'avatar-body-panel', 'avatar-shape-panel'].forEach(id => {
+            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-type-panel', 'avatar-custom-panel', 'avatar-shape-panel'].forEach(id => {
                 document.getElementById(id).style.display = 'none';
             });
             document.getElementById('login-error').innerText = '';
@@ -498,51 +504,60 @@
             switchPanel('avatar-type-panel');
         }
 
-        function goToVisorSetup(type) {
+        function goToCustomSetup(type) {
             regData.avatarType = type;
-            switchPanel('avatar-visor-panel');
-        }
-
-        function goToBodySetup() {
-            regData.colorVisor = selectedVisorColor;
-            switchPanel('avatar-body-panel');
+            switchPanel('avatar-custom-panel');
+            setTimeout(initPreview, 50); 
+            renderColorPicker(); 
         }
 
         function goToShapeSetup() {
-            regData.colorBody = selectedBodyColor;
             switchPanel('avatar-shape-panel');
-            setTimeout(initPreview, 50);
         }
 
-        const visorColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
-        const visorContainer = document.getElementById('visor-color-picker');
-        visorColors.forEach(color => {
-            const btn = document.createElement('div');
-            btn.className = 'color-btn';
-            btn.style.backgroundColor = color;
-            if (color === selectedVisorColor) btn.classList.add('selected');
-            btn.onclick = () => {
-                document.querySelectorAll('#visor-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                selectedVisorColor = color;
-            };
-            visorContainer.appendChild(btn);
-        });
+        const palette = {
+            visor: ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'],
+            armor: ['#dddddd', '#888888', '#555555', '#222222', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f', '#d97706', '#9333ea']
+        };
 
-        const bodyColors = ['#555555', '#222222', '#dddddd', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f'];
-        const bodyContainer = document.getElementById('body-color-picker');
-        bodyColors.forEach(color => {
-            const btn = document.createElement('div');
-            btn.className = 'color-btn';
-            btn.style.backgroundColor = color;
-            if (color === selectedBodyColor) btn.classList.add('selected');
-            btn.onclick = () => {
-                document.querySelectorAll('#body-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                selectedBodyColor = color;
-            };
-            bodyContainer.appendChild(btn);
-        });
+        window.switchColorTab = function(part) {
+            currentEditingPart = part;
+            document.querySelectorAll('.part-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            renderColorPicker();
+        };
+
+        function renderColorPicker() {
+            const container = document.getElementById('dynamic-color-picker');
+            container.innerHTML = ''; 
+            
+            const colors = (currentEditingPart === 'visor') ? palette.visor : palette.armor;
+            let currentColor = '';
+            if (currentEditingPart === 'visor') currentColor = regData.colorVisor;
+            else if (currentEditingPart === 'head') currentColor = regData.colorHead;
+            else if (currentEditingPart === 'body') currentColor = regData.colorBody;
+            else if (currentEditingPart === 'arm') currentColor = regData.colorArm;
+
+            colors.forEach(color => {
+                const btn = document.createElement('div');
+                btn.className = 'color-btn';
+                btn.style.backgroundColor = color;
+                if (color === currentColor) btn.classList.add('selected');
+                
+                btn.onclick = () => {
+                    document.querySelectorAll('#dynamic-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    
+                    if (currentEditingPart === 'visor') regData.colorVisor = color;
+                    else if (currentEditingPart === 'head') regData.colorHead = color;
+                    else if (currentEditingPart === 'body') regData.colorBody = color;
+                    else if (currentEditingPart === 'arm') regData.colorArm = color;
+
+                    updatePreviewModel();
+                };
+                container.appendChild(btn);
+            });
+        }
 
         let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
         
@@ -550,13 +565,18 @@
             const container = document.getElementById('setup-preview-box');
             if(!previewRenderer) {
                 previewScene = new THREE.Scene();
-                previewScene.add(new THREE.AmbientLight(0x223344, 2.0));
+                previewScene.add(new THREE.AmbientLight(0x445566, 2.0));
+                
                 const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-                dirLight.position.set(2, 5, 3);
+                dirLight.position.set(5, 10, 7);
                 previewScene.add(dirLight);
+                
+                const cyanLight = new THREE.PointLight(0x00f3ff, 2, 5);
+                cyanLight.position.set(0, 1.2, 2.5);
+                previewScene.add(cyanLight);
 
                 previewCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-                previewCamera.position.set(0, 1.0, 3.5);
+                previewCamera.position.set(0, 1.5, 4.5);
 
                 previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                 previewRenderer.setSize(container.clientWidth, container.clientHeight);
@@ -566,18 +586,28 @@
                     previewReqId = requestAnimationFrame(renderPreview);
                     if(previewAvatar) {
                         previewAvatar.rotation.y += 0.015; 
+                        const time = performance.now() * 0.002;
+                        previewAvatar.position.y = -0.5 + Math.sin(time) * 0.05;
                     }
                     previewRenderer.render(previewScene, previewCamera);
                 }
                 renderPreview();
             }
             
+            updatePreviewModel();
+        }
+
+        function updatePreviewModel() {
             if(previewAvatar) previewScene.remove(previewAvatar);
-            previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor, regData.avatarType);
-            previewAvatar.position.y = -0.5; 
-            previewScene.add(previewAvatar);
             
-            updateShapeParams();
+            previewAvatar = createAvatarMesh(regData);
+            previewAvatar.position.set(0, -0.5, 0); 
+            
+            const h = parseFloat(document.getElementById('shape-height').value);
+            const w = parseFloat(document.getElementById('shape-width').value);
+            previewAvatar.scale.set(w, h, w);
+
+            previewScene.add(previewAvatar);
         }
 
         function updateShapeParams() {
@@ -591,114 +621,146 @@
             if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
-        // --- アバター生成 ---
-        window.createAvatarMesh = function(visorHex, bodyHex, avatarType = 'A') {
+        // ==========================================
+        // ★ アバター生成ロジック (SF多面体・フラットシェーディング仕様・足なし)
+        // ==========================================
+        window.createAvatarMesh = function(config) {
             const group = new THREE.Group();
+            const type = config.avatarType || 'A';
             
-            const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: bodyHex, metalness: 0.8, roughness: 0.3, flatShading: true // ★修正: 金属感を高め、フラットシェーディング
-            });
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                color: visorHex
-            });
-            const darkMaterial = new THREE.MeshStandardMaterial({
-                color: 0x111622, metalness: 0.5, roughness: 0.5, flatShading: true
-            });
+            // ★パーツごとのマテリアル設定。明るく発色するように調整
+            const matHead = new THREE.MeshStandardMaterial({ color: config.colorHead || '#dddddd', roughness: 0.6, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.95 }); 
+            const matBody = new THREE.MeshStandardMaterial({ color: config.colorBody || '#555555', roughness: 0.6, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.95 }); 
+            const matArm  = new THREE.MeshStandardMaterial({ color: config.colorArm  || '#111622', roughness: 0.6, metalness: 0.1, flatShading: true }); 
+            const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: config.colorVisor || '#00f3ff', emissiveIntensity: 1.5 });
 
-            const baseGroup = new THREE.Group();
-            group.add(baseGroup);
-            
-            const tiltGroup = new THREE.Group();
-            tiltGroup.position.y = 0.6;
-            baseGroup.add(tiltGroup);
-
-            let headGeo, chestGeo, armGeo, waistGeo;
-            let lineScaleX = 1.0, lineScaleZ = 1.0;
-            let visorY = 0.22, visorZ = 0.32;
-            let headYOffset = 0.2;
-
-            if (avatarType === 'B') {
-                headGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.5, 8);
-                chestGeo = new THREE.BoxGeometry(0.7, 0.6, 0.5);
-                armGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15); // ★修正: 腕を少し細く
-                waistGeo = new THREE.CylinderGeometry(0.3, 0.1, 0.4, 6);
-                lineScaleX = 1.4; lineScaleZ = 1.6;
-                visorY = 0.1; visorZ = 0.31;
-                headYOffset = 0.25;
-            } else if (avatarType === 'C') {
-                headGeo = new THREE.OctahedronGeometry(0.3, 0); 
-                chestGeo = new THREE.CylinderGeometry(0.3, 0.15, 0.7, 6);
-                armGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.8, 6);
-                waistGeo = new THREE.CylinderGeometry(0.1, 0.05, 0.4, 5);
-                lineScaleX = 0.6; lineScaleZ = 0.6;
-                visorY = 0.15; visorZ = 0.28;
-                headYOffset = 0.2;
-            } else {
-                headGeo = new THREE.IcosahedronGeometry(0.35, 0);
-                chestGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
-                armGeo = new THREE.BoxGeometry(0.1, 0.5, 0.12);
-                waistGeo = new THREE.CylinderGeometry(0.22, 0.05, 0.4, 5);
-            }
+            const baseGroup = new THREE.Group(); group.add(baseGroup);
+            const tiltGroup = new THREE.Group(); tiltGroup.position.y = 0.6; baseGroup.add(tiltGroup);
 
             const headGroup = new THREE.Group();
-            headGroup.position.y = 0.7; 
-            tiltGroup.add(headGroup);
-
-            const headMesh = new THREE.Mesh(headGeo, bodyMaterial);
-            headMesh.position.y = headYOffset; 
-            headMesh.castShadow = true;
-            headGroup.add(headMesh);
-
-            const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMaterial);
-            visorMesh.position.set(0, visorY, visorZ);
-            headGroup.add(visorMesh);
-
-            const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
-            const leftSensor = new THREE.Mesh(sensorGeo, darkMaterial);
-            leftSensor.rotation.z = Math.PI / 2;
-            leftSensor.position.set(0.32, visorY, 0);
-            headGroup.add(leftSensor);
-
-            const rightSensor = leftSensor.clone();
-            rightSensor.position.set(-0.32, visorY, 0);
-            headGroup.add(rightSensor);
-
-            const torsoGroup = new THREE.Group();
-            tiltGroup.add(torsoGroup);
-
-            const chestMesh = new THREE.Mesh(chestGeo, bodyMaterial);
-            chestMesh.position.y = 0.3;
-            chestMesh.castShadow = true;
-            torsoGroup.add(chestMesh);
-
-            const lineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5 * lineScaleX, 0.04, 0.3 * lineScaleZ), glowMaterial);
-            lineMesh.position.y = 0.15;
-            torsoGroup.add(lineMesh);
-
-            const waistMesh = new THREE.Mesh(waistGeo, bodyMaterial);
-            waistMesh.position.y = -0.15;
-            waistMesh.castShadow = true;
-            torsoGroup.add(waistMesh);
-
             const armLGroup = new THREE.Group();
-            armLGroup.position.set(0.4, 0.55, 0); // ★修正: TYPE-Bでも干渉しないように少し外側に
-            const leftArm = new THREE.Mesh(armGeo, bodyMaterial);
-            leftArm.position.y = -0.25;
-            leftArm.castShadow = true;
-            armLGroup.add(leftArm);
-            tiltGroup.add(armLGroup);
-
             const armRGroup = new THREE.Group();
-            armRGroup.position.set(-0.4, 0.55, 0); // ★修正: 同上
-            const rightArm = new THREE.Mesh(armGeo, bodyMaterial);
-            rightArm.position.y = -0.25;
-            rightArm.castShadow = true;
-            armRGroup.add(rightArm);
-            tiltGroup.add(armRGroup);
 
-            // ★修正: 腕が内側に曲がって胴体と干渉するのを防ぐため、少し外側に開く
-            armLGroup.rotation.z = 0.05;
-            armRGroup.rotation.z = -0.05;
+            if (type === 'B') {
+                headGroup.position.y = 1.3;
+                const headGeo = new THREE.BoxGeometry(0.5, 0.4, 0.5);
+                const headMesh = new THREE.Mesh(headGeo, matHead); headMesh.castShadow = true;
+                headGroup.add(headMesh);
+                
+                const visorGeo = new THREE.BoxGeometry(0.4, 0.1, 0.05);
+                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
+                visorMesh.position.set(0, 0.05, 0.26);
+                headGroup.add(visorMesh);
+                tiltGroup.add(headGroup);
+
+                const torsoGroup = new THREE.Group(); torsoGroup.position.y = 0.6;
+                const chestGeo = new THREE.BoxGeometry(0.8, 0.7, 0.5);
+                const chestMesh = new THREE.Mesh(chestGeo, matBody); chestMesh.castShadow = true;
+                torsoGroup.add(chestMesh);
+                
+                const lineGeo = new THREE.BoxGeometry(0.82, 0.05, 0.52);
+                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial); lineMesh.position.y = 0;
+                torsoGroup.add(lineMesh);
+                tiltGroup.add(torsoGroup);
+
+                const armGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
+                armLGroup.position.set(-0.55, 1.0, 0);
+                const armL = new THREE.Mesh(armGeo, matArm); armL.position.y = -0.3; armL.castShadow = true;
+                armLGroup.add(armL); tiltGroup.add(armLGroup);
+                
+                armRGroup.position.set(0.55, 1.0, 0);
+                const armR = new THREE.Mesh(armGeo, matArm); armR.position.y = -0.3; armR.castShadow = true;
+                armRGroup.add(armR); tiltGroup.add(armRGroup);
+
+            } else if (type === 'C') {
+                headGroup.position.y = 1.5;
+                const headGeo = new THREE.OctahedronGeometry(0.3, 0); 
+                const headMesh = new THREE.Mesh(headGeo, matHead); headMesh.castShadow = true;
+                headGroup.add(headMesh);
+                
+                const visorGeo = new THREE.BoxGeometry(0.2, 0.2, 0.05);
+                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
+                visorMesh.position.set(0, 0, 0.25);
+                visorMesh.rotation.z = Math.PI / 4; 
+                headGroup.add(visorMesh);
+                tiltGroup.add(headGroup);
+
+                const torsoGroup = new THREE.Group(); torsoGroup.position.y = 0.8;
+                const chestGeo = new THREE.CylinderGeometry(0.3, 0.15, 0.7, 6);
+                const chestMesh = new THREE.Mesh(chestGeo, matBody); chestMesh.castShadow = true;
+                torsoGroup.add(chestMesh);
+                
+                const lineGeo = new THREE.CylinderGeometry(0.31, 0.28, 0.05, 6);
+                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial); lineMesh.position.y = 0.1;
+                torsoGroup.add(lineMesh);
+                tiltGroup.add(torsoGroup);
+
+                const armGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.8, 6);
+                armLGroup.position.set(-0.35, 1.2, 0);
+                const armL = new THREE.Mesh(armGeo, matArm); armL.position.y = -0.4; armL.castShadow = true;
+                armLGroup.add(armL); tiltGroup.add(armLGroup);
+                
+                armRGroup.position.set(0.35, 1.2, 0);
+                const armR = new THREE.Mesh(armGeo, matArm); armR.position.y = -0.4; armR.castShadow = true;
+                armRGroup.add(armR); tiltGroup.add(armRGroup);
+
+            } else {
+                headGroup.position.y = 1.4;
+
+                const headGeo = new THREE.IcosahedronGeometry(0.35, 0);
+                const headMesh = new THREE.Mesh(headGeo, matHead);
+                headMesh.castShadow = true;
+                headGroup.add(headMesh);
+
+                const visorGeo = new THREE.BoxGeometry(0.25, 0.08, 0.05);
+                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
+                visorMesh.position.set(0, 0.02, 0.32);
+                headGroup.add(visorMesh);
+
+                const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
+                const leftSensor = new THREE.Mesh(sensorGeo, matArm);
+                leftSensor.rotation.z = Math.PI / 2;
+                leftSensor.position.set(0.32, 0, 0);
+                const rightSensor = leftSensor.clone();
+                rightSensor.position.set(-0.32, 0, 0);
+                headGroup.add(leftSensor, rightSensor);
+
+                tiltGroup.add(headGroup);
+
+                const torsoGroup = new THREE.Group();
+                torsoGroup.position.y = 0.7;
+
+                const chestGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
+                const chestMesh = new THREE.Mesh(chestGeo, matBody);
+                chestMesh.castShadow = true;
+                torsoGroup.add(chestMesh);
+
+                const lineGeo = new THREE.BoxGeometry(0.52, 0.04, 0.32);
+                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial);
+                lineMesh.position.y = -0.05;
+                torsoGroup.add(lineMesh);
+
+                const waistGeo = new THREE.CylinderGeometry(0.22, 0.15, 0.4, 5); 
+                const waistMesh = new THREE.Mesh(waistGeo, matBody);
+                waistMesh.position.y = -0.45;
+                waistMesh.castShadow = true;
+                torsoGroup.add(waistMesh);
+                
+                tiltGroup.add(torsoGroup);
+
+                const armGeo = new THREE.BoxGeometry(0.12, 0.7, 0.12);
+                
+                armLGroup.position.set(-0.35, 1.1, 0);
+                const armL = new THREE.Mesh(armGeo, matArm); armL.position.y = -0.25; armL.castShadow = true;
+                armLGroup.add(armL); tiltGroup.add(armLGroup);
+                
+                armRGroup.position.set(0.35, 1.1, 0);
+                const armR = new THREE.Mesh(armGeo, matArm); armR.position.y = -0.25; armR.castShadow = true;
+                armRGroup.add(armR); tiltGroup.add(armRGroup);
+            }
+            
+            armLGroup.rotation.z = -0.15;
+            armRGroup.rotation.z = 0.15;
 
             group.userData = { 
                 base: baseGroup, head: headGroup, tilt: tiltGroup, 
@@ -727,7 +789,6 @@
                 if (scene.fog) scene.fog.color.set(mapData.environment.groundColor);
             }
 
-            // 床 (Floors)
             if (mapData.floors) {
                 mapData.floors.forEach(f => {
                     let mesh;
@@ -747,7 +808,6 @@
                 });
             }
 
-            // 壁・ビル (Walls)
             if (mapData.walls) {
                 mapData.walls.forEach(w => {
                     let mesh;
@@ -770,7 +830,6 @@
                 });
             }
 
-            // ワープパッド
             warpPadsData = mapData.warpPads || [];
             warpPadsData.forEach(wp => {
                 const mat = new THREE.MeshBasicMaterial({ color: wp.color, transparent: true, opacity: 0.7 });
@@ -779,7 +838,6 @@
                 mapGroup.add(mesh);
             });
 
-            // ゲーム端末
             gameTerminalsData = mapData.gameTerminals || [];
             gameTerminalsData.forEach(gt => {
                 const mat = new THREE.MeshStandardMaterial({ color: gt.color, metalness: 0.5, roughness: 0.2 });
@@ -791,7 +849,6 @@
             });
         }
 
-        // Iframeでゲームを開く関数
         function openGameIframe(url) {
             if (document.pointerLockElement === document.body) document.exitPointerLock();
             if (document.getElementById('iframe-modal')) return;
@@ -851,15 +908,6 @@
         }
 
         async function attemptRegister() {
-            const avatarConfig = {
-                controlMode: regData.controlMode,
-                avatarType: regData.avatarType,
-                colorVisor: regData.colorVisor,
-                colorBody: regData.colorBody,
-                scaleH: regData.scaleH,
-                scaleW: regData.scaleW
-            };
-
             try {
                 const res = await fetch('/api/register', {
                     method: 'POST',
@@ -867,7 +915,7 @@
                     body: JSON.stringify({
                         username: regData.username,
                         password: regData.password,
-                        avatar: avatarConfig
+                        avatar: regData
                     })
                 });
                 const data = await res.json();
@@ -875,7 +923,7 @@
                 if (data.success) {
                     currentUser = data.username;
                     isAdmin = data.isAdmin;
-                    userAvatarConfig = avatarConfig;
+                    userAvatarConfig = regData;
 
                     document.getElementById('ui-id').innerText = currentUser;
                     document.getElementById('ui-money').innerText = data.cr;
@@ -952,7 +1000,7 @@
             buildFallbackMap(); 
             
             const cfg = userAvatarConfig || regData;
-            localAvatar = createAvatarMesh(cfg.colorVisor, cfg.colorBody, cfg.avatarType);
+            localAvatar = createAvatarMesh(cfg);
             localAvatar.scale.set(cfg.scaleW, cfg.scaleH, cfg.scaleW);
             scene.add(localAvatar);
 
@@ -987,7 +1035,6 @@
 
         function setupSocketEvents() {
             socket.on('initData', (data) => {
-                // ★修正: サーバーから届いたマップデータをここで構築
                 if (data.customMap) buildCustomMap(data.customMap);
 
                 Object.keys(data.players).forEach(id => {
@@ -1050,7 +1097,6 @@
                 showToast(msg.type, msg.text);
             });
 
-            // ★ Admin用
             socket.on('banned', (target) => {
                 if (target === currentUser) {
                     alert("管理者にアカウントを停止(BAN)されました。システムから切断されます。");
@@ -1078,7 +1124,7 @@
             if (otherPlayers[info.id]) scene.remove(otherPlayers[info.id]);
 
             const av = info.avatar || {};
-            const mesh = createAvatarMesh(av.colorVisor || '#00f3ff', av.colorBody || '#555555', av.avatarType || 'A');
+            const mesh = createAvatarMesh(av);
             mesh.scale.set(av.scaleW || 1.0, av.scaleH || 1.0, av.scaleW || 1.0);
             mesh.position.set(info.x || 0, info.y || 5, info.z || 0);
             mesh.userData.targetYaw = info.rotation || 0;
@@ -1135,16 +1181,13 @@
             const bubble = document.createElement('div');
             bubble.className = 'chat-bubble';
             
-            const borderCol = colorVisor.replace('#', 'rgba(') ? `border-color: ${colorVisor} transparent transparent transparent;` : '';
-            
             const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             bubble.innerHTML = `<span class="author" style="color: ${colorVisor}">${username}</span>: <span>${safeText}</span>`;
             
-            // 吹き出しの三角形部分の色も動的変更するためのインラインスタイル追加
             const style = document.createElement('style');
             const uniqueClass = 'bubble-' + Date.now();
             bubble.classList.add(uniqueClass);
-            style.innerHTML = `.${uniqueClass}::after { border-color: rgba(15, 23, 42, 0.85) transparent transparent transparent; }`; // TODO: ボーダー色対応は複雑なので背景色合わせで留める
+            style.innerHTML = `.${uniqueClass}::after { border-color: rgba(15, 23, 42, 0.85) transparent transparent transparent; }`; 
             document.head.appendChild(style);
 
             container.appendChild(bubble);
@@ -1259,14 +1302,16 @@
 
         function setupInputHandlers() {
             const chatInput = document.getElementById('chat-input');
-            chatInput.addEventListener('focus', () => isTyping = true);
-            chatInput.addEventListener('blur', () => isTyping = false);
+            if (chatInput) {
+                chatInput.addEventListener('focus', () => isTyping = true);
+                chatInput.addEventListener('blur', () => isTyping = false);
+            }
 
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     if (!isTyping && isLocked) {
                         document.exitPointerLock();
-                        chatInput.focus();
+                        if (chatInput) chatInput.focus();
                     }
                     return;
                 }
@@ -1297,7 +1342,6 @@
             });
         }
 
-        // ★欠落していたマウスロック＆画面切り替え関数を追加
         window.lockMouse = function() {
             if (userAvatarConfig && userAvatarConfig.controlMode === 'keyboard') {
                 document.body.requestPointerLock();
@@ -1458,38 +1502,27 @@
             }
 
             if (!grounded) {
-                // ★修正: ジャンプ（空中）ポーズ。腕を前で組むのをやめ、バランスを取るように横に広げる
-                ud.walkTime += delta * 5; // 完全に硬直させず、空中で少し揺らす
+                ud.walkTime = 0;
                 ud.tilt.rotation.x = 0.2; 
-                ud.armL.rotation.x = -0.2 + Math.sin(ud.walkTime) * 0.1; 
-                ud.armR.rotation.x = -0.2 - Math.sin(ud.walkTime) * 0.1;
-                ud.armL.rotation.z = 0.15; // 空中では腕を少し広げる
-                ud.armR.rotation.z = -0.15;
+                ud.armL.rotation.x = -Math.PI / 3; 
+                ud.armR.rotation.x = -Math.PI / 3;
                 
-                // 空中でも移動方向に向きを変える
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
                 ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else if (isMoving) {
-                // 歩行ポーズ
                 ud.walkTime += delta * 15; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
                 ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.4 - 0.1;
                 ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.4 - 0.1;
-                ud.armL.rotation.z = 0.05; // 走る時も胴体に干渉しないよう外側をキープ
-                ud.armR.rotation.z = -0.05;
                 
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
                 ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else {
-                // 待機ポーズ
                 ud.walkTime = 0; 
                 ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-                ud.armL.rotation.z = 0.05; // 待機時も外側をキープ
-                ud.armR.rotation.z = -0.05;
 
-                // 顔をカメラ方向（奥）に向ける
                 let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
                 const limit = Math.PI / 3;
                 if (yawDiff > limit) {
@@ -1502,14 +1535,18 @@
                     ud.head.rotation.y = yawDiff;
                 }
             }
-            // ★修正: 首の上下の向きを正しく修正 (マイナスを付与)
-            ud.head.rotation.x = -camPitch; 
+            ud.head.rotation.x = camPitch; // ★修正: 首の上下を逆転 (マイナスを外す)
         }
 
         function checkCollision(pos) {
             const cfg = userAvatarConfig || regData;
             if (isGodMode) return { collided: false, safeY: pos.y };
-            const pRadius = 0.3 * cfg.scaleW, pHeight = 1.5 * cfg.scaleH;
+            
+            // ★修正: TYPE-B (Heavy)の干渉を減らすため、当たり判定(pRadius)を少しスリムに調整
+            let radiusMult = 0.3;
+            if(cfg.avatarType === 'B') radiusMult = 0.25; 
+            
+            const pRadius = radiusMult * cfg.scaleW, pHeight = 1.5 * cfg.scaleH;
             const pBox = new THREE.Box3(
                 new THREE.Vector3(pos.x - pRadius, pos.y, pos.z - pRadius),
                 new THREE.Vector3(pos.x + pRadius, pos.y + pHeight, pos.z + pRadius)
@@ -1574,7 +1611,6 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                // ★ 修正: 前後左右へ、カメラ基準で素直に走る
                 targetAvatarRotation = Math.atan2(mv.x, mv.z);
             }
 
@@ -1601,17 +1637,15 @@
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
-            // ★追加: ワープパッドの判定
             warpPadsData.forEach(wp => {
                 const dist = Math.hypot(playerLocalPos.x - wp.x, playerLocalPos.z - wp.z);
                 if (dist < 2.0 && Math.abs(playerLocalPos.y - wp.y) < 3.0) {
                     playerLocalPos.set(wp.targetX, wp.targetY, wp.targetZ);
-                    cameraYaw = 0; // 向きリセット
+                    cameraYaw = 0; 
                     showToast('info', wp.label + ' しました');
                 }
             });
 
-            // ★追加: ゲーム端末の判定とボタン表示
             let nearGame = null;
             gameTerminalsData.forEach(gt => {
                 const dist = Math.hypot(playerLocalPos.x - gt.x, playerLocalPos.z - gt.z);
@@ -1637,7 +1671,7 @@
                 }
                 
                 if (keysPressed['f'] && !document.getElementById('iframe-modal')) {
-                    keysPressed['f'] = false; // 連続起動防止
+                    keysPressed['f'] = false; 
                     openGameIframe(nearGame.url);
                 }
             } else {
@@ -1647,7 +1681,6 @@
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
-                // isMovingフラグは moved が true かどうか。!isGodMode などの判定と切り離して姿勢制御に送る
                 updateAvatarAnim(localAvatar, moved && !isGodMode, isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
             }
 
@@ -1708,3 +1741,4 @@
     </script>
 </body>
 </html>
+}
