@@ -596,7 +596,7 @@
             const group = new THREE.Group();
             
             const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: bodyHex, metalness: 0.8, roughness: 0.3, flatShading: true
+                color: bodyHex, metalness: 0.2, roughness: 0.8, flatShading: true // ★修正: 金属感を下げて色を明るく発色させる
             });
             const glowMaterial = new THREE.MeshBasicMaterial({
                 color: visorHex
@@ -714,6 +714,109 @@
         // ★ Admin機能
         let adminSpeedMult = 1.0;
         
+        // ★ マップ構築用データ保持
+        let warpPadsData = [];
+        let gameTerminalsData = [];
+
+        function buildCustomMap(mapData) {
+            if (!mapData) return;
+            
+            if (mapData.environment && mapData.environment.groundColor) {
+                scene.background = new THREE.Color(mapData.environment.groundColor);
+                if (scene.fog) scene.fog.color.set(mapData.environment.groundColor);
+            }
+
+            // 床 (Floors)
+            if (mapData.floors) {
+                mapData.floors.forEach(f => {
+                    let mesh;
+                    const mat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.9, metalness: 0.1 });
+                    if (f.type === 'rect') {
+                        mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), mat);
+                        mesh.position.set(f.x, f.y || -0.5, f.z);
+                    } else if (f.type === 'circle') {
+                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(f.radius, f.radius, 1, 32), mat);
+                        mesh.position.set(f.x, f.y || -0.5, f.z);
+                    }
+                    if (mesh) {
+                        mesh.receiveShadow = true;
+                        mapGroup.add(mesh);
+                        if (f.y && f.y > 0) collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
+                    }
+                });
+            }
+
+            // 壁・ビル (Walls)
+            if (mapData.walls) {
+                mapData.walls.forEach(w => {
+                    let mesh;
+                    const mat = new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.7 });
+                    const height = w.maxY - w.minY;
+                    const centerY = w.minY + height / 2;
+
+                    if (w.type === 'rect') {
+                        mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat);
+                        mesh.position.set(w.x, centerY, w.z);
+                    } else if (w.type === 'circle') {
+                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 32), mat);
+                        mesh.position.set(w.x, centerY, w.z);
+                    }
+                    if (mesh) {
+                        mesh.castShadow = true; mesh.receiveShadow = true;
+                        mapGroup.add(mesh);
+                        collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
+                    }
+                });
+            }
+
+            // ワープパッド
+            warpPadsData = mapData.warpPads || [];
+            warpPadsData.forEach(wp => {
+                const mat = new THREE.MeshBasicMaterial({ color: wp.color, transparent: true, opacity: 0.7 });
+                const mesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.2, 16), mat);
+                mesh.position.set(wp.x, wp.y, wp.z);
+                mapGroup.add(mesh);
+            });
+
+            // ゲーム端末
+            gameTerminalsData = mapData.gameTerminals || [];
+            gameTerminalsData.forEach(gt => {
+                const mat = new THREE.MeshStandardMaterial({ color: gt.color, metalness: 0.5, roughness: 0.2 });
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(gt.width, gt.height, gt.depth), mat);
+                mesh.position.set(gt.x, gt.y + gt.height/2, gt.z);
+                mesh.castShadow = true;
+                mapGroup.add(mesh);
+                collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
+            });
+        }
+
+        // Iframeでゲームを開く関数
+        function openGameIframe(url) {
+            if (document.pointerLockElement === document.body) document.exitPointerLock();
+            if (document.getElementById('iframe-modal')) return;
+
+            const modal = document.createElement('div');
+            modal.id = 'iframe-modal';
+            modal.className = 'modal-bg';
+            modal.style.display = 'flex';
+            modal.style.zIndex = '150';
+            modal.innerHTML = `
+                <div class="panel" style="width: 90%; max-width: 800px; height: 80vh; padding: 0; display: flex; flex-direction: column;">
+                    <div style="background: #334155; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0;">
+                        <span style="font-weight: bold; color: #fff;">MINI GAME</span>
+                        <button class="btn-danger" style="width: auto; margin: 0; padding: 5px 15px;" onclick="closeGameIframe()">閉じる</button>
+                    </div>
+                    <iframe src="${url}" style="width: 100%; height: 100%; border: none; border-radius: 0 0 12px 12px;"></iframe>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        window.closeGameIframe = function() {
+            const modal = document.getElementById('iframe-modal');
+            if (modal) modal.remove();
+        }
+
         async function attemptLogin() {
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
@@ -883,6 +986,9 @@
 
         function setupSocketEvents() {
             socket.on('initData', (data) => {
+                // ★修正: サーバーから届いたマップデータをここで構築
+                if (data.customMap) buildCustomMap(data.customMap);
+
                 Object.keys(data.players).forEach(id => {
                     if (id !== socket.id) addOtherPlayer(data.players[id]);
                 });
@@ -1486,6 +1592,49 @@
                     isGrounded = false;
                 }
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
+            }
+
+            // ★追加: ワープパッドの判定
+            warpPadsData.forEach(wp => {
+                const dist = Math.hypot(playerLocalPos.x - wp.x, playerLocalPos.z - wp.z);
+                if (dist < 2.0 && Math.abs(playerLocalPos.y - wp.y) < 3.0) {
+                    playerLocalPos.set(wp.targetX, wp.targetY, wp.targetZ);
+                    cameraYaw = 0; // 向きリセット
+                    showToast('info', wp.label + ' しました');
+                }
+            });
+
+            // ★追加: ゲーム端末の判定とボタン表示
+            let nearGame = null;
+            gameTerminalsData.forEach(gt => {
+                const dist = Math.hypot(playerLocalPos.x - gt.x, playerLocalPos.z - gt.z);
+                if (dist < (gt.triggerDistance || 5.0) && Math.abs(playerLocalPos.y - gt.y) < 5.0) {
+                    nearGame = gt;
+                }
+            });
+
+            const interactBtn = document.getElementById('interact-btn');
+            if (nearGame) {
+                if (!interactBtn) {
+                    const btn = document.createElement('button');
+                    btn.id = 'interact-btn';
+                    btn.className = 'start-btn';
+                    btn.style.position = 'absolute';
+                    btn.style.bottom = '120px';
+                    btn.style.left = '50%';
+                    btn.style.transform = 'translateX(-50%)';
+                    btn.style.zIndex = '100';
+                    btn.innerText = `🎮 ${nearGame.label}をプレイ (Fキー)`;
+                    btn.onclick = () => openGameIframe(nearGame.url);
+                    document.body.appendChild(btn);
+                }
+                
+                if (keysPressed['f'] && !document.getElementById('iframe-modal')) {
+                    keysPressed['f'] = false; // 連続起動防止
+                    openGameIframe(nearGame.url);
+                }
+            } else {
+                if (interactBtn) interactBtn.remove();
             }
 
             if (localAvatar) {
