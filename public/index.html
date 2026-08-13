@@ -14,7 +14,7 @@
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
         .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px;}
-        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; }
+        .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; letter-spacing: 2px;}
         .panel input { width: 100%; box-sizing: border-box; padding: 10px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; }
         .panel button { width: 100%; padding: 10px; margin: 8px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: #0ea5e9; color: white; }
@@ -83,7 +83,7 @@
         }
         #settings-btn {
             background: rgba(15, 23, 42, 0.8); color: white; border: 1px solid #334155;
-            padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; /* 初期非表示 */
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none;
         }
         #settings-btn:hover { background: #1e293b; }
 
@@ -130,7 +130,7 @@
         /* 画面暗転オーバーレイ (Escキー用) */
         #pause-overlay {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.5); z-index: 5; /* サイドバー等の後ろ */
+            background: rgba(0,0,0,0.5); z-index: 5; 
             display: none; justify-content: center; align-items: center;
         }
         #resume-btn {
@@ -186,6 +186,7 @@
             background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center;
         }
     </style>
+    <!-- Three.js (Core) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -222,13 +223,13 @@
             <h2>機体選択 (STEP 2/3)</h2>
             <p style="font-size: 0.8rem; color: #94a3b8; text-align: center;">ベースとなる機体フレームを選択してください。</p>
             <button class="btn-primary" style="margin-top: 10px; padding: 15px;" onclick="goToVisorSetup('typeA')">
-                TYPE-A (Standard)<br><small style="color: #bae6fd;">バランス型 多面体フレーム</small>
+                TYPE-A (Standard)<br><small style="color: #bae6fd;">多面体・フラットシェーディング</small>
             </button>
             <button class="btn-primary" style="margin-top: 10px; padding: 15px; background: #3b82f6;" onclick="goToVisorSetup('typeB')">
-                TYPE-B (Heavy)<br><small style="color: #bfdbfe;">重装甲 円柱ベースフレーム</small>
+                TYPE-B (Heavy)<br><small style="color: #bfdbfe;">重装甲・ボックスフレーム</small>
             </button>
             <button class="btn-primary" style="margin-top: 10px; padding: 15px; background: #6366f1;" onclick="goToVisorSetup('typeC')">
-                TYPE-C (Slim)<br><small style="color: #c7d2fe;">スピード型 流線型フレーム</small>
+                TYPE-C (Slim)<br><small style="color: #c7d2fe;">スピード型・流線型フレーム</small>
             </button>
             <button class="btn-danger" style="margin-top: 15px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('register-panel')">戻る</button>
         </div>
@@ -251,8 +252,8 @@
 
         <div class="panel" id="avatar-shape-panel" style="display: none; width: 350px;">
             <h2>最終調整</h2>
-            <div id="setup-preview-box" style="width: 100%; height: 200px; background: #000; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative;">
-                <span style="position: absolute; top:5px; left:5px; font-size:0.7rem; color:#94a3b8;">Preview</span>
+            <div id="setup-preview-box" style="width: 100%; height: 250px; background: #050814; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative;">
+                <span style="position: absolute; top:5px; left:5px; font-size:0.7rem; color:#94a3b8; z-index:10;">Preview</span>
             </div>
             <div class="setup-slider">
                 <label>身長 (Height) : <span id="val-height">1.00</span></label>
@@ -264,7 +265,6 @@
             </div>
             <div id="setup-error" class="error-msg"></div>
             
-            <!-- ★ 修正: attemptRegister を呼び出す -->
             <button class="btn-success" style="margin-top: 15px; padding: 15px; font-size: 1.1rem;" onclick="attemptRegister()">HAKUYARCにダイブする</button>
             <button class="btn-danger" style="margin-top: 10px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('avatar-body-panel')">戻る</button>
         </div>
@@ -396,12 +396,14 @@
     <div id="canvas-container"></div>
 
     <script>
+        // ==========================================
+        // ★ グローバル変数
+        // ==========================================
         let socket;
         let currentUser = null;
         let userCR = 0;
         let isAdmin = false;
-        let myAvatarData = null; // スケール等を含んだ自分のアバター情報
-        
+        let myAvatarData = null; 
         let pingInterval;
 
         // ==========================================
@@ -411,8 +413,8 @@
             username: '', password: '', avatarType: 'typeA', 
             scaleH: 1.0, scaleW: 1.0
         };
-        let selectedBodyColor = '#dddddd';
-        let selectedVisorColor = '#00f3ff';
+        let selectedBodyColor = '#a0aab5'; // デフォルトは金属グレー
+        let selectedVisorColor = '#00f3ff'; // デフォルトはシアン
         
         function switchPanel(panelId) {
             ['login-panel', 'register-panel', 'avatar-type-panel', 'avatar-visor-panel', 'avatar-body-panel', 'avatar-shape-panel'].forEach(id => {
@@ -490,9 +492,10 @@
 
         function goToShapeSetup() {
             switchPanel('avatar-shape-panel');
-            setTimeout(initPreview, 50);
+            setTimeout(initPreview, 100);
         }
 
+        // カラーピッカー生成 (バイザー)
         const visorColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
         const visorContainer = document.getElementById('visor-color-picker');
         visorColors.forEach(color => {
@@ -504,11 +507,19 @@
                 document.querySelectorAll('#visor-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
                 selectedVisorColor = color;
+                if(previewAvatar) { // プレビュー中なら即時反映
+                    previewScene.remove(previewAvatar);
+                    previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor, regData.avatarType);
+                    previewAvatar.position.set(0, -0.5, 0); 
+                    updateShapeParams();
+                    previewScene.add(previewAvatar);
+                }
             };
             visorContainer.appendChild(btn);
         });
 
-        const bodyColors = ['#dddddd', '#555555', '#1a1a1a', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f', '#d97706'];
+        // カラーピッカー生成 (ボディ)
+        const bodyColors = ['#a0aab5', '#333333', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f', '#dddddd'];
         const bodyContainer = document.getElementById('body-color-picker');
         bodyColors.forEach(color => {
             const btn = document.createElement('div');
@@ -519,137 +530,690 @@
                 document.querySelectorAll('#body-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
                 selectedBodyColor = color;
+                if(previewAvatar) {
+                    previewScene.remove(previewAvatar);
+                    previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor, regData.avatarType);
+                    previewAvatar.position.set(0, -0.5, 0); 
+                    updateShapeParams();
+                    previewScene.add(previewAvatar);
+                }
             };
             bodyContainer.appendChild(btn);
         });
 
-        // ==========================================
-        // ★ アバター生成ロジックの完全復元 (v1.0ベース)
-        // ==========================================
-        function createRoundedBox(width, height, depth, radius0, smoothness) {
-            let shape = new THREE.Shape();
-            let eps = 0.00001;
-            let radius = radius0 - eps;
-            shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
-            shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
-            shape.absarc(width - radius * 2, height - radius * 2, eps, Math.PI / 2, 0, true);
-            shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
-            let geometry = new THREE.ExtrudeGeometry(shape, {
-                depth: depth - radius0 * 2,
-                bevelEnabled: true, bevelSegments: smoothness * 2, steps: 1, bevelSize: radius, bevelThickness: radius0, curveSegments: smoothness
-            });
-            geometry.center();
-            return geometry;
-        }
 
+        // ==========================================
+        // ★ アバター生成ロジック (SF多面体・フラットシェーディング仕様)
+        // ==========================================
         window.createAvatarMesh = function(visorHex, bodyHex, type = 'typeA') {
             const group = new THREE.Group();
             
-            // 色と材質の設定
+            // SFっぽさを出すためのマテリアル設定
+            // body: フラットシェーディングを有効にしてポリゴン感を強調
             const matBody = new THREE.MeshStandardMaterial({ 
-                color: bodyHex, roughness: 0.4, metalness: 0.1 // ★修正: 金属反射を抑え色を見やすく
+                color: bodyHex, roughness: 0.3, metalness: 0.8, flatShading: true, transparent: true, opacity: 0.95
             }); 
-            const matDark = new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.9 }); 
-            const matVisor = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: visorHex, emissiveIntensity: 1.0 });
+            const matDark = new THREE.MeshStandardMaterial({ 
+                color: 0x111622, roughness: 0.5, metalness: 0.5, flatShading: true 
+            }); 
+            // visor: 発光マテリアル
+            const glowMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, emissive: visorHex, emissiveIntensity: 1.0 
+            });
 
-            if (type === 'typeC') {
-                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2, 16), matBody);
-                torso.position.y = 1.3; torso.castShadow = true; group.add(torso);
-                
-                const headGroup = new THREE.Group(); headGroup.position.y = 2.0;
-                const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), matBody);
-                head.position.y = 0.2; head.castShadow = true;
-                const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.2, 16, 1, false, 0, Math.PI), matVisor);
-                visor.position.set(0, 0.2, 0); visor.rotation.y = Math.PI / 2;
-                headGroup.add(head, visor); group.add(headGroup);
+            // アニメーション用に部位ごとのグループを作成
+            const headGroup = new THREE.Group();
+            const armLGroup = new THREE.Group();
+            const armRGroup = new THREE.Group();
+            const legLGroup = new THREE.Group();
+            const legRGroup = new THREE.Group();
 
-                const armGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.0, 8);
-                const legGeo = new THREE.CylinderGeometry(0.15, 0.1, 1.2, 8);
+            if (type === 'typeB') {
+                // -----------------------------
+                // TYPE-B (Heavy): 重装甲・四角形ベース
+                // -----------------------------
+                headGroup.position.y = 1.9;
+                const headGeo = new THREE.BoxGeometry(0.5, 0.4, 0.5);
+                const headMesh = new THREE.Mesh(headGeo, matBody); headMesh.castShadow = true;
+                headGroup.add(headMesh);
                 
-                const armLGroup = new THREE.Group(); armLGroup.position.set(-0.4, 1.8, 0);
-                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.4; armLGroup.add(armL); group.add(armLGroup);
-                
-                const armRGroup = new THREE.Group(); armRGroup.position.set(0.4, 1.8, 0);
-                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.4; armRGroup.add(armR); group.add(armRGroup);
-                
-                const legLGroup = new THREE.Group(); legLGroup.position.set(-0.2, 0.9, 0);
-                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.5; legLGroup.add(legL); group.add(legLGroup);
-                
-                const legRGroup = new THREE.Group(); legRGroup.position.set(0.2, 0.9, 0);
-                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.5; legRGroup.add(legR); group.add(legRGroup);
-                
-                group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
-            
-            } else if (type === 'typeB') {
-                const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.8), matBody);
-                torso.position.y = 1.2; torso.castShadow = true; group.add(torso);
-                
-                const headGroup = new THREE.Group(); headGroup.position.y = 1.8;
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), matBody);
-                head.position.y = 0.3; head.castShadow = true;
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.1), matVisor);
-                visor.position.set(0, 0.3, -0.36);
-                headGroup.add(head, visor); group.add(headGroup);
+                const visorGeo = new THREE.BoxGeometry(0.4, 0.1, 0.05);
+                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
+                visorMesh.position.set(0, 0.05, 0.26);
+                headGroup.add(visorMesh);
+                group.add(headGroup);
 
-                const armGeo = new THREE.BoxGeometry(0.4, 0.9, 0.4);
-                const legGeo = new THREE.BoxGeometry(0.4, 1.0, 0.4);
+                const torsoGroup = new THREE.Group(); torsoGroup.position.y = 1.2;
+                const chestGeo = new THREE.BoxGeometry(0.8, 0.7, 0.5);
+                const chestMesh = new THREE.Mesh(chestGeo, matBody); chestMesh.castShadow = true;
+                torsoGroup.add(chestMesh);
                 
-                const armLGroup = new THREE.Group(); armLGroup.position.set(-0.7, 1.7, 0);
-                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.35; armLGroup.add(armL); group.add(armLGroup);
+                const lineGeo = new THREE.BoxGeometry(0.82, 0.05, 0.52);
+                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial); lineMesh.position.y = 0;
+                torsoGroup.add(lineMesh);
+                group.add(torsoGroup);
+
+                const armGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
+                armLGroup.position.set(-0.6, 1.6, 0);
+                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.3; armL.castShadow = true;
+                armLGroup.add(armL); group.add(armLGroup);
                 
-                const armRGroup = new THREE.Group(); armRGroup.position.set(0.7, 1.7, 0);
-                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.35; armRGroup.add(armR); group.add(armRGroup);
+                armRGroup.position.set(0.6, 1.6, 0);
+                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.3; armR.castShadow = true;
+                armRGroup.add(armR); group.add(armRGroup);
+
+                const legGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
+                legLGroup.position.set(-0.25, 0.8, 0);
+                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.35; legL.castShadow = true;
+                legLGroup.add(legL); group.add(legLGroup);
                 
-                const legLGroup = new THREE.Group(); legLGroup.position.set(-0.3, 0.7, 0);
-                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.4; legLGroup.add(legL); group.add(legLGroup);
+                legRGroup.position.set(0.25, 0.8, 0);
+                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.35; legR.castShadow = true;
+                legRGroup.add(legR); group.add(legRGroup);
+
+            } else if (type === 'typeC') {
+                // -----------------------------
+                // TYPE-C (Slim): スピード型・八面体ベース
+                // -----------------------------
+                headGroup.position.y = 2.1;
+                const headGeo = new THREE.OctahedronGeometry(0.3, 0); // 八面体
+                const headMesh = new THREE.Mesh(headGeo, matBody); headMesh.castShadow = true;
+                headGroup.add(headMesh);
                 
-                const legRGroup = new THREE.Group(); legRGroup.position.set(0.3, 0.7, 0);
-                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.4; legRGroup.add(legR); group.add(legRGroup);
+                const visorGeo = new THREE.BoxGeometry(0.2, 0.2, 0.05);
+                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
+                visorMesh.position.set(0, 0, 0.25);
+                visorMesh.rotation.z = Math.PI / 4; // 菱形に
+                headGroup.add(visorMesh);
+                group.add(headGroup);
+
+                const torsoGroup = new THREE.Group(); torsoGroup.position.y = 1.4;
+                const chestGeo = new THREE.CylinderGeometry(0.3, 0.15, 0.7, 6);
+                const chestMesh = new THREE.Mesh(chestGeo, matBody); chestMesh.castShadow = true;
+                torsoGroup.add(chestMesh);
                 
-                group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
-            
+                const lineGeo = new THREE.CylinderGeometry(0.31, 0.28, 0.05, 6);
+                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial); lineMesh.position.y = 0.1;
+                torsoGroup.add(lineMesh);
+                group.add(torsoGroup);
+
+                const armGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.8, 6);
+                armLGroup.position.set(-0.35, 1.8, 0);
+                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.4; armL.castShadow = true;
+                armLGroup.add(armL); group.add(armLGroup);
+                
+                armRGroup.position.set(0.35, 1.8, 0);
+                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.4; armR.castShadow = true;
+                armRGroup.add(armR); group.add(armRGroup);
+
+                const legGeo = new THREE.CylinderGeometry(0.08, 0.05, 0.9, 6);
+                legLGroup.position.set(-0.12, 1.0, 0);
+                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.45; legL.castShadow = true;
+                legLGroup.add(legL); group.add(legLGroup);
+                
+                legRGroup.position.set(0.12, 1.0, 0);
+                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.45; legR.castShadow = true;
+                legRGroup.add(legR); group.add(legRGroup);
+
             } else {
-                // TYPE-A (Standard)
-                const torso = new THREE.Mesh(createRoundedBox(0.8, 1.2, 0.5, 0.1, 2), matBody);
-                torso.position.y = 1.3; torso.castShadow = true; group.add(torso);
+                // -----------------------------
+                // TYPE-A (Standard): ユーザーリクエストの「二十面体＋各種パーツ」
+                // -----------------------------
+                headGroup.position.y = 2.0;
 
-                const headGroup = new THREE.Group(); headGroup.position.y = 2.0;
-                const head = new THREE.Mesh(createRoundedBox(0.6, 0.6, 0.6, 0.1, 2), matBody);
-                head.position.y = 0.3; head.castShadow = true;
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.1), matVisor);
-                visor.position.set(0, 0.35, -0.32);
-                headGroup.add(head, visor); group.add(headGroup);
+                // 頭部：二十面体
+                const headGeo = new THREE.IcosahedronGeometry(0.35, 0);
+                const headMesh = new THREE.Mesh(headGeo, matBody);
+                headMesh.castShadow = true;
+                headGroup.add(headMesh);
 
-                const armGeo = createRoundedBox(0.25, 1.0, 0.25, 0.08, 2);
-                const legGeo = createRoundedBox(0.3, 1.1, 0.3, 0.08, 2);
+                // バイザー
+                const visorGeo = new THREE.BoxGeometry(0.25, 0.08, 0.05);
+                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
+                visorMesh.position.set(0, 0.02, 0.32);
+                headGroup.add(visorMesh);
+
+                // センサー
+                const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
+                const leftSensor = new THREE.Mesh(sensorGeo, matDark);
+                leftSensor.rotation.z = Math.PI / 2;
+                leftSensor.position.set(0.32, 0, 0);
+                const rightSensor = leftSensor.clone();
+                rightSensor.position.set(-0.32, 0, 0);
+                headGroup.add(leftSensor, rightSensor);
+
+                group.add(headGroup);
+
+                // 胴体
+                const torsoGroup = new THREE.Group();
+                torsoGroup.position.y = 1.3;
+
+                const chestGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
+                const chestMesh = new THREE.Mesh(chestGeo, matBody);
+                chestMesh.castShadow = true;
+                torsoGroup.add(chestMesh);
+
+                const lineGeo = new THREE.BoxGeometry(0.52, 0.04, 0.32);
+                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial);
+                lineMesh.position.y = -0.05;
+                torsoGroup.add(lineMesh);
+
+                const waistGeo = new THREE.CylinderGeometry(0.22, 0.15, 0.4, 5); // 下部を少し太く
+                const waistMesh = new THREE.Mesh(waistGeo, matBody);
+                waistMesh.position.y = -0.45;
+                waistMesh.castShadow = true;
+                torsoGroup.add(waistMesh);
                 
-                const armLGroup = new THREE.Group(); armLGroup.position.set(-0.55, 1.8, 0);
-                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.4; armLGroup.add(armL); group.add(armLGroup);
+                group.add(torsoGroup);
+
+                // 腕
+                const armGeo = new THREE.BoxGeometry(0.12, 0.7, 0.12);
                 
-                const armRGroup = new THREE.Group(); armRGroup.position.set(0.55, 1.8, 0);
-                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.4; armRGroup.add(armR); group.add(armRGroup);
+                armLGroup.position.set(-0.35, 1.7, 0);
+                const armL = new THREE.Mesh(armGeo, matBody); armL.position.y = -0.25; armL.castShadow = true;
+                armLGroup.add(armL); group.add(armLGroup);
                 
-                const legLGroup = new THREE.Group(); legLGroup.position.set(-0.2, 0.9, 0);
-                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.45; legLGroup.add(legL); group.add(legLGroup);
+                armRGroup.position.set(0.35, 1.7, 0);
+                const armR = new THREE.Mesh(armGeo, matBody); armR.position.y = -0.25; armR.castShadow = true;
+                armRGroup.add(armR); group.add(armRGroup);
+
+                // 足 (歩行アニメーション用に追加。浮遊感を出すためダークカラーで細身に)
+                const legGeo = new THREE.BoxGeometry(0.12, 0.6, 0.12);
                 
-                const legRGroup = new THREE.Group(); legRGroup.position.set(0.2, 0.9, 0);
-                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.45; legRGroup.add(legR); group.add(legRGroup);
+                legLGroup.position.set(-0.15, 0.9, 0);
+                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.3; legL.castShadow = true;
+                legLGroup.add(legL); group.add(legLGroup);
                 
-                group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
+                legRGroup.position.set(0.15, 0.9, 0);
+                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.3; legR.castShadow = true;
+                legRGroup.add(legR); group.add(legRGroup);
             }
+
+            // アニメーション更新用に参照を保持
+            group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
             return group;
         };
 
+        // === プレビューレンダラー ===
+        let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
+        
+        function initPreview() {
+            const container = document.getElementById('setup-preview-box');
+            if(!previewRenderer) {
+                previewScene = new THREE.Scene();
+                previewScene.add(new THREE.AmbientLight(0x445566, 2.0));
+                
+                // サイバー感を出すための照明追加
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                dirLight.position.set(5, 10, 7);
+                previewScene.add(dirLight);
+                
+                const cyanLight = new THREE.PointLight(0x00f3ff, 2, 5);
+                cyanLight.position.set(0, 1.2, 2.5);
+                previewScene.add(cyanLight);
+
+                previewCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+                previewCamera.position.set(0, 1.5, 4.5);
+
+                previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                previewRenderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(previewRenderer.domElement);
+
+                function renderPreview() {
+                    previewReqId = requestAnimationFrame(renderPreview);
+                    if(previewAvatar) {
+                        previewAvatar.rotation.y += 0.015; 
+                        
+                        // 待機時のフワフワ浮遊感 (プレビュー用)
+                        const time = performance.now() * 0.002;
+                        previewAvatar.position.y = -0.8 + Math.sin(time) * 0.05;
+                    }
+                    previewRenderer.render(previewScene, previewCamera);
+                }
+                renderPreview();
+            }
+            
+            if(previewAvatar) previewScene.remove(previewAvatar);
+            
+            previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor, regData.avatarType);
+            previewAvatar.position.set(0, -0.8, 0); 
+            previewScene.add(previewAvatar);
+            
+            updateShapeParams();
+        }
+
+        function updateShapeParams() {
+            const h = parseFloat(document.getElementById('shape-height').value);
+            const w = parseFloat(document.getElementById('shape-width').value);
+            document.getElementById('val-height').innerText = h.toFixed(2);
+            document.getElementById('val-width').innerText = w.toFixed(2);
+            
+            regData.scaleH = h;
+            regData.scaleW = w;
+            if(previewAvatar) previewAvatar.scale.set(w, h, w);
+        }
+
+        async function attemptRegister() {
+            const h = parseFloat(document.getElementById('shape-height').value);
+            const w = parseFloat(document.getElementById('shape-width').value);
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: regData.username,
+                        password: regData.password,
+                        avatar: {
+                            type: regData.avatarType,
+                            visor: selectedVisorColor,
+                            body: selectedBodyColor,
+                            scaleH: h,
+                            scaleW: w
+                        }
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    currentUser = data.username;
+                    userCR = data.cr;
+                    isAdmin = data.isAdmin;
+                    myAvatarData = data.avatar;
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-cr').innerText = userCR;
+                    if(isAdmin) document.getElementById('admin-btn').style.display = 'block';
+                    
+                    startGame(); 
+                } else {
+                    document.getElementById('setup-error').innerText = data.message;
+                }
+            } catch (e) {
+                document.getElementById('setup-error').innerText = 'サーバー通信エラー';
+            }
+        }
+
         // ==========================================
-        // ★ エラー修正: checkCollision関数にバグがあったため移動できなかった問題を修正
+        // ★ メインゲームロジック
         // ==========================================
+        let scene, camera, renderer, clock, mapGroup;
+        let localAvatar = null;
+        let otherPlayers = {};
+        let collisionBoxes = [];
+        let warpPads = [];
+        let gameTerminals = [];
+        let activeInteract = null;
+
+        let playerLocalPos = new THREE.Vector3(0, 5, 0); 
+        let playerVelocity = new THREE.Vector3(0, 0, 0);
+        let cameraYaw = 0, cameraPitch = 0;
+        let targetAvatarRotation = 0;
+        let isGrounded = false;
+        let isFPS = false;
+        let isLocked = false;
+        
+        let frames = 0; let prevTime = performance.now();
+        const keysPressed = {};
+
+        function startGame() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('sidebar').style.display = 'flex';
+            document.getElementById('settings-btn').style.display = 'block';
+
+            socket = io();
+            socket.emit('joinGame', { username: currentUser, avatar: myAvatarData });
+            
+            pingInterval = setInterval(() => {
+                const start = Date.now();
+                socket.emit('ping_req', () => {
+                    document.getElementById('ping-val').innerText = Date.now() - start;
+                });
+            }, 2000);
+
+            initThreeJS();
+            setupSocketEvents();
+            
+            document.getElementById('controls-help').style.display = 'block';
+            lockMouse();
+        }
+
+        function lockMouse() {
+            if(!isLocked) document.body.requestPointerLock();
+        }
+
+        function buildHakuyarcCity() {
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0x050814, roughness: 0.9 });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), matFloor);
+            floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+            mapGroup.add(floor);
+            
+            // GridHelperでサイバーな床面を演出
+            const gridHelper = new THREE.GridHelper(2000, 100, 0x00f3ff, 0x112233);
+            gridHelper.position.y = 0.01;
+            mapGroup.add(gridHelper);
+
+            // メインタワー
+            const towerMat = new THREE.MeshStandardMaterial({ color: 0x1a202c, metalness: 0.8 });
+            const tower = new THREE.Mesh(new THREE.BoxGeometry(40, 300, 40), towerMat);
+            tower.position.set(0, 150, 0);
+            tower.castShadow = true; tower.receiveShadow = true;
+            mapGroup.add(tower);
+            collisionBoxes.push(new THREE.Box3().setFromObject(tower));
+
+            // ネオンリング
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 });
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(35, 1, 16, 4), ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.rotation.z = Math.PI / 4;
+            ring.position.set(0, 100, 0);
+            mapGroup.add(ring);
+        }
+
+        function buildCustomMap(mapData) {
+            if (mapData.environment && mapData.environment.groundColor) {
+                scene.background = new THREE.Color(mapData.environment.groundColor);
+                scene.fog.color.set(mapData.environment.groundColor);
+            }
+            if (mapData.floors) {
+                mapData.floors.forEach(f => {
+                    let mesh;
+                    const mat = new THREE.MeshStandardMaterial({ color: f.color });
+                    if (f.type === 'rect') {
+                        mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), mat);
+                        mesh.position.set(f.x, f.y - 0.5, f.z);
+                    } else if (f.type === 'circle') {
+                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(f.radius, f.radius, 1, 32), mat);
+                        mesh.position.set(f.x, f.y - 0.5, f.z);
+                    }
+                    if (mesh) { mesh.receiveShadow = true; mapGroup.add(mesh); }
+                });
+            }
+            if (mapData.walls) {
+                mapData.walls.forEach(w => {
+                    let mesh;
+                    const mat = new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.7 });
+                    const height = w.maxY - w.minY;
+                    const centerY = w.minY + height / 2;
+                    if (w.type === 'rect') {
+                        mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat);
+                        mesh.position.set(w.x, centerY, w.z);
+                    } else if (w.type === 'circle') {
+                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 32), mat);
+                        mesh.position.set(w.x, centerY, w.z);
+                    }
+                    if (mesh) {
+                        mesh.castShadow = true; mesh.receiveShadow = true;
+                        mapGroup.add(mesh);
+                        const box3 = new THREE.Box3().setFromObject(mesh);
+                        collisionBoxes.push(box3);
+                    }
+                });
+            }
+            if (mapData.warpPads) {
+                mapData.warpPads.forEach(wp => {
+                    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 0.2, 32), new THREE.MeshStandardMaterial({ color: wp.color, emissive: wp.color, emissiveIntensity: 0.8 }));
+                    mesh.position.set(wp.x, wp.y, wp.z);
+                    mapGroup.add(mesh);
+                    warpPads.push({ mesh: mesh, data: wp });
+                });
+            }
+            if (mapData.gameTerminals) {
+                mapData.gameTerminals.forEach(gt => {
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(gt.width, gt.height, gt.depth), new THREE.MeshStandardMaterial({ color: gt.color, emissive: gt.color, emissiveIntensity: 0.3 }));
+                    mesh.position.set(gt.x, gt.y + gt.height/2, gt.z);
+                    mapGroup.add(mesh);
+                    const box3 = new THREE.Box3().setFromObject(mesh);
+                    collisionBoxes.push(box3);
+                    gameTerminals.push({ pos: new THREE.Vector3(gt.x, gt.y, gt.z), data: gt });
+                });
+            }
+        }
+
+        function initThreeJS() {
+            scene = new THREE.Scene(); 
+            scene.background = new THREE.Color(0x050814);
+            scene.fog = new THREE.FogExp2(0x050814, 0.003);
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0x223344, 1.5));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(100, 200, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            mapGroup = new THREE.Group();
+            scene.add(mapGroup);
+
+            // フォールバック景観を生成
+            buildHakuyarcCity();
+
+            localAvatar = createAvatarMesh(myAvatarData.visor, myAvatarData.body, myAvatarData.type);
+            localAvatar.scale.set(myAvatarData.scaleW, myAvatarData.scaleH, myAvatarData.scaleW);
+            scene.add(localAvatar);
+
+            clock = new THREE.Clock();
+            setupInputHandlers();
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate();
+        }
+
+        function setupSocketEvents() {
+            socket.on('initData', (data) => {
+                if (data.customMap) {
+                    // フォールバックと重ならないように、必要な場合はマップをクリア
+                    // while (mapGroup.children.length > 0) mapGroup.remove(mapGroup.children[0]);
+                    // collisionBoxes = []; warpPads = []; gameTerminals = [];
+                    buildCustomMap(data.customMap);
+                }
+                Object.values(data.players).forEach(p => {
+                    if (p.id !== socket.id) addOtherPlayer(p);
+                });
+            });
+
+            socket.on('newPlayer', (p) => addOtherPlayer(p));
+
+            socket.on('playerMoved', (data) => {
+                if (otherPlayers[data.id]) {
+                    otherPlayers[data.id].userData.targetPos = new THREE.Vector3(data.x, data.y, data.z);
+                    otherPlayers[data.id].userData.targetYaw = data.rotation;
+                    otherPlayers[data.id].userData.targetPitch = data.pitch;
+                    otherPlayers[data.id].userData.isGrounded = data.isGrounded;
+                    if (data.isMoving) otherPlayers[data.id].userData.movingTimer = 0.1;
+                }
+            });
+
+            socket.on('playerDisconnected', (id) => {
+                if (otherPlayers[id]) {
+                    scene.remove(otherPlayers[id]);
+                    delete otherPlayers[id];
+                }
+            });
+
+            socket.on('chatMessage', (msg) => {
+                const log = document.getElementById('chat-log');
+                const div = document.createElement('div');
+                div.className = 'chat-msg';
+                div.innerHTML = `<span class="name" style="color:${msg.color}">${msg.username}</span> ${msg.text}`;
+                log.appendChild(div);
+                log.scrollTop = log.scrollHeight;
+
+                const avatar = msg.username === currentUser ? localAvatar : Object.values(otherPlayers).find(p => p.userData.username === msg.username);
+                if (avatar) showChatBubble(avatar, msg.text, msg.color);
+            });
+
+            socket.on('moneyUpdated', (cr) => {
+                userCR = cr; document.getElementById('ui-cr').innerText = cr;
+            });
+            socket.on('forceUpdateCR', (data) => {
+                if (data.user === currentUser) {
+                    userCR = data.cr; document.getElementById('ui-cr').innerText = userCR;
+                    showNotification('info', '管理者によってCRが上書きされました');
+                }
+            });
+            socket.on('banned', (user) => {
+                if (user === currentUser) {
+                    alert("このアカウントは管理者により停止(BAN)されました。");
+                    window.location.reload();
+                }
+            });
+            socket.on('notification', (n) => showNotification(n.type, n.text));
+            socket.on('adminLogs', (logs) => {
+                document.getElementById('admin-log-auth').innerHTML = logs.auth.map(l => `[${l.time.substring(11,19)}] ${l.user}: ${l.action}`).join('<br>');
+                document.getElementById('admin-log-chat').innerHTML = logs.chat.map(l => `[${l.time.substring(11,19)}] ${l.user}: ${l.text}`).join('<br>');
+            });
+        }
+
+        function addOtherPlayer(p) {
+            const mesh = createAvatarMesh(p.avatar.visor, p.avatar.body, p.avatar.type);
+            mesh.scale.set(p.avatar.scaleW, p.avatar.scaleH, p.avatar.scaleW);
+            mesh.position.set(p.x, p.y, p.z);
+            mesh.userData.username = p.username;
+            scene.add(mesh);
+            otherPlayers[p.id] = mesh;
+        }
+
+        function showChatBubble(avatarMesh, text, color) {
+            const id = 'bubble-' + Math.random().toString(36).substr(2, 9);
+            const div = document.createElement('div');
+            div.className = 'chat-bubble'; div.id = id;
+            div.innerText = text;
+            div.style.borderColor = color;
+            document.body.appendChild(div);
+            
+            const updateBubble = () => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const headPos = avatarMesh.position.clone();
+                headPos.y += (avatarMesh.scale.y * 2.5);
+                headPos.project(camera);
+                const x = (headPos.x * .5 + .5) * window.innerWidth;
+                const y = (headPos.y * -.5 + .5) * window.innerHeight;
+                el.style.left = `${x}px`; el.style.top = `${y}px`;
+                
+                if(headPos.z < 1) requestAnimationFrame(updateBubble);
+                else el.style.display = 'none';
+            };
+            updateBubble();
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }
+            }, 5000);
+        }
+
+        function setupInputHandlers() {
+            window.addEventListener('keydown', (e) => {
+                keysPressed[e.key.toLowerCase()] = true;
+                if (e.key === 'Enter') {
+                    if (isLocked) {
+                        document.exitPointerLock();
+                        const inputEl = document.getElementById('chat-input');
+                        if (inputEl) inputEl.focus();
+                    } else {
+                        sendChat();
+                        lockMouse();
+                    }
+                }
+            });
+            window.addEventListener('keyup', (e) => keysPressed[e.key.toLowerCase()] = false);
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isLocked) return;
+                const sensitivity = 0.002;
+                cameraYaw -= e.movementX * sensitivity;
+                cameraPitch -= e.movementY * sensitivity;
+                cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = (document.pointerLockElement === document.body);
+                document.getElementById('pause-overlay').style.display = isLocked ? 'none' : 'flex';
+                document.getElementById('crosshair').style.display = (isLocked && isFPS) ? 'block' : 'none';
+            });
+            
+            const chatInputEl = document.getElementById('chat-input');
+            if (chatInputEl) {
+                chatInputEl.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendChat();
+                });
+            }
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'f' && activeInteract && isLocked) {
+                    openGameIframe(activeInteract.url);
+                }
+            });
+        }
+
+        function updateAvatarAnim(avatar, isMoving, isGrd, delta, targetYaw, camPitch) {
+            if (!avatar || !avatar.userData.head) return;
+            const ud = avatar.userData;
+            
+            if (isMoving) {
+                ud.walkTime += delta * 15; 
+                const swing = Math.sin(ud.walkTime);
+                ud.armL.rotation.x = swing * 0.8;
+                ud.armR.rotation.x = -swing * 0.8;
+                ud.legL.rotation.x = -swing * 0.8;
+                ud.legR.rotation.x = swing * 0.8;
+                // 走る時は体を少し前傾
+                avatar.rotation.x = THREE.MathUtils.lerp(avatar.rotation.x, 0.1, 0.1);
+            } else {
+                ud.walkTime += delta * 2; // 停止時のフワフワ感
+                const floatY = Math.sin(ud.walkTime) * 0.05;
+                // avatar全体ではなく、胴体と頭を中心に軽く揺らす演出
+                ud.head.position.y = 2.0 + floatY;
+                
+                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
+                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+                ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.1);
+                ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.1);
+                avatar.rotation.x = THREE.MathUtils.lerp(avatar.rotation.x, 0, 0.1);
+            }
+            
+            // 空中（ジャンプ・落下中）のポーズ
+            if (!isGrd) {
+                ud.armL.rotation.x = -0.5; ud.armR.rotation.x = -0.5;
+                ud.armL.rotation.z = 0.5;  ud.armR.rotation.z = -0.5;
+                ud.legL.rotation.x = 0.2;  ud.legR.rotation.x = -0.2;
+                avatar.rotation.x = 0.2;
+            } else if (!isMoving) {
+                ud.armL.rotation.z = 0; ud.armR.rotation.z = 0;
+            }
+            
+            // 体の向きを滑らかに補間
+            let diff = targetYaw - avatar.rotation.y;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            avatar.rotation.y += diff * 0.15; 
+
+            // 顔をカメラの方向（正面）に向ける
+            let yawDiff = cameraYaw - avatar.rotation.y;
+            yawDiff += Math.PI; // 背中ではなく前を向かせる
+            while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
+            while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
+            
+            const clampedYaw = Math.max(-Math.PI/3, Math.min(Math.PI/3, yawDiff));
+            const clampedPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, camPitch));
+            
+            ud.head.rotation.y = clampedYaw;
+            ud.head.rotation.x = clampedPitch;
+        }
+
         function checkCollision(newPos) {
-            // アバターの高さを2とし、中心のYを少し上げる
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 new THREE.Vector3(newPos.x, newPos.y + 1, newPos.z), 
                 new THREE.Vector3(1, 2, 1)
             );
-            // 建物や壁のボックスと衝突判定
             for (let box of collisionBoxes) {
                 if (playerBox.intersectsBox(box)) return true;
             }
@@ -660,9 +1224,10 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            if (!clock) return;
+            
             const delta = Math.min(clock.getDelta(), 0.1); 
             
-            // FPS計測
             frames++;
             const time = performance.now();
             if (time >= prevTime + 1000) {
@@ -679,7 +1244,6 @@
             if (localAvatar) {
                 let moved = false;
                 
-                // ZキーでAdmin専用の飛行モード
                 let gravity = keysPressed['z'] && isAdmin ? 0 : 30;
                 playerVelocity.y -= gravity * delta; 
                 
@@ -699,7 +1263,7 @@
                     if (mv.lengthSq() > 0) {
                         mv.normalize().multiplyScalar(moveSpeed * delta);
                         moved = true;
-                        // ★修正: 符号を反転して前進方向を向くように
+                        // 進行方向に向かせる
                         targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
                     }
 
@@ -710,7 +1274,6 @@
                         playerVelocity.y = 0;
                     }
 
-                    // XとZで別々に衝突判定を行う（壁にこすりながら進めるように）
                     const nextPosX = playerLocalPos.clone().add(new THREE.Vector3(mv.x, 0, 0));
                     if (!checkCollision(nextPosX)) playerLocalPos.x = nextPosX.x;
                     
@@ -729,16 +1292,13 @@
                 playerLocalPos.y += playerVelocity.y * delta;
                 isGrounded = false;
                 
-                // 地面(y=0) または オブジェクトの上に乗る処理
                 if (playerLocalPos.y < 0) { 
                     playerLocalPos.y = 0;
                     playerVelocity.y = 0;
                     isGrounded = true;
                 } else {
-                    // 足元にぶつかるものがあれば、そこを地面とする
-                    // 今回はシンプルな落下判定として、y座標を下げた時に衝突したらyの落下を止める
                     if (playerVelocity.y <= 0 && checkCollision(playerLocalPos)) {
-                         playerLocalPos.y -= playerVelocity.y * delta; // 衝突前の高さに戻す
+                         playerLocalPos.y -= playerVelocity.y * delta; 
                          playerVelocity.y = 0;
                          isGrounded = true;
                     }
@@ -746,7 +1306,6 @@
 
                 document.getElementById('ui-coords').innerText = `${playerLocalPos.x.toFixed(1)}, ${playerLocalPos.z.toFixed(1)}`;
 
-                // ワープパッド判定
                 warpPads.forEach(wp => {
                     if (playerLocalPos.distanceTo(wp.mesh.position) < 2.5) {
                         playerLocalPos.set(wp.data.targetX, wp.data.targetY, wp.data.targetZ);
@@ -754,7 +1313,6 @@
                     }
                 });
 
-                // インタラクト(ゲーム端末)判定
                 let foundInteract = null;
                 gameTerminals.forEach(gt => {
                     if (playerLocalPos.distanceTo(gt.pos) < gt.data.triggerDistance) {
@@ -776,19 +1334,6 @@
                 updateAvatarAnim(localAvatar, moved, isGrounded, delta, targetAvatarRotation, cameraPitch);
                 localAvatar.visible = !isFPS; 
 
-                // モノレール
-                if (trackSpline && monorailCars.length > 0) {
-                    for(let i = 0; i < monorailCars.length; i++) {
-                        monorailProgress[i] += monorailSpeed * (delta * 60); 
-                        if (monorailProgress[i] > 1) monorailProgress[i] -= 1;
-                        const pt = trackSpline.getPoint(monorailProgress[i]);
-                        const tangent = trackSpline.getTangent(monorailProgress[i]);
-                        monorailCars[i].position.copy(pt);
-                        monorailCars[i].rotation.y = Math.atan2(tangent.x, tangent.z);
-                    }
-                }
-
-                // 他プレイヤー補間
                 Object.values(otherPlayers).forEach(op => {
                     let isOpMoving = false;
                     if (op.userData.movingTimer > 0) {
@@ -809,7 +1354,6 @@
                     });
                 }
 
-                // カメラ制御
                 const headTarget = playerLocalPos.clone();
                 headTarget.y += (myAvatarData.scaleH * 2.2); 
 
@@ -840,8 +1384,7 @@
                         const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                         camera.position.addScaledVector(fwdVec, -pushBack);
                         
-                        // ★修正: カメラが地面に引っかかって上を向けない問題を解消（最低高度を維持しつつ後ろへ下がる）
-                        const minHeight = playerLocalPos.y + 0.5;
+                        const minHeight = playerLocalPos.y + 0.5 + (cameraPitch * 2.0);
                         if (camera.position.y < minHeight) camera.position.y = minHeight;
                     } else if (camera.position.y < playerLocalPos.y + 0.2) {
                         camera.position.y = playerLocalPos.y + 0.2;
@@ -851,6 +1394,61 @@
             }
 
             renderer.render(scene, camera);
+        }
+
+        // --- 各種UI機能 ---
+        function sendChat() {
+            const el = document.getElementById('chat-input');
+            if (el.value.trim() !== '') {
+                socket.emit('chatMessage', el.value.trim());
+                el.value = '';
+            }
+        }
+        function toggleSettings() {
+            const p = document.getElementById('settings-panel');
+            p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        }
+        function updateDrawDistance() {
+            const val = document.getElementById('draw-distance').value;
+            document.getElementById('draw-dist-val').innerText = val;
+            if(camera) { camera.far = parseInt(val); camera.updateProjectionMatrix(); }
+        }
+        function sendMoney() {
+            const target = document.getElementById('send-target').value;
+            const amount = document.getElementById('send-amount').value;
+            socket.emit('sendMoney', { targetUsername: target, amount: amount });
+            document.getElementById('transfer-modal').style.display='none';
+        }
+        function showNotification(type, text) {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = text;
+            container.appendChild(toast);
+            setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 5000);
+        }
+        function triggerInteract() {
+            if (activeInteract) openGameIframe(activeInteract.url);
+        }
+        function openGameIframe(url) {
+            document.exitPointerLock();
+            document.getElementById('game-iframe').src = url;
+            document.getElementById('iframe-overlay').style.display = 'flex';
+        }
+        function closeGameIframe() {
+            document.getElementById('iframe-overlay').style.display = 'none';
+            document.getElementById('game-iframe').src = '';
+            lockMouse();
+        }
+        function openAdminDashboard() {
+            document.exitPointerLock();
+            socket.emit('adminCmd', { action: 'getLogs' });
+            document.getElementById('admin-dashboard-modal').style.display = 'flex';
+        }
+        function adminAction(action) {
+            const target = document.getElementById('admin-target-user').value;
+            const amount = document.getElementById('admin-target-cr').value;
+            socket.emit('adminCmd', { action: action, target: target, amount: amount });
         }
     </script>
 </body>
