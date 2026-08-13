@@ -7,7 +7,7 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; color: #fff; }
         
-        /* ログイン画面 (Kanazawa Metaverse風) */
+        /* ログイン画面 */
         #login-screen {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(15, 23, 42, 0.95);
@@ -29,6 +29,9 @@
         .color-picker { display: flex; justify-content: space-between; margin-bottom: 15px; margin-top: 10px;}
         .color-btn { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
         .color-btn.selected { box-shadow: 0 0 10px #fff, 0 0 15px currentColor; transform: scale(1.1); }
+        .setup-slider { margin-bottom: 10px; }
+        .setup-slider label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
+        .setup-slider input { width: 100%; }
 
         /* 左側固定サイドバーUI */
         #sidebar {
@@ -58,12 +61,84 @@
         #chat-input { flex-grow: 1; padding: 8px; border: 1px solid #334155; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; }
         #chat-send { padding: 8px 12px; background: #00ffff; color: #000; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-        /* クロスヘア (FPS/TPS 視点用) */
+        /* 3Dチャット吹き出し用 */
+        .chat-bubble {
+            position: absolute; background: rgba(15, 23, 42, 0.85); color: white;
+            padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; font-weight: bold;
+            pointer-events: none; border: 2px solid;
+            transform: translate(-50%, -100%);
+            white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: opacity 0.3s; z-index: 5;
+        }
+
+        /* パフォーマンス & 設定 (右上) */
+        #top-right-panel {
+            position: absolute; top: 10px; right: 10px; z-index: 10;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .perf-box {
+            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;
+            font-family: monospace; font-size: 0.8rem; color: #00ffff;
+            border: 1px solid rgba(0,255,255,0.2);
+        }
+        #settings-btn {
+            background: rgba(15, 23, 42, 0.8); color: white; border: 1px solid #334155;
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; /* 初期非表示 */
+        }
+        #settings-btn:hover { background: #1e293b; }
+
+        #settings-panel {
+            display: none; position: absolute; top: 40px; right: 0;
+            background: rgba(15, 23, 42, 0.95); padding: 15px; border-radius: 8px;
+            border: 1px solid #334155; width: 200px;
+        }
+
+        /* インタラクトポップアップ */
+        #interact-popup {
+            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8); color: #fff; padding: 15px 30px;
+            border-radius: 30px; font-weight: bold; font-size: 1.2rem;
+            border: 2px solid #00ff66; box-shadow: 0 0 15px rgba(0,255,102,0.5);
+            display: none; z-index: 20; cursor: pointer;
+        }
+        #interact-popup:hover { background: #00ff66; color: #000; }
+
+        /* ミニゲーム(Iframe)用オーバーレイ */
+        #iframe-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8); z-index: 150; display: none;
+            justify-content: center; align-items: center;
+        }
+        #game-iframe {
+            width: 80vw; height: 80vh; max-width: 1200px; border: 2px solid #00f3ff;
+            border-radius: 12px; background: #000; box-shadow: 0 0 30px rgba(0,243,255,0.3);
+        }
+        #close-iframe-btn {
+            position: absolute; top: 20px; right: 20px; background: #f43f5e; color: white;
+            border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold;
+            cursor: pointer; font-size: 1.1rem;
+        }
+        #close-iframe-btn:hover { background: #e11d48; }
+
+        /* クロスヘア */
         #crosshair {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 4px; height: 4px; background: rgba(0,255,255,0.8); border-radius: 50%;
             pointer-events: none; z-index: 5; display: none; box-shadow: 0 0 5px #00ffff;
         }
+
+        /* 画面暗転オーバーレイ (Escキー用) */
+        #pause-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.5); z-index: 5; /* サイドバー等の後ろ */
+            display: none; justify-content: center; align-items: center;
+        }
+        #resume-btn {
+            padding: 15px 40px; font-size: 1.5rem; font-weight: bold;
+            background: #0ea5e9; color: white; border: none; border-radius: 8px;
+            cursor: pointer; box-shadow: 0 0 20px rgba(14, 165, 233, 0.5); z-index: 6;
+        }
+        #resume-btn:hover { background: #0284c7; }
 
         /* 操作ヒント */
         #controls-help {
@@ -81,7 +156,7 @@
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center;
         }
-        .admin-panel { background: #0f172a; padding: 20px; border-radius: 8px; border: 2px solid #f43f5e; width: 600px; max-width: 90vw; color: white; }
+        .admin-panel { background: #0f172a; padding: 20px; border-radius: 8px; border: 2px solid #f43f5e; width: 800px; max-width: 90vw; max-height: 90vh; overflow-y: auto; color: white; }
         .admin-panel h2 { color: #f43f5e; margin-top: 0; }
         .admin-section { margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 6px; }
         .admin-log-box { height: 150px; overflow-y: auto; background: #000; padding: 10px; font-family: monospace; font-size: 0.8rem; border: 1px solid #333; margin-top: 10px;}
@@ -104,50 +179,48 @@
         @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
 
         #canvas-container { width: 100vw; height: 100vh; display: block; position: absolute; top: 0; left: 0; z-index: 1;}
+
+        /* 送金モーダル */
+        #transfer-modal {
+            display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center;
+        }
     </style>
-    <!-- Three.js & Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <!-- 1. ログイン & 登録フロー画面 (STEP方式を完全復元) -->
+    <!-- 1. ログイン & 登録フロー画面 -->
     <div id="login-screen">
-        <!-- STEP 1: アカウント入力 -->
         <div class="panel" id="login-panel">
             <h2>HAKUYARC</h2>
             <div id="login-error" class="error-msg"></div>
             <input type="text" id="login-username" placeholder="UserID" required>
             <input type="password" id="login-password" placeholder="Password" required>
             <button class="btn-primary" onclick="attemptLogin()">ログイン / START</button>
-            
             <div style="margin-top: 15px; border-top: 1px solid #334155; padding-top: 15px; text-align: center;">
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">初めての方はこちら</p>
                 <button class="btn-success" onclick="switchPanel('register-panel')">新規登録 (無料)</button>
             </div>
         </div>
 
-        <!-- STEP 2: 新規登録 アカウント作成 -->
         <div class="panel" id="register-panel" style="display: none;">
-            <h2>新規登録 (STEP 1/4)</h2>
+            <h2>新規登録 (STEP 1/3)</h2>
             <div id="reg-error" class="error-msg"></div>
             <input type="text" id="reg-username" placeholder="希望のUserID" required>
             <input type="password" id="reg-password" placeholder="パスワード" required>
-            
             <label style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin: 10px 0; color: #cbd5e1; cursor: pointer;">
                 <input type="checkbox" id="terms-checkbox" style="width: auto;">
-                <span style="color:#38bdf8; text-decoration: underline;" onclick="document.getElementById('terms-modal').style.display='flex'">利用規約とプライバシーポリシー</span>に同意する
+                <span onclick="document.getElementById('terms-modal').style.display='flex'" style="color:#38bdf8; text-decoration:underline;">利用規約とプライバシーポリシー</span>に同意する
             </label>
-            
             <button class="btn-success" onclick="goToTypeSetup()">次へ (機体選択)</button>
             <button class="btn-danger" style="margin-top: 10px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('login-panel')">キャンセル</button>
         </div>
 
-        <!-- STEP 3: 機体タイプ選択 -->
         <div class="panel" id="avatar-type-panel" style="display: none;">
-            <h2>機体選択 (STEP 2/4)</h2>
+            <h2>機体選択 (STEP 2/3)</h2>
             <p style="font-size: 0.8rem; color: #94a3b8; text-align: center;">ベースとなる機体フレームを選択してください。</p>
-            
             <button class="btn-primary" style="margin-top: 10px; padding: 15px;" onclick="goToVisorSetup('typeA')">
                 TYPE-A (Standard)<br><small style="color: #bae6fd;">バランス型 多面体フレーム</small>
             </button>
@@ -157,35 +230,30 @@
             <button class="btn-primary" style="margin-top: 10px; padding: 15px; background: #6366f1;" onclick="goToVisorSetup('typeC')">
                 TYPE-C (Slim)<br><small style="color: #c7d2fe;">スピード型 流線型フレーム</small>
             </button>
-            
             <button class="btn-danger" style="margin-top: 15px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('register-panel')">戻る</button>
         </div>
 
-        <!-- STEP 4: 発光色選択 -->
         <div class="panel" id="avatar-visor-panel" style="display: none;">
-            <h2>発光色 (STEP 3/4)</h2>
+            <h2>発光色 (STEP 3/3)</h2>
             <p style="font-size: 0.8rem; color: #94a3b8; text-align: center;">バイザーとホログラムの発光色</p>
             <div class="color-picker" id="visor-color-picker"></div>
             <button class="btn-success" onclick="goToBodySetup()">次へ (装甲色)</button>
             <button class="btn-danger" style="margin-top: 10px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('avatar-type-panel')">戻る</button>
         </div>
 
-        <!-- STEP 5: 装甲色選択 -->
         <div class="panel" id="avatar-body-panel" style="display: none;">
-            <h2>装甲色 (STEP 3/4)</h2>
+            <h2>装甲色 (STEP 3/3)</h2>
             <p style="font-size: 0.8rem; color: #94a3b8; text-align: center;">メイン装甲(ボディ)のカラー</p>
             <div class="color-picker" id="body-color-picker"></div>
             <button class="btn-success" onclick="goToShapeSetup()">次へ (体形調整)</button>
             <button class="btn-danger" style="margin-top: 10px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('avatar-visor-panel')">戻る</button>
         </div>
 
-        <!-- STEP 6: 体形調整 & 完了 -->
         <div class="panel" id="avatar-shape-panel" style="display: none; width: 350px;">
-            <h2>最終調整 (STEP 4/4)</h2>
-            <div id="setup-preview-box" style="width: 100%; height: 200px; background: #000; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative; overflow: hidden;">
-                <span style="position: absolute; top:5px; left:5px; font-size:0.7rem; color:#94a3b8; z-index: 5;">Preview</span>
+            <h2>最終調整</h2>
+            <div id="setup-preview-box" style="width: 100%; height: 200px; background: #000; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative;">
+                <span style="position: absolute; top:5px; left:5px; font-size:0.7rem; color:#94a3b8;">Preview</span>
             </div>
-            
             <div class="setup-slider">
                 <label>身長 (Height) : <span id="val-height">1.00</span></label>
                 <input type="range" id="shape-height" min="0.5" max="1.5" step="0.05" value="1.0" oninput="updateShapeParams()">
@@ -196,12 +264,88 @@
             </div>
             <div id="setup-error" class="error-msg"></div>
             
+            <!-- ★ 修正: attemptRegister を呼び出す -->
             <button class="btn-success" style="margin-top: 15px; padding: 15px; font-size: 1.1rem;" onclick="attemptRegister()">HAKUYARCにダイブする</button>
             <button class="btn-danger" style="margin-top: 10px; background: transparent; border: 1px solid #475569;" onclick="switchPanel('avatar-body-panel')">戻る</button>
         </div>
     </div>
     
-    <!-- 利用規約モーダル (変更なし) -->
+    <!-- 利用規約モーダル -->
+    <div id="terms-modal" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center;">
+        <div class="panel" style="width: 500px; max-width: 90vw;">
+            <h2>利用規約</h2>
+            <div style="height: 200px; overflow-y: auto; background: #000; padding: 10px; font-size: 0.8rem; border: 1px solid #334155; margin-bottom: 15px;">
+                本メタバースの利用について...（略）
+            </div>
+            <button class="btn-primary" onclick="document.getElementById('terms-modal').style.display='none'">閉じる</button>
+        </div>
+    </div>
+
+    <!-- 左側サイドバー UI -->
+    <div id="sidebar">
+        <div class="sidebar-section">
+            <h3>Player Info</h3>
+            <div class="user-id" id="ui-id">---</div>
+            <div class="money"><span id="ui-cr">0</span> CR</div>
+            <div class="coords" id="ui-coords">0.0, 0.0</div>
+        </div>
+        
+        <div class="sidebar-section" style="border: none;">
+            <h3>Actions</h3>
+            <button class="btn-primary" style="width: 100%; padding: 8px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; margin-bottom: 10px;" onclick="document.getElementById('transfer-modal').style.display='flex'">💸 CRを送金する</button>
+        </div>
+
+        <div id="chat-container">
+            <div id="chat-log"></div>
+            <div id="chat-input-wrapper">
+                <input type="text" id="chat-input" placeholder="Enterで送信 / Escで戻る">
+                <button id="chat-send" onclick="sendChat()">送信</button>
+            </div>
+        </div>
+
+        <button id="admin-btn" onclick="openAdminDashboard()">🛡️ Admin Dashboard</button>
+    </div>
+
+    <!-- 右上パネル (FPS/Ping & 設定) -->
+    <div id="top-right-panel">
+        <div class="perf-box">FPS: <span id="fps-val">60</span> | Ping: <span id="ping-val">--</span>ms</div>
+        <button id="settings-btn" onclick="toggleSettings()">⚙️ 設定</button>
+    </div>
+    <div id="settings-panel">
+        <label style="color:#00ffff; font-size:0.8rem; font-weight:bold;">描画距離 (Far Plane)</label>
+        <input type="range" id="draw-distance" min="500" max="5000" step="100" value="2000" style="width:100%; margin-top:5px;" oninput="updateDrawDistance()">
+        <div style="text-align:right; font-size:0.7rem; color:#94a3b8;"><span id="draw-dist-val">2000</span> m</div>
+    </div>
+
+    <!-- 送金モーダル -->
+    <div id="transfer-modal">
+        <div class="panel">
+            <h2>💸 CR 送金</h2>
+            <input type="text" id="send-target" placeholder="宛先のUserID">
+            <input type="number" id="send-amount" placeholder="金額 (CR)">
+            <button class="btn-success" onclick="sendMoney()">送金実行</button>
+            <button class="btn-danger" style="background: transparent; border: 1px solid #475569;" onclick="document.getElementById('transfer-modal').style.display='none'">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- ミニゲーム(Iframe)用オーバーレイ -->
+    <div id="iframe-overlay">
+        <button id="close-iframe-btn" onclick="closeGameIframe()">✖ 終了して戻る</button>
+        <iframe id="game-iframe" src="" frameborder="0"></iframe>
+    </div>
+
+    <!-- インタラクト用ポップアップ -->
+    <div id="interact-popup" onclick="triggerInteract()"></div>
+
+    <!-- マウスロック解除時の画面暗転と復帰ボタン -->
+    <div id="pause-overlay">
+        <button id="resume-btn" onclick="lockMouse()">画面をクリックして操作に戻る</button>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="controls-help">
+        <b>W A S D</b> : 移動<br>
+        <b>Shift</b> : ダッシュ<br>
         <b>Space</b> : ジャンプ<br>
         <b>マウス</b> : 視点移動<br>
         <b>V</b> : FPS/TPS 切替<br>
@@ -209,19 +353,66 @@
         <b>Esc</b> : 操作ロック解除
     </div>
 
+    <!-- Admin モーダル -->
+    <div id="admin-dashboard-modal">
+        <div class="admin-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>🛡️ 管理者ダッシュボード</h2>
+                <button class="btn-danger" style="width: auto; padding: 5px 15px;" onclick="document.getElementById('admin-dashboard-modal').style.display='none'">閉じる</button>
+            </div>
+            
+            <div class="admin-section">
+                <h3>👑 プレイヤー管理・制裁</h3>
+                <input type="text" id="admin-target-user" placeholder="対象のUserID" style="padding: 8px; width: 150px; border-radius: 4px; border: 1px solid #333; background: #000; color: white;">
+                <input type="number" id="admin-target-cr" placeholder="セットするCR" style="padding: 8px; width: 120px; border-radius: 4px; border: 1px solid #333; background: #000; color: white; margin-left: 10px;">
+                
+                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                    <button class="btn-primary" style="width: auto; padding: 8px 15px;" onclick="adminAction('setMoney')">CR上書き</button>
+                    <button class="btn-danger" style="width: auto; padding: 8px 15px;" onclick="adminAction('ban')">BAN (追放)</button>
+                    <button class="btn-success" style="width: auto; padding: 8px 15px;" onclick="adminAction('unban')">BAN 解除</button>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3>🏃‍♂️ 神の移動速度 (Local Only)</h3>
+                <input type="range" id="admin-speed-slider" min="1" max="10" step="1" value="1" oninput="document.getElementById('admin-speed-val').innerText = this.value">
+                <p style="font-size: 0.8rem;">通常速度の <span id="admin-speed-val" style="color: #00ffff; font-weight: bold;">1</span> 倍で移動します。※Zキーで飛行</p>
+            </div>
+            
+            <div style="display: flex; gap: 20px;">
+                <div class="admin-section" style="flex: 1;">
+                    <h3>📝 認証・移動ログ</h3>
+                    <div id="admin-log-auth" class="admin-log-box"></div>
+                </div>
+                <div class="admin-section" style="flex: 1;">
+                    <h3>💬 チャットログ</h3>
+                    <div id="admin-log-chat" class="admin-log-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="notification-container"></div>
     <div id="canvas-container"></div>
 
     <script>
+        let socket;
+        let currentUser = null;
+        let userCR = 0;
+        let isAdmin = false;
+        let myAvatarData = null; // スケール等を含んだ自分のアバター情報
+        
+        let pingInterval;
+
         // ==========================================
-        // ★ 登録・設定フローのUIロジック
+        // ★ 登録・設定フロー UIロジック
         // ==========================================
         let regData = {
             username: '', password: '', avatarType: 'typeA', 
-            colorBody: '#dddddd', colorVisor: '#00f3ff', scaleH: 1.0, scaleW: 1.0
+            scaleH: 1.0, scaleW: 1.0
         };
-        let selectedBodyColor = regData.colorBody;
-        let selectedVisorColor = regData.colorVisor;
+        let selectedBodyColor = '#dddddd';
+        let selectedVisorColor = '#00f3ff';
         
         function switchPanel(panelId) {
             ['login-panel', 'register-panel', 'avatar-type-panel', 'avatar-visor-panel', 'avatar-body-panel', 'avatar-shape-panel'].forEach(id => {
@@ -233,7 +424,35 @@
             document.getElementById(panelId).style.display = 'block';
         }
 
-        // --- STEP 1 -> 2 ---
+        async function attemptLogin() {
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value;
+            if(!user || !pass) return document.getElementById('login-error').innerText = '入力してください';
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    currentUser = data.username;
+                    userCR = data.cr;
+                    isAdmin = data.isAdmin;
+                    myAvatarData = data.avatar;
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-cr').innerText = userCR;
+                    if(isAdmin) document.getElementById('admin-btn').style.display = 'block';
+                    
+                    startGame(); 
+                } else {
+                    document.getElementById('login-error').innerText = data.message;
+                }
+            } catch (e) {
+                document.getElementById('login-error').innerText = 'サーバー通信エラー';
+            }
+        }
+
         async function goToTypeSetup() {
             const user = document.getElementById('reg-username').value.trim();
             const pass = document.getElementById('reg-password').value;
@@ -252,36 +471,28 @@
                 if (!data.success) {
                     return document.getElementById('reg-error').innerText = data.message;
                 }
-                
                 regData.username = user; 
                 regData.password = pass;
                 switchPanel('avatar-type-panel');
             } catch (e) {
-                document.getElementById('reg-error').innerText = 'サーバー通信エラーが発生しました';
+                document.getElementById('reg-error').innerText = '通信エラー';
             }
         }
 
-        // --- STEP 2 -> 3 ---
         function goToVisorSetup(type) {
             regData.avatarType = type;
             switchPanel('avatar-visor-panel');
         }
 
-        // --- STEP 3 -> 4 ---
         function goToBodySetup() {
-            regData.colorVisor = selectedVisorColor;
             switchPanel('avatar-body-panel');
         }
 
-        // --- STEP 4 -> 5 (Preview) ---
         function goToShapeSetup() {
-            regData.colorBody = selectedBodyColor;
             switchPanel('avatar-shape-panel');
-            // パネルが表示されてからプレビューを初期化 (DOMの幅を取得するため)
             setTimeout(initPreview, 50);
         }
 
-        // カラーピッカー (バイザー)
         const visorColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
         const visorContainer = document.getElementById('visor-color-picker');
         visorColors.forEach(color => {
@@ -297,7 +508,6 @@
             visorContainer.appendChild(btn);
         });
 
-        // カラーピッカー (装甲/ボディ)
         const bodyColors = ['#dddddd', '#555555', '#1a1a1a', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f', '#d97706'];
         const bodyContainer = document.getElementById('body-color-picker');
         bodyColors.forEach(color => {
@@ -313,7 +523,124 @@
             bodyContainer.appendChild(btn);
         });
 
-        // --- プレビューレンダラー ---
+        // ==========================================
+        // ★ アバター生成ロジックの完全復元 (v1.0ベース)
+        // ==========================================
+        function createRoundedBox(width, height, depth, radius0, smoothness) {
+            let shape = new THREE.Shape();
+            let eps = 0.00001;
+            let radius = radius0 - eps;
+            shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
+            shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
+            shape.absarc(width - radius * 2, height - radius * 2, eps, Math.PI / 2, 0, true);
+            shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
+            let geometry = new THREE.ExtrudeGeometry(shape, {
+                depth: depth - radius0 * 2,
+                bevelEnabled: true, bevelSegments: smoothness * 2, steps: 1, bevelSize: radius, bevelThickness: radius0, curveSegments: smoothness
+            });
+            geometry.center();
+            return geometry;
+        }
+
+        window.createAvatarMesh = function(visorHex, bodyHex, type = 'typeA') {
+            const group = new THREE.Group();
+            
+            // 色と材質の設定
+            const matBody = new THREE.MeshStandardMaterial({ 
+                color: bodyHex, roughness: 0.4, metalness: 0.1 // ★修正: 金属反射を抑え色を見やすく
+            }); 
+            const matDark = new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.9 }); 
+            const matVisor = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: visorHex, emissiveIntensity: 1.0 });
+
+            if (type === 'typeC') {
+                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2, 16), matBody);
+                torso.position.y = 1.3; torso.castShadow = true; group.add(torso);
+                
+                const headGroup = new THREE.Group(); headGroup.position.y = 2.0;
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), matBody);
+                head.position.y = 0.2; head.castShadow = true;
+                const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.2, 16, 1, false, 0, Math.PI), matVisor);
+                visor.position.set(0, 0.2, 0); visor.rotation.y = Math.PI / 2;
+                headGroup.add(head, visor); group.add(headGroup);
+
+                const armGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.0, 8);
+                const legGeo = new THREE.CylinderGeometry(0.15, 0.1, 1.2, 8);
+                
+                const armLGroup = new THREE.Group(); armLGroup.position.set(-0.4, 1.8, 0);
+                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.4; armLGroup.add(armL); group.add(armLGroup);
+                
+                const armRGroup = new THREE.Group(); armRGroup.position.set(0.4, 1.8, 0);
+                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.4; armRGroup.add(armR); group.add(armRGroup);
+                
+                const legLGroup = new THREE.Group(); legLGroup.position.set(-0.2, 0.9, 0);
+                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.5; legLGroup.add(legL); group.add(legLGroup);
+                
+                const legRGroup = new THREE.Group(); legRGroup.position.set(0.2, 0.9, 0);
+                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.5; legRGroup.add(legR); group.add(legRGroup);
+                
+                group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
+            
+            } else if (type === 'typeB') {
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.8), matBody);
+                torso.position.y = 1.2; torso.castShadow = true; group.add(torso);
+                
+                const headGroup = new THREE.Group(); headGroup.position.y = 1.8;
+                const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), matBody);
+                head.position.y = 0.3; head.castShadow = true;
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.1), matVisor);
+                visor.position.set(0, 0.3, -0.36);
+                headGroup.add(head, visor); group.add(headGroup);
+
+                const armGeo = new THREE.BoxGeometry(0.4, 0.9, 0.4);
+                const legGeo = new THREE.BoxGeometry(0.4, 1.0, 0.4);
+                
+                const armLGroup = new THREE.Group(); armLGroup.position.set(-0.7, 1.7, 0);
+                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.35; armLGroup.add(armL); group.add(armLGroup);
+                
+                const armRGroup = new THREE.Group(); armRGroup.position.set(0.7, 1.7, 0);
+                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.35; armRGroup.add(armR); group.add(armRGroup);
+                
+                const legLGroup = new THREE.Group(); legLGroup.position.set(-0.3, 0.7, 0);
+                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.4; legLGroup.add(legL); group.add(legLGroup);
+                
+                const legRGroup = new THREE.Group(); legRGroup.position.set(0.3, 0.7, 0);
+                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.4; legRGroup.add(legR); group.add(legRGroup);
+                
+                group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
+            
+            } else {
+                // TYPE-A (Standard)
+                const torso = new THREE.Mesh(createRoundedBox(0.8, 1.2, 0.5, 0.1, 2), matBody);
+                torso.position.y = 1.3; torso.castShadow = true; group.add(torso);
+
+                const headGroup = new THREE.Group(); headGroup.position.y = 2.0;
+                const head = new THREE.Mesh(createRoundedBox(0.6, 0.6, 0.6, 0.1, 2), matBody);
+                head.position.y = 0.3; head.castShadow = true;
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.1), matVisor);
+                visor.position.set(0, 0.35, -0.32);
+                headGroup.add(head, visor); group.add(headGroup);
+
+                const armGeo = createRoundedBox(0.25, 1.0, 0.25, 0.08, 2);
+                const legGeo = createRoundedBox(0.3, 1.1, 0.3, 0.08, 2);
+                
+                const armLGroup = new THREE.Group(); armLGroup.position.set(-0.55, 1.8, 0);
+                const armL = new THREE.Mesh(armGeo, matDark); armL.position.y = -0.4; armLGroup.add(armL); group.add(armLGroup);
+                
+                const armRGroup = new THREE.Group(); armRGroup.position.set(0.55, 1.8, 0);
+                const armR = new THREE.Mesh(armGeo, matDark); armR.position.y = -0.4; armRGroup.add(armR); group.add(armRGroup);
+                
+                const legLGroup = new THREE.Group(); legLGroup.position.set(-0.2, 0.9, 0);
+                const legL = new THREE.Mesh(legGeo, matDark); legL.position.y = -0.45; legLGroup.add(legL); group.add(legLGroup);
+                
+                const legRGroup = new THREE.Group(); legRGroup.position.set(0.2, 0.9, 0);
+                const legR = new THREE.Mesh(legGeo, matDark); legR.position.y = -0.45; legRGroup.add(legR); group.add(legRGroup);
+                
+                group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
+            }
+            return group;
+        };
+
+        // === プレビューレンダラー ===
         let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
         
         function initPreview() {
@@ -335,22 +662,19 @@
                 function renderPreview() {
                     previewReqId = requestAnimationFrame(renderPreview);
                     if(previewAvatar) {
-                        previewAvatar.rotation.y += 0.015; // ゆっくり回転
+                        previewAvatar.rotation.y += 0.015; 
                     }
                     previewRenderer.render(previewScene, previewCamera);
                 }
                 renderPreview();
             }
             
-            // 既存のアバターがあれば削除して再生成 (選んだ色が反映されるように)
             if(previewAvatar) previewScene.remove(previewAvatar);
             
-            // プレビュー用に新規生成
             previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor, regData.avatarType);
             previewAvatar.position.y = -0.5; 
             previewScene.add(previewAvatar);
             
-            // スライダーの初期値を適用
             updateShapeParams();
         }
 
@@ -362,16 +686,46 @@
             
             regData.scaleH = h;
             regData.scaleW = w;
-            
-            if(previewAvatar) {
-                previewAvatar.scale.set(w, h, w);
-            }
+            if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
-        function showAuthError(msg, isSuccess = false) {
-            const el = document.getElementById('auth-error');
-            el.style.color = isSuccess ? '#10b981' : '#f43f5e';
-            el.innerText = msg;
+        // --- ★ 修正: 通信処理を正しく記述 ---
+        async function attemptRegister() {
+            const h = parseFloat(document.getElementById('shape-height').value);
+            const w = parseFloat(document.getElementById('shape-width').value);
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: regData.username,
+                        password: regData.password,
+                        avatar: {
+                            type: regData.avatarType,
+                            visor: selectedVisorColor,
+                            body: selectedBodyColor,
+                            scaleH: h,
+                            scaleW: w
+                        }
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    currentUser = data.username;
+                    userCR = data.cr;
+                    isAdmin = data.isAdmin;
+                    myAvatarData = data.avatar;
+                    document.getElementById('ui-id').innerText = currentUser;
+                    document.getElementById('ui-cr').innerText = userCR;
+                    if(isAdmin) document.getElementById('admin-btn').style.display = 'block';
+                    
+                    startGame(); 
+                } else {
+                    document.getElementById('setup-error').innerText = data.message;
+                }
+            } catch (e) {
+                document.getElementById('setup-error').innerText = 'サーバー通信エラー';
+            }
         }
 
         function showNotification(type, text) {
@@ -383,17 +737,60 @@
             setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 5000);
         }
 
-        function addChatLog(name, text, isSystem = false) {
+        function addChatLog(name, text, isSystem = false, visorColor = '#00ffff') {
             const log = document.getElementById('chat-log');
             const msg = document.createElement('div');
             msg.className = 'chat-msg' + (isSystem ? ' system' : '');
             if (isSystem) {
                 msg.innerText = text;
             } else {
-                msg.innerHTML = `<span class="name">${name}:</span> ${text}`;
+                msg.innerHTML = `<span class="name" style="color: ${visorColor};">${name}:</span> ${text}`;
             }
             log.appendChild(msg);
             log.scrollTop = log.scrollHeight;
+        }
+
+        // 3Dチャット吹き出しを作成する関数
+        function createChatBubble(text, targetMesh, visorColor) {
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble';
+            bubble.innerText = text;
+            bubble.style.borderColor = visorColor;
+            
+            document.body.appendChild(bubble);
+            
+            let frameId;
+            const startTime = Date.now();
+            const duration = 5000; 
+
+            function updateBubblePos() {
+                const elapsed = Date.now() - startTime;
+                if (elapsed > duration) {
+                    bubble.style.opacity = 0;
+                    setTimeout(() => { if(bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 300);
+                    return;
+                }
+
+                if (targetMesh && camera) {
+                    const pos = targetMesh.position.clone();
+                    pos.y += (targetMesh.scale.y * 2.5); // 頭の上に
+                    
+                    const vector = pos.project(camera);
+                    
+                    // カメラの裏側にある場合は非表示
+                    if (vector.z > 1) {
+                        bubble.style.display = 'none';
+                    } else {
+                        bubble.style.display = 'block';
+                        const x = (vector.x * .5 + .5) * window.innerWidth;
+                        const y = (vector.y * -.5 + .5) * window.innerHeight;
+                        bubble.style.left = `${x}px`;
+                        bubble.style.top = `${y}px`;
+                    }
+                }
+                frameId = requestAnimationFrame(updateBubblePos);
+            }
+            updateBubblePos();
         }
 
         function sendChat() {
@@ -402,31 +799,78 @@
             if (text && socket) {
                 socket.emit('chatMessage', text);
                 input.value = '';
+                input.blur();
+                lockMouse();
             }
         }
 
-        // ==========================================
-        // ★ エラー修正: 要素が存在するか確認してからイベントリスナーを追加
-        // ==========================================
         const chatInputEl = document.getElementById('chat-input');
         if (chatInputEl) {
             chatInputEl.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendChat();
             });
+            chatInputEl.addEventListener('focus', () => { if(isLocked) document.exitPointerLock(); });
         }
 
-        // Admin機能
+        // ==========================================
+        // ★ マウスロックとUI操作処理
+        // ==========================================
+        function lockMouse() {
+            document.body.requestPointerLock();
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = (document.pointerLockElement === document.body);
+            document.getElementById('crosshair').style.display = (isLocked && isFPS) ? 'block' : 'none';
+            document.getElementById('controls-help').style.display = isLocked ? 'block' : 'none';
+            
+            // ロック解除時は暗転オーバーレイを表示
+            document.getElementById('pause-overlay').style.display = isLocked ? 'none' : 'flex';
+            if (!isLocked) document.getElementById('settings-btn').style.display = 'block';
+            else {
+                document.getElementById('settings-btn').style.display = 'none';
+                document.getElementById('settings-panel').style.display = 'none';
+            }
+        });
+
+        // ==========================================
+        // ★ Socket通信とシステム
+        // ==========================================
+        function sendMoney() {
+            const target = document.getElementById('send-target').value;
+            const amount = document.getElementById('send-amount').value;
+            if (!target || !amount) return showNotification('error', '宛先と金額を入力してください');
+            
+            socket.emit('sendMoney', { targetUsername: target, amount: amount });
+            
+            document.getElementById('send-target').value = '';
+            document.getElementById('send-amount').value = '';
+            document.getElementById('transfer-modal').style.display = 'none';
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function updateDrawDistance() {
+            const val = document.getElementById('draw-distance').value;
+            document.getElementById('draw-dist-val').innerText = val;
+            if (camera) {
+                camera.far = parseFloat(val);
+                camera.updateProjectionMatrix();
+                if(scene && scene.fog) scene.fog.far = parseFloat(val);
+            }
+        }
+
         function openAdminDashboard() { 
             document.getElementById('admin-dashboard-modal').style.display = 'flex'; 
-            fetchAdminLogs();
-        }
-        function fetchAdminLogs() {
             if (socket && isAdmin) socket.emit('adminCmd', { action: 'getLogs' });
         }
+        
         function adminAction(actionType) {
             const target = document.getElementById('admin-target-user').value.trim();
             if (!target) return alert("対象ユーザーIDを入力してください。");
-            
             let amount = 0;
             if (actionType === 'setMoney') {
                 amount = document.getElementById('admin-target-cr').value;
@@ -440,8 +884,7 @@
 
         function setupSocketEvents() {
             socket.on('initData', (data) => {
-                if (data.customMap) buildMap(data.customMap); // 外部JSONマップがあれば読み込み
-                
+                if (data.customMap) buildMap(data.customMap); 
                 Object.keys(data.players).forEach(id => {
                     const info = data.players[id];
                     if (id !== socket.id) addOtherPlayer(info);
@@ -455,17 +898,26 @@
 
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
-                    // 位置情報を更新（補間用に目標値を設定）
                     otherPlayers[info.id].userData.targetPos = new THREE.Vector3(info.x, info.y, info.z);
                     otherPlayers[info.id].userData.targetYaw = info.rotation;
                     otherPlayers[info.id].userData.targetPitch = info.pitch;
                     otherPlayers[info.id].userData.isGrounded = info.isGrounded;
-                    otherPlayers[info.id].userData.movingTimer = 0.1; // 動いている判定用
+                    otherPlayers[info.id].userData.movingTimer = info.isMoving ? 0.1 : 0; 
                 }
             });
 
             socket.on('chatMessage', (data) => {
-                addChatLog(data.username, data.text);
+                addChatLog(data.username, data.text, false, data.visorColor);
+                
+                // 3D空間の頭上に吹き出しを表示
+                if (data.username === currentUser && localAvatar) {
+                    createChatBubble(data.text, localAvatar, myAvatarData.visor);
+                } else {
+                    const opId = Object.keys(otherPlayers).find(id => otherPlayers[id].userData.username === data.username);
+                    if (opId && otherPlayers[opId]) {
+                        createChatBubble(data.text, otherPlayers[opId], data.visorColor);
+                    }
+                }
             });
 
             socket.on('playerDisconnected', (id) => {
@@ -494,135 +946,70 @@
 
             socket.on('adminLogs', (logs) => {
                 if (!isAdmin) return;
-                
                 const chatBox = document.getElementById('admin-log-chat');
                 chatBox.innerHTML = logs.chat.reverse().map(l => `[${new Date(l.time).toLocaleTimeString()}] <b>${l.user}</b>: ${l.text}`).join('<br>');
-                
                 const authBox = document.getElementById('admin-log-auth');
                 authBox.innerHTML = logs.auth.reverse().map(l => `[${new Date(l.time).toLocaleTimeString()}] <b>${l.user}</b>: ${l.action}`).join('<br>');
             });
 
+            socket.on('moneyUpdated', (newMoney) => {
+                userCR = newMoney;
+                document.getElementById('ui-cr').innerText = userCR;
+            });
+            
+            socket.on('notification', (msg) => showNotification(msg.type, msg.text));
+
             socket.on('disconnect', () => {
                 showNotification('error', 'サーバーから切断されました');
             });
+            
+            // Ping 計測ループ
+            pingInterval = setInterval(() => {
+                const start = Date.now();
+                socket.emit('ping_req', () => {
+                    document.getElementById('ping-val').innerText = Date.now() - start;
+                });
+            }, 2000);
         }
-
 
         // ==========================================
         // ★ 3D エンジン & ゲームロジック
         // ==========================================
         let scene, camera, renderer, clock;
         let mapGroup = null;
-        let collisionBoxes = []; // 当たり判定用のBox3配列
+        let collisionBoxes = []; 
+        let warpPads = [];
+        let gameTerminals = [];
+        let activeInteract = null;
         
         let localAvatar = null;
         const otherPlayers = {};
         
-        // プレイヤー状態
         let playerLocalPos = new THREE.Vector3(0, 3, 0);
         let playerVelocity = new THREE.Vector3(0, 0, 0);
         let isGrounded = false;
         
-        // カメラ・操作状態
         let cameraYaw = 0; 
         let cameraPitch = 0;
         let targetAvatarRotation = 0;
         let isLocked = false;
         let isFPS = false;
         const keysPressed = {};
+        
+        let frames = 0;
+        let prevTime = performance.now();
 
         function startGame() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('sidebar').style.display = 'flex';
 
             socket = io();
-            socket.emit('joinGame', { username: currentUser, avatar: selectedAvatarColor });
+            socket.emit('joinGame', { username: currentUser, avatar: myAvatarData });
 
             initThreeJS();
             setupSocketEvents();
-        }
-
-        // --- 次世代シンプル・スタイリッシュアバター生成 ---
-        function createRoundedBox(width, height, depth, radius0, smoothness) {
-            let shape = new THREE.Shape();
-            let eps = 0.00001;
-            let radius = radius0 - eps;
-            shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
-            shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
-            shape.absarc(width - radius * 2, height - radius * 2, eps, Math.PI / 2, 0, true);
-            shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
-            let geometry = new THREE.ExtrudeGeometry(shape, {
-                depth: depth - radius0 * 2,
-                bevelEnabled: true, bevelSegments: smoothness * 2, steps: 1, bevelSize: radius, bevelThickness: radius0, curveSegments: smoothness
-            });
-            geometry.center();
-            return geometry;
-        }
-
-        function createAvatarMesh(colorHex) {
-            const group = new THREE.Group();
             
-            const matBody = new THREE.MeshStandardMaterial({ 
-                color: colorHex, roughness: 0.2, metalness: 0.8, transparent: true, opacity: 0.9
-            }); 
-            const matDark = new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.9 }); 
-            
-            // 胴体
-            const torsoGeo = createRoundedBox(0.8, 1.2, 0.5, 0.1, 2);
-            const torso = new THREE.Mesh(torsoGeo, matBody);
-            torso.position.y = 1.3;
-            torso.castShadow = true;
-            group.add(torso);
-
-            // 頭部
-            const headGroup = new THREE.Group();
-            headGroup.position.y = 2.0; 
-            const headGeo = createRoundedBox(0.6, 0.6, 0.6, 0.1, 2);
-            const head = new THREE.Mesh(headGeo, matBody);
-            head.position.y = 0.3; 
-            head.castShadow = true;
-            
-            const matVisor = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 1.0});
-            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.1), matVisor);
-            visor.position.set(0, 0.35, -0.32);
-            
-            headGroup.add(head, visor);
-            group.add(headGroup);
-
-            // 腕
-            const armGeo = createRoundedBox(0.25, 1.0, 0.25, 0.08, 2);
-            const armLGroup = new THREE.Group();
-            armLGroup.position.set(-0.55, 1.8, 0); 
-            const armL = new THREE.Mesh(armGeo, matDark);
-            armL.position.y = -0.4; armL.castShadow = true;
-            armLGroup.add(armL);
-            group.add(armLGroup);
-
-            const armRGroup = new THREE.Group();
-            armRGroup.position.set(0.55, 1.8, 0); 
-            const armR = new THREE.Mesh(armGeo, matDark);
-            armR.position.y = -0.4; armR.castShadow = true;
-            armRGroup.add(armR);
-            group.add(armRGroup);
-
-            // 足
-            const legGeo = createRoundedBox(0.3, 1.1, 0.3, 0.08, 2);
-            const legLGroup = new THREE.Group();
-            legLGroup.position.set(-0.2, 0.9, 0); 
-            const legL = new THREE.Mesh(legGeo, matDark);
-            legL.position.y = -0.45; legL.castShadow = true;
-            legLGroup.add(legL);
-            group.add(legLGroup);
-
-            const legRGroup = new THREE.Group();
-            legRGroup.position.set(0.2, 0.9, 0); 
-            const legR = new THREE.Mesh(legGeo, matDark);
-            legR.position.y = -0.45; legR.castShadow = true;
-            legRGroup.add(legR);
-            group.add(legRGroup);
-
-            group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: legLGroup, legR: legRGroup, walkTime: 0, movingTimer: 0 };
-            return group;
+            lockMouse(); // ゲーム開始時に即座にマウスロック
         }
 
         function updateAvatarAnim(avatar, isMoving, isGrounded, delta, targetYaw, camPitch) {
@@ -633,30 +1020,49 @@
             let diff = targetYaw - avatar.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            avatar.rotation.y += diff * 10 * delta;
+            avatar.rotation.y += diff * 15 * delta;
 
-            if (isMoving && isGrounded) {
-                ud.walkTime += delta * 15; 
-                const swing = Math.sin(ud.walkTime);
-                ud.armL.rotation.x = swing * 0.8;
-                ud.armR.rotation.x = -swing * 0.8;
-                ud.legL.rotation.x = -swing * 0.8;
-                ud.legR.rotation.x = swing * 0.8;
-            } else if (!isGrounded) {
-                // ジャンプ/落下モーション
+            if (isGrounded) {
+                if (isMoving) {
+                    // 走るモーション
+                    ud.walkTime += delta * 15; 
+                    const swing = Math.sin(ud.walkTime);
+                    ud.armL.rotation.x = swing * 0.8;
+                    ud.armR.rotation.x = -swing * 0.8;
+                    ud.legL.rotation.x = -swing * 0.8;
+                    ud.legR.rotation.x = swing * 0.8;
+                    
+                    // 前傾姿勢
+                    ud.head.parent.rotation.x = THREE.MathUtils.lerp(ud.head.parent.rotation.x, 0.2, 0.1);
+                } else {
+                    // 直立
+                    ud.walkTime = 0; 
+                    ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.2);
+                    ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.2);
+                    ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.2);
+                    ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.2);
+                    
+                    ud.head.parent.rotation.x = THREE.MathUtils.lerp(ud.head.parent.rotation.x, 0, 0.2);
+                }
+            } else {
+                // 空中（ジャンプ・滑空）ポーズ
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, -Math.PI/6, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, -Math.PI/6, 0.1);
                 ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, -Math.PI/8, 0.1);
                 ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, Math.PI/8, 0.1);
-            } else {
-                ud.walkTime = 0; 
-                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
-                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-                ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.1);
-                ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.1);
+                ud.head.parent.rotation.x = THREE.MathUtils.lerp(ud.head.parent.rotation.x, 0.3, 0.1);
             }
             
+            // 首の可動範囲（顔がカメラの向いている前方を向くように補正）
+            // アバターのY回転とカメラのYawの差分を取る
+            let yawDiff = cameraYaw - avatar.rotation.y + Math.PI; // 背中が正面なので反転
+            while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
+            while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
+            
+            const clampedYaw = Math.max(-Math.PI/3, Math.min(Math.PI/3, yawDiff));
             const clampedPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, camPitch));
+            
+            ud.head.rotation.y = clampedYaw;
             ud.head.rotation.x = clampedPitch;
         }
 
@@ -667,7 +1073,6 @@
         let monorailProgress = [0, 0.015, 0.03]; 
 
         function buildHakuyarcCity() {
-            // 土台
             const plazaGeo = new THREE.BoxGeometry(800, 2, 800);
             const plazaMat = new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.8 });
             const plaza = new THREE.Mesh(plazaGeo, plazaMat);
@@ -687,7 +1092,6 @@
             lmGroup.add(base);
             collisionBoxes.push(new THREE.Box3().setFromObject(base));
 
-            // ビルテクスチャ
             const canvas = document.createElement('canvas');
             canvas.width = 128; canvas.height = 128;
             const ctx = canvas.getContext('2d');
@@ -710,7 +1114,6 @@
             lmGroup.add(mainTower);
             collisionBoxes.push(new THREE.Box3().setFromObject(mainTower));
 
-            // エネルギーリング
             const neonMatCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.9 });
             const neonMatPink = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.9 });
             for (let i = 0; i < 4; i++) {
@@ -724,7 +1127,6 @@
             }
             mapGroup.add(lmGroup);
 
-            // モノレールと駅
             const w = 350; const h = 300; const r = 80; const y = 60;  
             const points = [
                 new THREE.Vector3(0, y, -h), new THREE.Vector3(w-r, y, -h),
@@ -773,7 +1175,6 @@
                 pillar.castShadow = true;
                 stGroup.add(pillar);
                 
-                // 柱の当たり判定
                 const pillarBox = new THREE.Mesh(pillarGeo, pillarMat);
                 pillarBox.position.copy(pt).add(new THREE.Vector3(0, -pt.y/2, 0));
                 collisionBoxes.push(new THREE.Box3().setFromObject(pillarBox));
@@ -793,7 +1194,7 @@
             }
         }
 
-        // --- 外部JSONマップの構築 ---
+        // --- JSONマップ生成 ---
         function buildMap(mapData) {
             if (mapData.environment && mapData.environment.groundColor) {
                 scene.background = new THREE.Color(mapData.environment.groundColor);
@@ -840,6 +1241,28 @@
                     }
                 });
             }
+
+            if (mapData.warpPads) {
+                mapData.warpPads.forEach(wp => {
+                    const mat = new THREE.MeshStandardMaterial({ color: wp.color, emissive: wp.color, emissiveIntensity: 0.5 });
+                    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.2, 16), mat);
+                    mesh.position.set(wp.x, wp.y, wp.z);
+                    mapGroup.add(mesh);
+                    warpPads.push({ mesh: mesh, data: wp });
+                });
+            }
+
+            if (mapData.gameTerminals) {
+                mapData.gameTerminals.forEach(gt => {
+                    const mat = new THREE.MeshStandardMaterial({ color: gt.color, roughness: 0.5 });
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(gt.width, gt.height, gt.depth), mat);
+                    mesh.position.set(gt.x, gt.y + gt.height/2, gt.z);
+                    mesh.castShadow = true;
+                    mapGroup.add(mesh);
+                    collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
+                    gameTerminals.push({ pos: mesh.position, data: gt });
+                });
+            }
         }
 
         function initThreeJS() {
@@ -863,10 +1286,10 @@
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
 
-            // ★追加: 起動時にHAKUYARC景観を生成する呼び出し
             buildHakuyarcCity();
 
-            localAvatar = createAvatarMesh(selectedAvatarColor);
+            localAvatar = createAvatarMesh(myAvatarData.visor, myAvatarData.body, myAvatarData.type);
+            localAvatar.scale.set(myAvatarData.scaleW, myAvatarData.scaleH, myAvatarData.scaleW);
             scene.add(localAvatar);
 
             clock = new THREE.Clock();
@@ -882,31 +1305,28 @@
         }
 
         function addOtherPlayer(info) {
-            const mesh = createAvatarMesh(info.avatar || 0xffffff);
+            const avData = info.avatar || { type: 'typeA', visor: '#ffffff', body: '#dddddd', scaleH: 1, scaleW: 1 };
+            const mesh = createAvatarMesh(avData.visor, avData.body, avData.type);
+            mesh.scale.set(avData.scaleW, avData.scaleH, avData.scaleW);
             mesh.position.set(info.x, info.y, info.z);
             mesh.rotation.y = info.rotation;
             
-            // 補間用データ
             mesh.userData.targetPos = new THREE.Vector3(info.x, info.y, info.z);
             mesh.userData.targetYaw = info.rotation;
+            mesh.userData.username = info.username;
             
             scene.add(mesh);
             otherPlayers[info.id] = mesh;
         }
 
-        function togglePointerLock() {
-            if (!isLocked) {
-                document.body.requestPointerLock();
-            } else {
-                document.exitPointerLock();
-            }
-        }
-
         function setupInputHandlers() {
             window.addEventListener('keydown', (e) => {
-                // チャット入力中や入力フィールドフォーカス時は操作を無効化
                 if (document.activeElement.tagName === 'INPUT') return;
                 keysPressed[e.key.toLowerCase()] = true;
+                
+                if (e.key.toLowerCase() === 'f' && activeInteract) {
+                    triggerInteract();
+                }
             });
             window.addEventListener('keyup', (e) => {
                 if (document.activeElement.tagName === 'INPUT') return;
@@ -920,15 +1340,8 @@
                 cameraPitch -= e.movementY * sensitivity;
                 cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
             });
-
-            document.addEventListener('pointerlockchange', () => {
-                isLocked = (document.pointerLockElement === document.body);
-                document.getElementById('crosshair').style.display = (isLocked && isFPS) ? 'block' : 'none';
-                document.getElementById('controls-help').style.display = isLocked ? 'block' : 'none';
-            });
         }
 
-        // 当たり判定 (シンプルなAABB)
         function checkCollision(newPos) {
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 new THREE.Vector3(newPos.x, newPos.y + 1, newPos.z), 
@@ -940,11 +1353,32 @@
             return false;
         }
 
+        function triggerInteract() {
+            if (!activeInteract) return;
+            document.getElementById('iframe-overlay').style.display = 'flex';
+            document.getElementById('game-iframe').src = activeInteract.url;
+            if (isLocked) document.exitPointerLock();
+        }
+        
+        function closeGameIframe() {
+            document.getElementById('iframe-overlay').style.display = 'none';
+            document.getElementById('game-iframe').src = "";
+            lockMouse();
+        }
+
         let vKeyWasPressed = false;
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = Math.min(clock.getDelta(), 0.1); 
+            
+            // FPS計測
+            frames++;
+            const time = performance.now();
+            if (time >= prevTime + 1000) {
+                document.getElementById('fps-val').innerText = Math.round((frames * 1000) / (time - prevTime));
+                frames = 0; prevTime = time;
+            }
 
             if (keysPressed['v'] && !vKeyWasPressed) {
                 isFPS = !isFPS;
@@ -955,13 +1389,15 @@
             if (localAvatar) {
                 let moved = false;
                 
-                // 重力とジャンプ
-                playerVelocity.y -= 30 * delta; 
+                // ZキーでAdmin専用の飛行モード
+                let gravity = keysPressed['z'] && isAdmin ? 0 : 30;
+                playerVelocity.y -= gravity * delta; 
                 
                 if (isLocked) {
-                    const speed = keysPressed['shift'] ? 15.0 : 6.0;
-                    const mv = new THREE.Vector3(0, 0, 0);
+                    let moveSpeed = keysPressed['shift'] ? 15.0 : 6.0;
+                    if (isAdmin) moveSpeed *= parseFloat(document.getElementById('admin-speed-slider').value);
                     
+                    const mv = new THREE.Vector3(0, 0, 0);
                     const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
 
@@ -971,20 +1407,25 @@
                     if (keysPressed['d']) mv.add(right);
 
                     if (mv.lengthSq() > 0) {
-                        mv.normalize().multiplyScalar(speed * delta);
+                        mv.normalize().multiplyScalar(moveSpeed * delta);
                         moved = true;
-                        
-                        targetAvatarRotation = Math.atan2(mv.x, mv.z);
+                        // ★修正: 符号を反転して前進方向を向くように
+                        targetAvatarRotation = Math.atan2(-mv.x, -mv.z);
                     }
 
-                    // 水平移動の衝突判定
+                    if (keysPressed['z'] && isAdmin) {
+                        playerLocalPos.y += moveSpeed * delta;
+                        isGrounded = false;
+                        moved = true;
+                        playerVelocity.y = 0;
+                    }
+
                     const nextPosX = playerLocalPos.clone().add(new THREE.Vector3(mv.x, 0, 0));
                     if (!checkCollision(nextPosX)) playerLocalPos.x = nextPosX.x;
                     
                     const nextPosZ = playerLocalPos.clone().add(new THREE.Vector3(0, 0, mv.z));
                     if (!checkCollision(nextPosZ)) playerLocalPos.z = nextPosZ.z;
 
-                    // ジャンプ
                     if (keysPressed[' ']) {
                         if (isGrounded) {
                             playerVelocity.y = 12;
@@ -994,19 +1435,16 @@
                     }
                 }
 
-                // 垂直移動の衝突判定 (落下・上昇)
                 playerLocalPos.y += playerVelocity.y * delta;
                 isGrounded = false;
                 
-                if (playerLocalPos.y < 0) { // 仮の床 (-1 + radius)
+                if (playerLocalPos.y < 0) { 
                     playerLocalPos.y = 0;
                     playerVelocity.y = 0;
                     isGrounded = true;
                 } else {
-                    // 下方向へのレイキャストの代用 (Box判定)
                     if (playerVelocity.y <= 0 && checkCollision(playerLocalPos)) {
-                         // 足元がめり込んだら押し上げる (簡易実装)
-                         playerLocalPos.y -= playerVelocity.y * delta; // 戻す
+                         playerLocalPos.y -= playerVelocity.y * delta; 
                          playerVelocity.y = 0;
                          isGrounded = true;
                     }
@@ -1014,37 +1452,58 @@
 
                 document.getElementById('ui-coords').innerText = `${playerLocalPos.x.toFixed(1)}, ${playerLocalPos.z.toFixed(1)}`;
 
-                // アバター同期
+                // ワープパッド判定
+                warpPads.forEach(wp => {
+                    if (playerLocalPos.distanceTo(wp.mesh.position) < 2.5) {
+                        playerLocalPos.set(wp.data.targetX, wp.data.targetY, wp.data.targetZ);
+                        showNotification('info', `⚡ ${wp.data.label}`);
+                    }
+                });
+
+                // インタラクト(ゲーム端末)判定
+                let foundInteract = null;
+                gameTerminals.forEach(gt => {
+                    if (playerLocalPos.distanceTo(gt.pos) < gt.data.triggerDistance) {
+                        foundInteract = gt.data;
+                    }
+                });
+                
+                const popup = document.getElementById('interact-popup');
+                if (foundInteract) {
+                    activeInteract = foundInteract;
+                    popup.style.display = 'block';
+                    popup.innerText = `🎮 ${foundInteract.label} をプレイ (Fキー)`;
+                } else {
+                    activeInteract = null;
+                    popup.style.display = 'none';
+                }
+
                 localAvatar.position.copy(playerLocalPos);
                 updateAvatarAnim(localAvatar, moved, isGrounded, delta, targetAvatarRotation, cameraPitch);
                 localAvatar.visible = !isFPS; 
 
-                // モノレールアニメーション
+                // モノレール
                 if (trackSpline && monorailCars.length > 0) {
                     for(let i = 0; i < monorailCars.length; i++) {
                         monorailProgress[i] += monorailSpeed * (delta * 60); 
                         if (monorailProgress[i] > 1) monorailProgress[i] -= 1;
-                        
                         const pt = trackSpline.getPoint(monorailProgress[i]);
                         const tangent = trackSpline.getTangent(monorailProgress[i]);
-                        
                         monorailCars[i].position.copy(pt);
                         monorailCars[i].rotation.y = Math.atan2(tangent.x, tangent.z);
                     }
                 }
 
-                // 他プレイヤーの補間移動とアニメーション
+                // 他プレイヤー補間
                 Object.values(otherPlayers).forEach(op => {
                     let isOpMoving = false;
                     if (op.userData.movingTimer > 0) {
                         isOpMoving = true;
                         op.userData.movingTimer -= delta;
                     }
-                    
                     if (op.userData.targetPos) {
-                        op.position.lerp(op.userData.targetPos, 0.2); // スムーズな補間
+                        op.position.lerp(op.userData.targetPos, 0.2); 
                     }
-                    
                     updateAvatarAnim(op, isOpMoving, op.userData.isGrounded, delta, op.userData.targetYaw || 0, op.userData.targetPitch || 0);
                 });
 
@@ -1052,17 +1511,17 @@
                     socket.emit('playerMovement', { 
                         x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
                         rotation: targetAvatarRotation, pitch: cameraPitch,
-                        isGrounded: isGrounded
+                        isGrounded: isGrounded, isMoving: moved
                     });
                 }
 
                 // カメラ制御
                 const headTarget = playerLocalPos.clone();
-                headTarget.y += 2.2; 
+                headTarget.y += (myAvatarData.scaleH * 2.2); 
 
                 if (isFPS) {
                     camera.position.copy(playerLocalPos);
-                    camera.position.y += 2.2; 
+                    camera.position.y += (myAvatarData.scaleH * 2.2); 
                     const lookDir = new THREE.Vector3(
                         -Math.sin(cameraYaw) * Math.cos(cameraPitch),
                         Math.sin(cameraPitch),
@@ -1070,7 +1529,7 @@
                     );
                     camera.lookAt(camera.position.clone().add(lookDir));
                 } else {
-                    const distance = 5.0; 
+                    const distance = 5.0 * myAvatarData.scaleW; 
                     const horizontalDist = Math.cos(cameraPitch) * distance;
                     const verticalDist = Math.sin(cameraPitch) * distance;
 
@@ -1087,11 +1546,10 @@
                         const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                         camera.position.addScaledVector(fwdVec, -pushBack);
                         
-                        const minHeight = playerLocalPos.y + 1.0 + (cameraPitch * 1.5);
+                        // ★修正: カメラが地面に引っかかって上を向けない問題を解消（最低高度を維持しつつ後ろへ下がる）
+                        const minHeight = playerLocalPos.y + 0.5;
                         if (camera.position.y < minHeight) camera.position.y = minHeight;
-                    }
-
-                    if (camera.position.y < playerLocalPos.y + 0.2) {
+                    } else if (camera.position.y < playerLocalPos.y + 0.2) {
                         camera.position.y = playerLocalPos.y + 0.2;
                     }
                     camera.lookAt(headTarget);
