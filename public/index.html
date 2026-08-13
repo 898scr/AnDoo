@@ -13,7 +13,7 @@
             background: rgba(15, 23, 42, 0.95);
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 320px; transition: 0.3s; }
+        .panel { background: rgba(30, 41, 59, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 340px; transition: 0.3s; }
         .panel h2 { margin-top: 0; color: #38bdf8; text-align: center; font-size: 1.2rem; letter-spacing: 1px;}
         .panel input[type="text"], .panel input[type="password"], .panel input[type="number"] { width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: white; transition: 0.2s;}
         .panel input:focus { border-color: #38bdf8; outline: none; box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);}
@@ -21,8 +21,9 @@
         
         .btn-primary { background: #0ea5e9; color: white; }
         .btn-primary:hover { background: #0284c7; }
-        .btn-secondary { background: transparent; color: #94a3b8; border: 1px solid #475569; }
-        .btn-secondary:hover { background: #1e293b; color: #fff; }
+        .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #475569; }
+        .btn-secondary:hover { background: #334155; color: #fff; }
+        .btn-secondary.active { background: #0ea5e9; border-color: #38bdf8; color: white; font-weight: bold; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
         .btn-danger { background: #f43f5e; color: white; }
@@ -33,7 +34,6 @@
         .link-text a { color: #38bdf8; cursor: pointer; text-decoration: none; font-weight: bold; }
         .link-text a:hover { text-decoration: underline; }
 
-        /* 利用規約 */
         .checkbox-container { display: flex; align-items: flex-start; margin: 15px 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
         .checkbox-container input { margin-right: 8px; margin-top: 2px; width: 16px; height: 16px; cursor: pointer; }
 
@@ -46,14 +46,14 @@
         .choice-btn .icon { font-size: 1.5rem; margin-bottom: 5px; }
         .choice-btn.compact { padding: 10px; flex-direction: row; gap: 10px; justify-content: flex-start; }
 
-        /* カラーピッカー用 */
-        .setup-preview { width: 100%; height: 250px; background: #050814; border-radius: 8px; border: 1px solid #475569; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px #000;}
+        /* カスタマイズUI用 */
+        .setup-preview { width: 100%; height: 220px; background: #0a0f1d; border-radius: 8px; border: 1px solid #475569; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,243,255,0.1);}
         
         .part-tabs { display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;}
         .part-tab { flex: 1; padding: 5px; font-size: 0.8rem; background: transparent; border: none; color: #94a3b8; cursor: pointer; text-align: center; }
         .part-tab.active { color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: bold;}
         
-        .color-picker-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .color-picker-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 10px; }
         .color-btn { width: 35px; height: 35px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
         .color-btn:hover { transform: scale(1.1); }
         .color-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); transform: scale(1.1); }
@@ -63,7 +63,7 @@
         .slider-group input[type="range"] { width: 100%; cursor: pointer; }
 
         #login-panel { display: block; }
-        #register-panel, #control-setup-panel, #avatar-type-panel, #avatar-custom-panel, #avatar-shape-panel { display: none; }
+        #register-panel, #control-setup-panel, #avatar-custom-panel, #avatar-shape-panel { display: none; }
 
         #loading-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -200,12 +200,12 @@
         }
         .v-btn:active { background: rgba(0, 243, 255, 0.4); border-color: #00f3ff; }
     </style>
-    <!-- ★ 本番用のSocket.ioをインポート -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
+    <!-- -->
     <div id="auth-container">
         <!-- 1. ログイン画面 -->
         <div class="panel" id="login-panel">
@@ -214,8 +214,9 @@
             <input type="text" id="login-username" placeholder="UserID" required>
             <input type="password" id="login-password" placeholder="Password" required>
             <button class="btn-primary" onclick="attemptLogin()">ENTER SYSTEM</button>
-            <div class="link-text">
-                アカウントをお持ちでないですか？ <a onclick="switchPanel('register-panel')">新規登録</a>
+            <div style="margin-top: 15px; border-top: 1px solid #334155; padding-top: 15px; text-align: center;">
+                <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">初めての方はこちら</p>
+                <button class="btn-success" onclick="switchPanel('register-panel')">新規登録 (無料)</button>
             </div>
         </div>
 
@@ -230,68 +231,56 @@
                 <span><a onclick="document.getElementById('terms-modal').style.display='flex'">利用規約・プライバシーポリシー</a>に同意します。</span>
             </label>
             <button class="btn-success" onclick="goToControlSetup()">次へ (操作設定)</button>
-            <div class="link-text"><a onclick="switchPanel('login-panel')">← ログインに戻る</a></div>
+            <div class="link-text"><a onclick="switchPanel('login-panel')">← 戻る</a></div>
         </div>
 
         <!-- 3. 登録Step 2 (操作方法) -->
         <div class="panel" id="control-setup-panel">
             <h2>STEP 2: CONTROL</h2>
             <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">プレイスタイルを選択してください</p>
-            <div class="choice-btn compact" onclick="goToTypeSetup('keyboard')">
+            <div class="choice-btn compact" onclick="goToCustomSetup('keyboard')">
                 <div class="icon">⌨️</div>
                 <div>キーボード ＆ マウス</div>
             </div>
-            <div class="choice-btn compact" onclick="goToTypeSetup('pad')">
+            <div class="choice-btn compact" onclick="goToCustomSetup('pad')">
                 <div class="icon">📱</div>
                 <div>ヴァーチャルパッド (Touch)</div>
             </div>
             <div class="link-text"><a onclick="switchPanel('register-panel')">← 戻る</a></div>
         </div>
 
-        <!-- 4. 登録Step 3 (タイプ選択) -->
-        <div class="panel" id="avatar-type-panel">
-            <h2>STEP 3: TYPE</h2>
-            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">ベース機体を選択してください</p>
-            <div class="choice-btn compact" onclick="goToCustomSetup('A')">
-                <div class="icon">🤖</div>
-                <div>TYPE-A (Standard)</div>
-            </div>
-            <div class="choice-btn compact" onclick="goToCustomSetup('B')">
-                <div class="icon">🪨</div>
-                <div>TYPE-B (Heavy)</div>
-            </div>
-            <div class="choice-btn compact" onclick="goToCustomSetup('C')">
-                <div class="icon">⚡</div>
-                <div>TYPE-C (Slim)</div>
-            </div>
-            <div class="link-text"><a onclick="switchPanel('control-setup-panel')">← 戻る</a></div>
-        </div>
-
-        <!-- 5. 登録Step 4 (パーツカラー設定＆プレビュー統合) -->
+        <!-- 4. 登録Step 3 (パーツごとのカスタマイズ) -->
         <div class="panel" id="avatar-custom-panel" style="width: 400px;">
-            <h2>STEP 4: CUSTOMIZE</h2>
+            <h2>STEP 3: CUSTOMIZE (GARAGE)</h2>
+            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:10px;">各パーツの形状とカラーを組み合わせて機体を構築</p>
             
             <div class="setup-preview" id="setup-preview-box"></div>
 
             <div class="part-tabs">
-                <button class="part-tab active" onclick="switchColorTab('visor')">発光</button>
-                <button class="part-tab" onclick="switchColorTab('head')">頭部</button>
-                <button class="part-tab" onclick="switchColorTab('body')">胴体</button>
-                <button class="part-tab" onclick="switchColorTab('arm')">両腕</button>
+                <button class="part-tab active" onclick="switchCustomTab('head', this)">頭部</button>
+                <button class="part-tab" onclick="switchCustomTab('body', this)">胴体</button>
+                <button class="part-tab" onclick="switchCustomTab('arm', this)">両腕</button>
+                <button class="part-tab" onclick="switchCustomTab('visor', this)">発光</button>
             </div>
 
+            <!-- 動的UI表示エリア -->
+            <div id="dynamic-type-area" style="display: flex; gap: 5px; margin-bottom: 10px;">
+                <button class="btn-secondary" style="flex:1; padding:8px;" id="btn-type-A" onclick="setPartType('A')">TYPE-A</button>
+                <button class="btn-secondary" style="flex:1; padding:8px;" id="btn-type-B" onclick="setPartType('B')">TYPE-B</button>
+                <button class="btn-secondary" style="flex:1; padding:8px;" id="btn-type-C" onclick="setPartType('C')">TYPE-C</button>
+            </div>
             <div class="color-picker-container" id="dynamic-color-picker"></div>
 
             <button class="btn-success" onclick="goToShapeSetup()">次へ (体形調整)</button>
-            <div class="link-text"><a onclick="switchPanel('avatar-type-panel')">← 戻る</a></div>
+            <div class="link-text"><a onclick="switchPanel('control-setup-panel')">← 戻る</a></div>
         </div>
 
-        <!-- 6. 登録Step 5 (体形設定) -->
-        <div class="panel" id="avatar-shape-panel">
-            <h2>STEP 5: SHAPE</h2>
+        <!-- 5. 登録Step 4 (体形設定・プレビュー) -->
+        <div class="panel" id="avatar-shape-panel" style="width: 400px;">
+            <h2>STEP 4: SHAPE & DIVE</h2>
             <div id="setup-error" class="error-msg"></div>
             
-            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:15px;">※プレビューは前画面で行っています</p>
+            <div class="setup-preview" id="setup-preview-box-shape"></div>
 
             <div class="slider-group">
                 <label>身長 (Height): <span id="val-height" style="color:#00ffff;">1.0</span></label>
@@ -302,13 +291,13 @@
                 <input type="range" id="shape-width" min="0.8" max="1.3" step="0.05" value="1.0" oninput="updateShapeParams()">
             </div>
 
-            <button class="btn-primary" onclick="attemptRegister()">登録してダイブ</button>
+            <button class="btn-primary" onclick="attemptRegister()">HAKUYARCにダイブする</button>
             <div class="link-text"><a onclick="switchPanel('avatar-custom-panel')">← 戻る</a></div>
         </div>
 
     </div>
 
-    <!-- 規約モーダル -->
+    <!-- -->
     <div id="terms-modal" class="modal-bg">
         <div class="panel" style="width: 85%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
             <h2>利用規約・プライバシーポリシー</h2>
@@ -335,7 +324,6 @@
         <button class="start-btn" onclick="lockMouse()">システムにダイブする</button>
     </div>
     
-    <!-- パフォーマンス表示 UI -->
     <div id="stats-container">
         <div class="stat-line stat-fps">FPS: <span id="val-fps">0</span></div>
         <div class="stat-line stat-ping">Ping: <span id="val-ping">--</span> ms</div>
@@ -345,7 +333,7 @@
         <div class="ui-text">ID: <span id="ui-id" class="ui-value">---</span></div>
         <div class="ui-text">CR: <span id="ui-money" class="ui-value" style="color:#fbbf24;">0</span></div>
         <button class="btn-success" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openTransferModal()">💸 CRを送金</button>
-        <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openSettingsModal()">⚙️ 設定</button>
+        <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem; margin-top:8px; border-color:#94a3b8; color:#fff;" onclick="openSettingsModal()">⚙️ 設定</button>
         <button id="btn-admin-dash" class="btn-secondary" style="display:none; padding:6px 12px; font-size:0.8rem; margin-top:8px; border-color:#facc15; color:#facc15;" onclick="openAdminDashboard()">🛡️ Admin</button>
 
         <div id="pc-help" style="margin-top:15px; font-size: 0.75rem; color: #94a3b8;">
@@ -358,7 +346,6 @@
         </div>
     </div>
 
-    <!-- チャットUI -->
     <div id="chat-container">
         <div id="chat-messages"></div>
         <form id="chat-form" onsubmit="sendChat(event)">
@@ -366,7 +353,6 @@
         </form>
     </div>
 
-    <!-- 送金モーダル -->
     <div id="transfer-modal" class="modal-bg">
         <div class="panel">
             <h2>💸 CRを送金</h2>
@@ -377,7 +363,6 @@
         </div>
     </div>
 
-    <!-- 設定モーダル -->
     <div id="settings-modal" class="modal-bg">
         <div class="panel">
             <h2>⚙️ SETTINGS</h2>
@@ -389,7 +374,6 @@
         </div>
     </div>
 
-    <!-- ★ Adminダッシュボード モーダル -->
     <div id="admin-dashboard-modal" class="modal-bg">
         <div class="panel" style="width: 80%; max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
             <h2 style="color: #facc15; margin-bottom: 5px;">🛡️ ADMIN DASHBOARD</h2>
@@ -398,15 +382,12 @@
             </div>
             
             <div style="display: flex; gap: 20px; flex-grow: 1; overflow: hidden; text-align: left;">
-                <!-- 左側：ログ表示 -->
                 <div style="flex: 2; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
                     <h3 style="font-size: 1rem; color: #38bdf8; margin: 0; border-bottom: 1px solid #334155; padding-bottom: 5px;">📜 サーバーログ</h3>
                     <div id="admin-logs-content" style="font-size: 0.8rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-all;">(ログの取得待ち...)</div>
                 </div>
                 
-                <!-- 右側：操作パネル -->
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;">
-                    <!-- 速度変更 -->
                     <div class="slider-group" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
                         <h3 style="font-size: 0.9rem; color: #facc15; margin: 0 0 10px 0;">⚡ 自身の移動速度</h3>
                         <label>倍率: <span id="val-admin-speed" style="color:#fff;">1.0</span>x</label>
@@ -414,14 +395,11 @@
                         <p style="font-size: 0.7rem; color:#94a3b8; margin: 5px 0 0 0;">※Zキーで飛行モード(Fly)切替。<br>※飛行中は Q(下降) E(上昇)。</p>
                     </div>
 
-                    <!-- プレイヤー管理 -->
                     <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
                         <h3 style="font-size: 0.9rem; color: #f43f5e; margin: 0 0 10px 0;">👥 プレイヤー管理</h3>
                         <input type="text" id="admin-target-user" placeholder="対象ユーザーID" style="margin-bottom: 10px; width: 100%;">
-                        
                         <button class="btn-danger" style="margin-bottom: 5px;" onclick="adminAction('ban')">🚫 BAN (強制切断)</button>
                         <button class="btn-success" style="margin-bottom: 15px;" onclick="adminAction('unban')">✅ BAN解除</button>
-                        
                         <input type="number" id="admin-target-cr" placeholder="設定する金額 (CR)" style="margin-bottom: 5px; width: 100%;">
                         <button class="btn-primary" onclick="adminAction('setMoney')">💰 所持金を強制変更</button>
                     </div>
@@ -432,16 +410,11 @@
         </div>
     </div>
 
-    <!-- 通知エリア -->
     <div id="notification-container"></div>
-    
-    <!-- 吹き出しエリア -->
     <div id="bubble-container"></div>
-
     <div id="crosshair"></div>
     <div id="canvas-container"></div>
 
-    <!-- バーチャルパッドUI -->
     <div id="virtual-pad-container">
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
         <div id="camera-zone"></div>
@@ -451,21 +424,21 @@
         </div>
     </div>
 
+    <!-- -->
     <script>
         // --- 設定とステータス ---
         let regData = {
             username: '', password: '', controlMode: 'keyboard', 
-            avatarType: 'A', 
-            colorVisor: '#00f3ff', colorHead: '#dddddd', colorBody: '#555555', colorArm: '#111622', 
+            headType: 'A', bodyType: 'A', armType: 'A',
+            colorVisor: '#00f3ff', colorHead: '#dddddd', colorBody: '#555555', colorArm: '#222a3f', 
             scaleH: 1.0, scaleW: 1.0
         };
         
-        let currentEditingPart = 'visor';
         let frames = 0;
         let lastFpsTime = performance.now();
 
         function switchPanel(panelId) {
-            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-type-panel', 'avatar-custom-panel', 'avatar-shape-panel'].forEach(id => {
+            ['login-panel', 'register-panel', 'control-setup-panel', 'avatar-custom-panel', 'avatar-shape-panel'].forEach(id => {
                 document.getElementById(id).style.display = 'none';
             });
             document.getElementById('login-error').innerText = '';
@@ -484,9 +457,7 @@
             
             try {
                 const res = await fetch('/api/check-username', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user })
                 });
                 const data = await res.json();
                 if (!data.success) return document.getElementById('reg-error').innerText = data.message;
@@ -499,44 +470,59 @@
             }
         }
 
-        function goToTypeSetup(mode) {
-            regData.controlMode = mode;
-            switchPanel('avatar-type-panel');
-        }
-
-        function goToCustomSetup(type) {
-            regData.avatarType = type;
-            switchPanel('avatar-custom-panel');
-            setTimeout(initPreview, 50); 
-            renderColorPicker(); 
-        }
-
-        function goToShapeSetup() {
-            switchPanel('avatar-shape-panel');
-        }
-
+        // --- カスタマイズUI (パーツ別設定) ---
+        let currentCustomPart = 'head'; 
         const palette = {
             visor: ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'],
-            armor: ['#dddddd', '#888888', '#555555', '#222222', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f', '#d97706', '#9333ea']
+            armor: ['#dddddd', '#888888', '#555555', '#222222', '#1e3a8a', '#7f1d1d', '#14532d']
         };
 
-        window.switchColorTab = function(part) {
-            currentEditingPart = part;
-            document.querySelectorAll('.part-tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-            renderColorPicker();
-        };
+        function goToCustomSetup(mode) {
+            regData.controlMode = mode;
+            switchPanel('avatar-custom-panel');
+            setTimeout(() => {
+                initPreview('setup-preview-box');
+                updateCustomUI();
+            }, 50);
+        }
 
-        function renderColorPicker() {
-            const container = document.getElementById('dynamic-color-picker');
-            container.innerHTML = ''; 
-            
-            const colors = (currentEditingPart === 'visor') ? palette.visor : palette.armor;
+        function switchCustomTab(partName, btnEl) {
+            currentCustomPart = partName;
+            document.querySelectorAll('.part-tab').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            updateCustomUI();
+        }
+
+        function updateCustomUI() {
+            const typeArea = document.getElementById('dynamic-type-area');
+            const colorContainer = document.getElementById('dynamic-color-picker');
+            colorContainer.innerHTML = '';
+
+            // Type選択エリアの表示制御
+            if (currentCustomPart === 'visor') {
+                typeArea.style.display = 'none';
+            } else {
+                typeArea.style.display = 'flex';
+                // 現在のパーツのTypeを選択状態にする
+                let currentType = 'A';
+                if (currentCustomPart === 'head') currentType = regData.headType;
+                if (currentCustomPart === 'body') currentType = regData.bodyType;
+                if (currentCustomPart === 'arm') currentType = regData.armType;
+                
+                ['A', 'B', 'C'].forEach(t => {
+                    const btn = document.getElementById(`btn-type-${t}`);
+                    if (t === currentType) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+            }
+
+            // カラーパレットの生成
+            const colors = (currentCustomPart === 'visor') ? palette.visor : palette.armor;
             let currentColor = '';
-            if (currentEditingPart === 'visor') currentColor = regData.colorVisor;
-            else if (currentEditingPart === 'head') currentColor = regData.colorHead;
-            else if (currentEditingPart === 'body') currentColor = regData.colorBody;
-            else if (currentEditingPart === 'arm') currentColor = regData.colorArm;
+            if (currentCustomPart === 'visor') currentColor = regData.colorVisor;
+            else if (currentCustomPart === 'head') currentColor = regData.colorHead;
+            else if (currentCustomPart === 'body') currentColor = regData.colorBody;
+            else if (currentCustomPart === 'arm') currentColor = regData.colorArm;
 
             colors.forEach(color => {
                 const btn = document.createElement('div');
@@ -548,35 +534,49 @@
                     document.querySelectorAll('#dynamic-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
                     btn.classList.add('selected');
                     
-                    if (currentEditingPart === 'visor') regData.colorVisor = color;
-                    else if (currentEditingPart === 'head') regData.colorHead = color;
-                    else if (currentEditingPart === 'body') regData.colorBody = color;
-                    else if (currentEditingPart === 'arm') regData.colorArm = color;
-
+                    if (currentCustomPart === 'visor') regData.colorVisor = color;
+                    else if (currentCustomPart === 'head') regData.colorHead = color;
+                    else if (currentCustomPart === 'body') regData.colorBody = color;
+                    else if (currentCustomPart === 'arm') regData.colorArm = color;
                     updatePreviewModel();
                 };
-                container.appendChild(btn);
+                colorContainer.appendChild(btn);
             });
+        }
+
+        window.setPartType = function(type) {
+            if (currentCustomPart === 'head') regData.headType = type;
+            if (currentCustomPart === 'body') regData.bodyType = type;
+            if (currentCustomPart === 'arm') regData.armType = type;
+            updateCustomUI(); // ボタンのハイライト更新
+            updatePreviewModel();
+        };
+
+        function goToShapeSetup() {
+            switchPanel('avatar-shape-panel');
+            // Canvas要素をShapeパネルの方へ移動させる
+            setTimeout(() => {
+                const shapeContainer = document.getElementById('setup-preview-box-shape');
+                if (previewRenderer && previewRenderer.domElement) {
+                    shapeContainer.appendChild(previewRenderer.domElement);
+                }
+            }, 50);
         }
 
         let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
         
-        function initPreview() {
-            const container = document.getElementById('setup-preview-box');
+        function initPreview(containerId) {
+            const container = document.getElementById(containerId);
             if(!previewRenderer) {
                 previewScene = new THREE.Scene();
-                previewScene.add(new THREE.AmbientLight(0x445566, 2.0));
-                
+                // プレビューの背景はCSSで指定し、キャンバスは透明にする
+                previewScene.add(new THREE.AmbientLight(0xffffff, 1.2)); // ★明るく
                 const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-                dirLight.position.set(5, 10, 7);
+                dirLight.position.set(2, 5, 3);
                 previewScene.add(dirLight);
-                
-                const cyanLight = new THREE.PointLight(0x00f3ff, 2, 5);
-                cyanLight.position.set(0, 1.2, 2.5);
-                previewScene.add(cyanLight);
 
                 previewCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-                previewCamera.position.set(0, 1.5, 4.5);
+                previewCamera.position.set(0, 1.0, 3.5);
 
                 previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                 previewRenderer.setSize(container.clientWidth, container.clientHeight);
@@ -586,22 +586,18 @@
                     previewReqId = requestAnimationFrame(renderPreview);
                     if(previewAvatar) {
                         previewAvatar.rotation.y += 0.015; 
-                        const time = performance.now() * 0.002;
-                        previewAvatar.position.y = -0.5 + Math.sin(time) * 0.05;
                     }
                     previewRenderer.render(previewScene, previewCamera);
                 }
                 renderPreview();
             }
-            
             updatePreviewModel();
         }
 
         function updatePreviewModel() {
             if(previewAvatar) previewScene.remove(previewAvatar);
-            
             previewAvatar = createAvatarMesh(regData);
-            previewAvatar.position.set(0, -0.5, 0); 
+            previewAvatar.position.y = -0.5; 
             
             const h = parseFloat(document.getElementById('shape-height').value);
             const w = parseFloat(document.getElementById('shape-width').value);
@@ -621,144 +617,92 @@
             if(previewAvatar) previewAvatar.scale.set(w, h, w);
         }
 
-        // ==========================================
-        // ★ アバター生成ロジック (SF多面体・フラットシェーディング仕様・足なし)
-        // ==========================================
         window.createAvatarMesh = function(config) {
             const group = new THREE.Group();
-            const type = config.avatarType || 'A';
             
-            // ★パーツごとのマテリアル設定。明るく発色するように調整
-            const matHead = new THREE.MeshStandardMaterial({ color: config.colorHead || '#dddddd', roughness: 0.6, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.95 }); 
-            const matBody = new THREE.MeshStandardMaterial({ color: config.colorBody || '#555555', roughness: 0.6, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.95 }); 
-            const matArm  = new THREE.MeshStandardMaterial({ color: config.colorArm  || '#111622', roughness: 0.6, metalness: 0.1, flatShading: true }); 
-            const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: config.colorVisor || '#00f3ff', emissiveIntensity: 1.5 });
+            // 安全のためのフォールバック
+            const typeH = config.headType || config.avatarType || 'A';
+            const typeB = config.bodyType || config.avatarType || 'A';
+            const typeA = config.armType  || config.avatarType || 'A';
+            const colVisor = config.colorVisor || '#00f3ff';
+            const colHead  = config.colorHead || '#dddddd';
+            const colBody  = config.colorBody || '#555555';
+            const colArm   = config.colorArm || '#222a3f';
+
+            // ★マテリアルを明るく（metalnessを下げて色を見やすく）
+            const matHead = new THREE.MeshStandardMaterial({ color: colHead, roughness: 0.6, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.95 });
+            const matBody = new THREE.MeshStandardMaterial({ color: colBody, roughness: 0.6, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.95 });
+            const matArm  = new THREE.MeshStandardMaterial({ color: colArm, roughness: 0.6, metalness: 0.1, flatShading: true });
+            const glowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: colVisor, emissiveIntensity: 1.5 });
 
             const baseGroup = new THREE.Group(); group.add(baseGroup);
             const tiltGroup = new THREE.Group(); tiltGroup.position.y = 0.6; baseGroup.add(tiltGroup);
 
             const headGroup = new THREE.Group();
+            const torsoGroup = new THREE.Group();
             const armLGroup = new THREE.Group();
             const armRGroup = new THREE.Group();
 
-            if (type === 'B') {
-                headGroup.position.y = 1.3;
-                const headGeo = new THREE.BoxGeometry(0.5, 0.4, 0.5);
-                const headMesh = new THREE.Mesh(headGeo, matHead); headMesh.castShadow = true;
-                headGroup.add(headMesh);
-                
-                const visorGeo = new THREE.BoxGeometry(0.4, 0.1, 0.05);
-                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
-                visorMesh.position.set(0, 0.05, 0.26);
-                headGroup.add(visorMesh);
-                tiltGroup.add(headGroup);
+            // --- 頭部 (HEAD) ---
+            headGroup.position.y = 1.4; // 共通の首の高さ
+            if (typeH === 'B') {
+                const h = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.5), matHead); h.castShadow = true;
+                const v = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.05), glowMat); v.position.set(0, 0.05, 0.26);
+                headGroup.add(h, v);
+            } else if (typeH === 'C') {
+                const h = new THREE.Mesh(new THREE.OctahedronGeometry(0.3, 0), matHead); h.castShadow = true;
+                const v = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.05), glowMat); v.position.set(0, 0, 0.25); v.rotation.z = Math.PI/4;
+                headGroup.add(h, v);
+            } else { // Type A
+                const h = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), matHead); h.castShadow = true;
+                const v = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), glowMat); v.position.set(0, 0.02, 0.32);
+                const sGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
+                const sl = new THREE.Mesh(sGeo, matArm); sl.rotation.z = Math.PI/2; sl.position.set(0.32, 0, 0);
+                const sr = new THREE.Mesh(sGeo, matArm); sr.rotation.z = Math.PI/2; sr.position.set(-0.32, 0, 0);
+                headGroup.add(h, v, sl, sr);
+            }
+            tiltGroup.add(headGroup);
 
-                const torsoGroup = new THREE.Group(); torsoGroup.position.y = 0.6;
-                const chestGeo = new THREE.BoxGeometry(0.8, 0.7, 0.5);
-                const chestMesh = new THREE.Mesh(chestGeo, matBody); chestMesh.castShadow = true;
-                torsoGroup.add(chestMesh);
-                
-                const lineGeo = new THREE.BoxGeometry(0.82, 0.05, 0.52);
-                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial); lineMesh.position.y = 0;
-                torsoGroup.add(lineMesh);
-                tiltGroup.add(torsoGroup);
+            // --- 胴体 (BODY) ---
+            torsoGroup.position.y = 0.7; // 共通の胴体の中心高さ
+            if (typeB === 'B') {
+                // Type B は幅広のボックス
+                const t = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.5), matBody); t.castShadow = true;
+                const l = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.05, 0.52), glowMat); l.position.y = 0;
+                torsoGroup.add(t, l);
+            } else if (typeB === 'C') {
+                // Type C はスリムなシリンダー
+                const t = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.15, 0.7, 6), matBody); t.castShadow = true;
+                const l = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.28, 0.05, 6), glowMat); l.position.y = 0.1;
+                torsoGroup.add(t, l);
+            } else { // Type A
+                const t = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), matBody); t.castShadow = true;
+                const l = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.32), glowMat); l.position.y = -0.05;
+                const w = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.15, 0.4, 5), matBody); w.position.y = -0.45; w.castShadow = true;
+                torsoGroup.add(t, l, w);
+            }
+            tiltGroup.add(torsoGroup);
 
-                const armGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
-                armLGroup.position.set(-0.55, 1.0, 0);
-                const armL = new THREE.Mesh(armGeo, matArm); armL.position.y = -0.3; armL.castShadow = true;
-                armLGroup.add(armL); tiltGroup.add(armLGroup);
-                
-                armRGroup.position.set(0.55, 1.0, 0);
-                const armR = new THREE.Mesh(armGeo, matArm); armR.position.y = -0.3; armR.castShadow = true;
-                armRGroup.add(armR); tiltGroup.add(armRGroup);
-
-            } else if (type === 'C') {
-                headGroup.position.y = 1.5;
-                const headGeo = new THREE.OctahedronGeometry(0.3, 0); 
-                const headMesh = new THREE.Mesh(headGeo, matHead); headMesh.castShadow = true;
-                headGroup.add(headMesh);
-                
-                const visorGeo = new THREE.BoxGeometry(0.2, 0.2, 0.05);
-                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
-                visorMesh.position.set(0, 0, 0.25);
-                visorMesh.rotation.z = Math.PI / 4; 
-                headGroup.add(visorMesh);
-                tiltGroup.add(headGroup);
-
-                const torsoGroup = new THREE.Group(); torsoGroup.position.y = 0.8;
-                const chestGeo = new THREE.CylinderGeometry(0.3, 0.15, 0.7, 6);
-                const chestMesh = new THREE.Mesh(chestGeo, matBody); chestMesh.castShadow = true;
-                torsoGroup.add(chestMesh);
-                
-                const lineGeo = new THREE.CylinderGeometry(0.31, 0.28, 0.05, 6);
-                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial); lineMesh.position.y = 0.1;
-                torsoGroup.add(lineMesh);
-                tiltGroup.add(torsoGroup);
-
-                const armGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.8, 6);
-                armLGroup.position.set(-0.35, 1.2, 0);
-                const armL = new THREE.Mesh(armGeo, matArm); armL.position.y = -0.4; armL.castShadow = true;
-                armLGroup.add(armL); tiltGroup.add(armLGroup);
-                
-                armRGroup.position.set(0.35, 1.2, 0);
-                const armR = new THREE.Mesh(armGeo, matArm); armR.position.y = -0.4; armR.castShadow = true;
-                armRGroup.add(armR); tiltGroup.add(armRGroup);
-
-            } else {
-                headGroup.position.y = 1.4;
-
-                const headGeo = new THREE.IcosahedronGeometry(0.35, 0);
-                const headMesh = new THREE.Mesh(headGeo, matHead);
-                headMesh.castShadow = true;
-                headGroup.add(headMesh);
-
-                const visorGeo = new THREE.BoxGeometry(0.25, 0.08, 0.05);
-                const visorMesh = new THREE.Mesh(visorGeo, glowMaterial);
-                visorMesh.position.set(0, 0.02, 0.32);
-                headGroup.add(visorMesh);
-
-                const sensorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6);
-                const leftSensor = new THREE.Mesh(sensorGeo, matArm);
-                leftSensor.rotation.z = Math.PI / 2;
-                leftSensor.position.set(0.32, 0, 0);
-                const rightSensor = leftSensor.clone();
-                rightSensor.position.set(-0.32, 0, 0);
-                headGroup.add(leftSensor, rightSensor);
-
-                tiltGroup.add(headGroup);
-
-                const torsoGroup = new THREE.Group();
-                torsoGroup.position.y = 0.7;
-
-                const chestGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
-                const chestMesh = new THREE.Mesh(chestGeo, matBody);
-                chestMesh.castShadow = true;
-                torsoGroup.add(chestMesh);
-
-                const lineGeo = new THREE.BoxGeometry(0.52, 0.04, 0.32);
-                const lineMesh = new THREE.Mesh(lineGeo, glowMaterial);
-                lineMesh.position.y = -0.05;
-                torsoGroup.add(lineMesh);
-
-                const waistGeo = new THREE.CylinderGeometry(0.22, 0.15, 0.4, 5); 
-                const waistMesh = new THREE.Mesh(waistGeo, matBody);
-                waistMesh.position.y = -0.45;
-                waistMesh.castShadow = true;
-                torsoGroup.add(waistMesh);
-                
-                tiltGroup.add(torsoGroup);
-
-                const armGeo = new THREE.BoxGeometry(0.12, 0.7, 0.12);
-                
-                armLGroup.position.set(-0.35, 1.1, 0);
-                const armL = new THREE.Mesh(armGeo, matArm); armL.position.y = -0.25; armL.castShadow = true;
-                armLGroup.add(armL); tiltGroup.add(armLGroup);
-                
-                armRGroup.position.set(0.35, 1.1, 0);
-                const armR = new THREE.Mesh(armGeo, matArm); armR.position.y = -0.25; armR.castShadow = true;
-                armRGroup.add(armR); tiltGroup.add(armRGroup);
+            // --- 両腕 (ARMS) ---
+            let armGeo, armX;
+            if (typeA === 'B') {
+                // 太すぎないように調整
+                armGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25); armX = 0.55; 
+            } else if (typeA === 'C') {
+                armGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.8, 6); armX = 0.35;
+            } else { // Type A
+                armGeo = new THREE.BoxGeometry(0.12, 0.7, 0.12); armX = 0.35;
             }
             
+            armLGroup.position.set(-armX, 1.1, 0); // 共通の肩の高さ
+            const aL = new THREE.Mesh(armGeo, matArm); aL.position.y = -0.25; aL.castShadow = true; 
+            armLGroup.add(aL); tiltGroup.add(armLGroup);
+            
+            armRGroup.position.set(armX, 1.1, 0);
+            const aR = new THREE.Mesh(armGeo, matArm); aR.position.y = -0.25; aR.castShadow = true; 
+            armRGroup.add(aR); tiltGroup.add(armRGroup);
+
+            // 腕がボディにめり込まないよう、初期状態から少し外側に開いておく
             armLGroup.rotation.z = -0.15;
             armRGroup.rotation.z = 0.15;
 
@@ -770,110 +714,11 @@
             return group;
         };
 
-        // --- ゲーム進行制御 ---
         let currentUser = null, isAdmin = false, socket = null;
         let userAvatarConfig = null;
-
-        // ★ Admin機能
         let adminSpeedMult = 1.0;
-        
-        // ★ マップ構築用データ保持
         let warpPadsData = [];
         let gameTerminalsData = [];
-
-        function buildCustomMap(mapData) {
-            if (!mapData) return;
-            
-            if (mapData.environment && mapData.environment.groundColor) {
-                scene.background = new THREE.Color(mapData.environment.groundColor);
-                if (scene.fog) scene.fog.color.set(mapData.environment.groundColor);
-            }
-
-            if (mapData.floors) {
-                mapData.floors.forEach(f => {
-                    let mesh;
-                    const mat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.9, metalness: 0.1 });
-                    if (f.type === 'rect') {
-                        mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), mat);
-                        mesh.position.set(f.x, f.y || -0.5, f.z);
-                    } else if (f.type === 'circle') {
-                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(f.radius, f.radius, 1, 32), mat);
-                        mesh.position.set(f.x, f.y || -0.5, f.z);
-                    }
-                    if (mesh) {
-                        mesh.receiveShadow = true;
-                        mapGroup.add(mesh);
-                        if (f.y && f.y > 0) collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
-                    }
-                });
-            }
-
-            if (mapData.walls) {
-                mapData.walls.forEach(w => {
-                    let mesh;
-                    const mat = new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.7 });
-                    const height = w.maxY - w.minY;
-                    const centerY = w.minY + height / 2;
-
-                    if (w.type === 'rect') {
-                        mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat);
-                        mesh.position.set(w.x, centerY, w.z);
-                    } else if (w.type === 'circle') {
-                        mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 32), mat);
-                        mesh.position.set(w.x, centerY, w.z);
-                    }
-                    if (mesh) {
-                        mesh.castShadow = true; mesh.receiveShadow = true;
-                        mapGroup.add(mesh);
-                        collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
-                    }
-                });
-            }
-
-            warpPadsData = mapData.warpPads || [];
-            warpPadsData.forEach(wp => {
-                const mat = new THREE.MeshBasicMaterial({ color: wp.color, transparent: true, opacity: 0.7 });
-                const mesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.2, 16), mat);
-                mesh.position.set(wp.x, wp.y, wp.z);
-                mapGroup.add(mesh);
-            });
-
-            gameTerminalsData = mapData.gameTerminals || [];
-            gameTerminalsData.forEach(gt => {
-                const mat = new THREE.MeshStandardMaterial({ color: gt.color, metalness: 0.5, roughness: 0.2 });
-                const mesh = new THREE.Mesh(new THREE.BoxGeometry(gt.width, gt.height, gt.depth), mat);
-                mesh.position.set(gt.x, gt.y + gt.height/2, gt.z);
-                mesh.castShadow = true;
-                mapGroup.add(mesh);
-                collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
-            });
-        }
-
-        function openGameIframe(url) {
-            if (document.pointerLockElement === document.body) document.exitPointerLock();
-            if (document.getElementById('iframe-modal')) return;
-
-            const modal = document.createElement('div');
-            modal.id = 'iframe-modal';
-            modal.className = 'modal-bg';
-            modal.style.display = 'flex';
-            modal.style.zIndex = '150';
-            modal.innerHTML = `
-                <div class="panel" style="width: 90%; max-width: 800px; height: 80vh; padding: 0; display: flex; flex-direction: column;">
-                    <div style="background: #334155; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0;">
-                        <span style="font-weight: bold; color: #fff;">MINI GAME</span>
-                        <button class="btn-danger" style="width: auto; margin: 0; padding: 5px 15px;" onclick="closeGameIframe()">閉じる</button>
-                    </div>
-                    <iframe src="${url}" style="width: 100%; height: 100%; border: none; border-radius: 0 0 12px 12px;"></iframe>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
-
-        window.closeGameIframe = function() {
-            const modal = document.getElementById('iframe-modal');
-            if (modal) modal.remove();
-        }
 
         async function attemptLogin() {
             const username = document.getElementById('login-username').value;
@@ -882,16 +727,14 @@
 
             try {
                 const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
 
                 if (data.success) {
                     currentUser = data.username;
                     isAdmin = data.isAdmin;
-                    userAvatarConfig = data.avatar || regData;
+                    userAvatarConfig = data.avatar || regData; // サーバーのデータを使用
 
                     document.getElementById('ui-id').innerText = currentUser;
                     document.getElementById('ui-money').innerText = data.cr;
@@ -908,10 +751,10 @@
         }
 
         async function attemptRegister() {
+            // regDataの内容をそのままavatar設定として送信
             try {
                 const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: regData.username,
                         password: regData.password,
@@ -1033,17 +876,77 @@
             animate(); 
         }
 
+        function buildCustomMap(mapData) {
+            if (!mapData) return;
+            if (mapData.environment && mapData.environment.groundColor) {
+                scene.background = new THREE.Color(mapData.environment.groundColor);
+                if (scene.fog) scene.fog.color.set(mapData.environment.groundColor);
+            }
+            if (mapData.floors) {
+                mapData.floors.forEach(f => {
+                    let mesh;
+                    const mat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.9, metalness: 0.1 });
+                    if (f.type === 'rect') { mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1, f.depth), mat); mesh.position.set(f.x, f.y || -0.5, f.z); }
+                    else if (f.type === 'circle') { mesh = new THREE.Mesh(new THREE.CylinderGeometry(f.radius, f.radius, 1, 32), mat); mesh.position.set(f.x, f.y || -0.5, f.z); }
+                    if (mesh) { mesh.receiveShadow = true; mapGroup.add(mesh); if (f.y && f.y > 0) collisionBoxes.push(new THREE.Box3().setFromObject(mesh)); }
+                });
+            }
+            if (mapData.walls) {
+                mapData.walls.forEach(w => {
+                    let mesh;
+                    const mat = new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.7 });
+                    const height = w.maxY - w.minY; const centerY = w.minY + height / 2;
+                    if (w.type === 'rect') { mesh = new THREE.Mesh(new THREE.BoxGeometry(w.width, height, w.depth), mat); mesh.position.set(w.x, centerY, w.z); }
+                    else if (w.type === 'circle') { mesh = new THREE.Mesh(new THREE.CylinderGeometry(w.radius, w.radius, height, 32), mat); mesh.position.set(w.x, centerY, w.z); }
+                    if (mesh) { mesh.castShadow = true; mesh.receiveShadow = true; mapGroup.add(mesh); collisionBoxes.push(new THREE.Box3().setFromObject(mesh)); }
+                });
+            }
+            warpPadsData = mapData.warpPads || [];
+            warpPadsData.forEach(wp => {
+                const mat = new THREE.MeshBasicMaterial({ color: wp.color, transparent: true, opacity: 0.7 });
+                const mesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.2, 16), mat); mesh.position.set(wp.x, wp.y, wp.z); mapGroup.add(mesh);
+            });
+            gameTerminalsData = mapData.gameTerminals || [];
+            gameTerminalsData.forEach(gt => {
+                const mat = new THREE.MeshStandardMaterial({ color: gt.color, metalness: 0.5, roughness: 0.2 });
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(gt.width, gt.height, gt.depth), mat); mesh.position.set(gt.x, gt.y + gt.height/2, gt.z);
+                mesh.castShadow = true; mapGroup.add(mesh); collisionBoxes.push(new THREE.Box3().setFromObject(mesh));
+            });
+        }
+
+        function buildFallbackMap() {
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0x113355, roughness: 0.9 });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), matFloor);
+            floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; mapGroup.add(floor);
+            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(-500, -10, -500), new THREE.Vector3(500, 0, 500)));
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff });
+            const box = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), boxMat); box.position.set(10, 2.5, -10); box.castShadow = true; mapGroup.add(box);
+            collisionBoxes.push(new THREE.Box3().setFromObject(box));
+        }
+
+        function openGameIframe(url) {
+            if (document.pointerLockElement === document.body) document.exitPointerLock();
+            if (document.getElementById('iframe-modal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'iframe-modal'; modal.className = 'modal-bg'; modal.style.display = 'flex'; modal.style.zIndex = '150';
+            modal.innerHTML = `
+                <div class="panel" style="width: 90%; max-width: 800px; height: 80vh; padding: 0; display: flex; flex-direction: column;">
+                    <div style="background: #334155; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0;">
+                        <span style="font-weight: bold; color: #fff;">MINI GAME</span>
+                        <button class="btn-danger" style="width: auto; margin: 0; padding: 5px 15px;" onclick="closeGameIframe()">閉じる</button>
+                    </div>
+                    <iframe src="${url}" style="width: 100%; height: 100%; border: none; border-radius: 0 0 12px 12px;"></iframe>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.closeGameIframe = function() { const modal = document.getElementById('iframe-modal'); if (modal) modal.remove(); }
+
         function setupSocketEvents() {
             socket.on('initData', (data) => {
                 if (data.customMap) buildCustomMap(data.customMap);
-
-                Object.keys(data.players).forEach(id => {
-                    if (id !== socket.id) addOtherPlayer(data.players[id]);
-                });
+                Object.keys(data.players).forEach(id => { if (id !== socket.id) addOtherPlayer(data.players[id]); });
             });
-
             socket.on('newPlayer', (info) => addOtherPlayer(info));
-
             socket.on('playerMoved', (info) => {
                 if (otherPlayers[info.id]) {
                     otherPlayers[info.id].position.set(info.x, info.y, info.z);
@@ -1053,496 +956,239 @@
                     otherPlayers[info.id].userData.movingTimer = 0.1; 
                 }
             });
-
             socket.on('playerDisconnected', (id) => {
                 if (otherPlayers[id]) {
-                    if (otherPlayers[id].userData.bubbleEl) {
-                        otherPlayers[id].userData.bubbleEl.remove();
-                        clearTimeout(otherPlayers[id].userData.bubbleTimer);
-                    }
-                    scene.remove(otherPlayers[id]);
-                    delete otherPlayers[id];
+                    if (otherPlayers[id].userData.bubbleEl) { otherPlayers[id].userData.bubbleEl.remove(); clearTimeout(otherPlayers[id].userData.bubbleTimer); }
+                    scene.remove(otherPlayers[id]); delete otherPlayers[id];
                 }
             });
-
             socket.on('chatMessage', (data) => {
-                const box = document.getElementById('chat-messages');
-                const el = document.createElement('div');
-                el.className = 'chat-msg';
-                
+                const box = document.getElementById('chat-messages'); const el = document.createElement('div'); el.className = 'chat-msg';
                 let colorVisor = '#00f3ff';
-                if (data.username === currentUser && userAvatarConfig) {
-                    colorVisor = userAvatarConfig.colorVisor || '#00f3ff';
-                } else {
-                    for (let id in otherPlayers) {
-                        if (otherPlayers[id].userData.username === data.username) {
-                            colorVisor = otherPlayers[id].userData.colorVisor;
-                            break;
-                        }
-                    }
-                }
-
+                if (data.username === currentUser && userAvatarConfig) colorVisor = userAvatarConfig.colorVisor || '#00f3ff';
+                else { for (let id in otherPlayers) { if (otherPlayers[id].userData.username === data.username) { colorVisor = otherPlayers[id].userData.colorVisor; break; } } }
                 el.innerHTML = `<span class="name" style="color: ${colorVisor};">${data.username}:</span><span>${data.text}</span>`;
-                box.appendChild(el);
-                box.scrollTop = box.scrollHeight;
-                
-                showChatBubble(data.username, data.text, colorVisor);
+                box.appendChild(el); box.scrollTop = box.scrollHeight; showChatBubble(data.username, data.text, colorVisor);
             });
-
-            socket.on('moneyUpdated', (newCr) => {
-                document.getElementById('ui-money').innerText = newCr;
-            });
-
-            socket.on('notification', (msg) => {
-                showToast(msg.type, msg.text);
-            });
-
-            socket.on('banned', (target) => {
-                if (target === currentUser) {
-                    alert("管理者にアカウントを停止(BAN)されました。システムから切断されます。");
-                    window.location.reload();
-                }
-            });
-            socket.on('forceUpdateCR', (data) => {
-                if (data.user === currentUser) {
-                    document.getElementById('ui-money').innerText = data.cr;
-                    showToast("info", "管理者により所持金が変更されました。");
-                }
-            });
+            socket.on('moneyUpdated', (newCr) => { document.getElementById('ui-money').innerText = newCr; });
+            socket.on('notification', (msg) => { showToast(msg.type, msg.text); });
+            socket.on('banned', (target) => { if (target === currentUser) { alert("管理者にBANされました。"); window.location.reload(); } });
+            socket.on('forceUpdateCR', (data) => { if (data.user === currentUser) { document.getElementById('ui-money').innerText = data.cr; showToast("info", "所持金が変更されました。"); } });
             socket.on('adminLogs', (logs) => {
-                let content = "=== AUTH LOGS ===\n";
-                logs.auth.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.action} : ${l.user}\n`);
-                content += "\n=== CHAT LOGS ===\n";
-                logs.chat.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.user} : ${l.text}\n`);
-                content += "\n=== MOVEMENT LOGS (Recent positions) ===\n";
-                logs.move.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.user} : x=${l.x.toFixed(1)}, y=${l.y.toFixed(1)}, z=${l.z.toFixed(1)}\n`);
+                let content = "=== AUTH LOGS ===\n"; logs.auth.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.action} : ${l.user}\n`);
+                content += "\n=== CHAT LOGS ===\n"; logs.chat.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.user} : ${l.text}\n`);
+                content += "\n=== MOVEMENT LOGS ===\n"; logs.move.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.user} : x=${l.x.toFixed(1)}, y=${l.y.toFixed(1)}, z=${l.z.toFixed(1)}\n`);
                 document.getElementById('admin-logs-content').innerText = content;
             });
         }
 
         function addOtherPlayer(info) {
             if (otherPlayers[info.id]) scene.remove(otherPlayers[info.id]);
-
             const av = info.avatar || {};
             const mesh = createAvatarMesh(av);
             mesh.scale.set(av.scaleW || 1.0, av.scaleH || 1.0, av.scaleW || 1.0);
             mesh.position.set(info.x || 0, info.y || 5, info.z || 0);
-            mesh.userData.targetYaw = info.rotation || 0;
-            mesh.userData.targetPitch = info.pitch || 0;
-            mesh.userData.isGrounded = true;
-            mesh.userData.username = info.username || 'Guest';
-            mesh.userData.colorVisor = av.colorVisor || '#00f3ff';
-            mesh.userData.scaleH = av.scaleH || 1.0;
-            
-            scene.add(mesh);
-            otherPlayers[info.id] = mesh;
+            mesh.userData.targetYaw = info.rotation || 0; mesh.userData.targetPitch = info.pitch || 0;
+            mesh.userData.isGrounded = true; mesh.userData.username = info.username || 'Guest';
+            mesh.userData.colorVisor = av.colorVisor || '#00f3ff'; mesh.userData.scaleH = av.scaleH || 1.0;
+            scene.add(mesh); otherPlayers[info.id] = mesh;
         }
 
         let isTyping = false;
         function sendChat(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
+            if(e) e.preventDefault();
+            const input = document.getElementById('chat-input'); const text = input.value.trim();
             if(text && socket) {
-                socket.emit('chatMessage', text);
-                input.value = '';
-                input.blur();
-                if(document.pointerLockElement !== document.body && userAvatarConfig.controlMode === 'keyboard') {
-                    document.body.requestPointerLock();
-                }
+                socket.emit('chatMessage', text); input.value = ''; input.blur();
+                if(document.pointerLockElement !== document.body && userAvatarConfig.controlMode === 'keyboard') document.body.requestPointerLock();
             }
         }
+        const chatInputEl = document.getElementById('chat-input');
+        if (chatInputEl) { chatInputEl.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChat(); }); }
 
         function showToast(type, text) {
-            const container = document.getElementById('notification-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerText = text;
-            container.appendChild(toast);
+            const container = document.getElementById('notification-container'); const toast = document.createElement('div');
+            toast.className = `toast ${type}`; toast.innerText = text; container.appendChild(toast);
             setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
         }
 
         function showChatBubble(username, text, colorVisor) {
             let targetMesh = null;
             if (username === currentUser) targetMesh = localAvatar;
-            else {
-                for (let id in otherPlayers) {
-                    if (otherPlayers[id].userData.username === username) { targetMesh = otherPlayers[id]; break; }
-                }
-            }
+            else { for (let id in otherPlayers) { if (otherPlayers[id].userData.username === username) { targetMesh = otherPlayers[id]; break; } } }
             if (!targetMesh) return;
+            if (targetMesh.userData.bubbleEl) { targetMesh.userData.bubbleEl.remove(); clearTimeout(targetMesh.userData.bubbleTimer); }
 
-            if (targetMesh.userData.bubbleEl) {
-                targetMesh.userData.bubbleEl.remove();
-                clearTimeout(targetMesh.userData.bubbleTimer);
-            }
-
-            const container = document.getElementById('bubble-container');
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-bubble';
-            
-            const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const container = document.getElementById('bubble-container'); const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble'; const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             bubble.innerHTML = `<span class="author" style="color: ${colorVisor}">${username}</span>: <span>${safeText}</span>`;
             
-            const style = document.createElement('style');
-            const uniqueClass = 'bubble-' + Date.now();
-            bubble.classList.add(uniqueClass);
+            const style = document.createElement('style'); const uniqueClass = 'bubble-' + Date.now(); bubble.classList.add(uniqueClass);
             style.innerHTML = `.${uniqueClass}::after { border-color: rgba(15, 23, 42, 0.85) transparent transparent transparent; }`; 
-            document.head.appendChild(style);
-
-            container.appendChild(bubble);
+            document.head.appendChild(style); container.appendChild(bubble);
 
             targetMesh.userData.bubbleEl = bubble;
             targetMesh.userData.bubbleTimer = setTimeout(() => {
-                bubble.style.opacity = '0';
-                setTimeout(() => { bubble.remove(); style.remove(); }, 300);
-                targetMesh.userData.bubbleEl = null;
+                bubble.style.opacity = '0'; setTimeout(() => { bubble.remove(); style.remove(); }, 300); targetMesh.userData.bubbleEl = null;
             }, 6000);
         }
 
         function updateBubbles() {
             const updateBubble = (mesh) => {
                 if (mesh && mesh.userData.bubbleEl) {
-                    const el = mesh.userData.bubbleEl;
-                    const pos = mesh.position.clone();
-                    const cfg = userAvatarConfig || regData;
-                    
-                    let height = 2.0; 
-                    if (mesh === localAvatar) height = 1.6 * cfg.scaleH;
-                    else height = 1.6 * (mesh.userData.scaleH || 1.0);
-                    pos.y += height;
-
-                    const tempV = pos.clone();
-                    tempV.project(camera);
-                    
-                    if (tempV.z > 1) {
-                        el.style.display = 'none';
-                        return;
-                    }
+                    const el = mesh.userData.bubbleEl; const pos = mesh.position.clone(); const cfg = userAvatarConfig || regData;
+                    let height = 2.0; if (mesh === localAvatar) height = 1.6 * cfg.scaleH; else height = 1.6 * (mesh.userData.scaleH || 1.0);
+                    pos.y += height; const tempV = pos.clone(); tempV.project(camera);
+                    if (tempV.z > 1) { el.style.display = 'none'; return; }
                     el.style.display = 'block';
-
-                    const x = (tempV.x * .5 + .5) * window.innerWidth;
-                    const y = (tempV.y * -.5 + .5) * window.innerHeight;
-                    el.style.left = `${x}px`;
-                    el.style.top = `${y}px`;
+                    const x = (tempV.x * .5 + .5) * window.innerWidth; const y = (tempV.y * -.5 + .5) * window.innerHeight;
+                    el.style.left = `${x}px`; el.style.top = `${y}px`;
                 }
             };
-            updateBubble(localAvatar);
-            Object.values(otherPlayers).forEach(updateBubble);
+            updateBubble(localAvatar); Object.values(otherPlayers).forEach(updateBubble);
         }
 
         // --- モーダル制御 ---
         function openTransferModal() { document.getElementById('transfer-modal').style.display = 'flex'; }
         function closeTransferModal() { document.getElementById('transfer-modal').style.display = 'none'; }
         function executeTransfer() {
-            const targetUsername = document.getElementById('transfer-target').value.trim();
-            const amount = document.getElementById('transfer-amount').value.trim();
+            const targetUsername = document.getElementById('transfer-target').value.trim(); const amount = document.getElementById('transfer-amount').value.trim();
             if (!targetUsername || !amount) return showToast('error', 'UserIDと金額を入力してください');
             socket.emit('sendMoney', { targetUsername, amount });
-            document.getElementById('transfer-target').value = '';
-            document.getElementById('transfer-amount').value = '';
-            closeTransferModal();
+            document.getElementById('transfer-target').value = ''; document.getElementById('transfer-amount').value = ''; closeTransferModal();
         }
 
         function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
         function updateSettings() {
-            const dist = parseInt(document.getElementById('setting-draw-dist').value);
-            document.getElementById('val-draw-dist').innerText = dist;
-            if (camera) {
-                camera.far = dist;
-                camera.updateProjectionMatrix();
-            }
-            if (scene && scene.fog) {
-                scene.fog.far = dist;
-            }
+            const dist = parseInt(document.getElementById('setting-draw-dist').value); document.getElementById('val-draw-dist').innerText = dist;
+            if (camera) { camera.far = dist; camera.updateProjectionMatrix(); } if (scene && scene.fog) { scene.fog.far = dist; }
         }
 
-        // ★ Admin機能
-        function openAdminDashboard() { 
-            document.getElementById('admin-dashboard-modal').style.display = 'flex'; 
-            fetchAdminLogs();
-        }
-        function updateAdminSpeed() {
-            adminSpeedMult = parseFloat(document.getElementById('admin-speed-slider').value);
-            document.getElementById('val-admin-speed').innerText = adminSpeedMult.toFixed(1);
-        }
-        function fetchAdminLogs() {
-            if (socket && isAdmin) socket.emit('adminCmd', { action: 'getLogs' });
-        }
+        function openAdminDashboard() { document.getElementById('admin-dashboard-modal').style.display = 'flex'; fetchAdminLogs(); }
+        function updateAdminSpeed() { adminSpeedMult = parseFloat(document.getElementById('admin-speed-slider').value); document.getElementById('val-admin-speed').innerText = adminSpeedMult.toFixed(1); }
+        function fetchAdminLogs() { if (socket && isAdmin) socket.emit('adminCmd', { action: 'getLogs' }); }
         function adminAction(actionType) {
-            const target = document.getElementById('admin-target-user').value.trim();
-            if (!target) return alert("対象ユーザーIDを入力してください。");
-            
-            let amount = 0;
-            if (actionType === 'setMoney') {
-                amount = document.getElementById('admin-target-cr').value;
-                if (!amount) return alert("金額を入力してください。");
-            }
-            if (confirm(`本当に ${target} に対して ${actionType} を実行しますか？`)) {
-                socket.emit('adminCmd', { action: actionType, target: target, amount: amount });
-                alert("コマンドを送信しました。");
-            }
-        }
-
-        function buildFallbackMap() {
-            const matFloor = new THREE.MeshStandardMaterial({ color: 0x113355, roughness: 0.9 });
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), matFloor);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            mapGroup.add(floor);
-            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(-500, -10, -500), new THREE.Vector3(500, 0, 500)));
-            
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff });
-            const box = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), boxMat);
-            box.position.set(10, 2.5, -10); box.castShadow = true;
-            mapGroup.add(box);
-            collisionBoxes.push(new THREE.Box3().setFromObject(box));
+            const target = document.getElementById('admin-target-user').value.trim(); if (!target) return alert("対象ユーザーIDを入力してください。");
+            let amount = 0; if (actionType === 'setMoney') { amount = document.getElementById('admin-target-cr').value; if (!amount) return alert("金額を入力してください。"); }
+            if (confirm(`本当に ${target} に対して ${actionType} を実行しますか？`)) { socket.emit('adminCmd', { action: actionType, target: target, amount: amount }); alert("コマンドを送信しました。"); }
         }
 
         function setupInputHandlers() {
             const chatInput = document.getElementById('chat-input');
-            if (chatInput) {
-                chatInput.addEventListener('focus', () => isTyping = true);
-                chatInput.addEventListener('blur', () => isTyping = false);
-            }
+            if (chatInput) { chatInput.addEventListener('focus', () => isTyping = true); chatInput.addEventListener('blur', () => isTyping = false); }
 
             window.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    if (!isTyping && isLocked) {
-                        document.exitPointerLock();
-                        if (chatInput) chatInput.focus();
-                    }
-                    return;
-                }
-                if (isTyping) return;
-                keysPressed[e.key.toLowerCase()] = true;
+                if (e.key === 'Enter') { if (!isTyping && isLocked) { document.exitPointerLock(); if (chatInput) chatInput.focus(); } return; }
+                if (isTyping) return; keysPressed[e.key.toLowerCase()] = true;
             });
-            window.addEventListener('keyup', (e) => {
-                if (isTyping) return;
-                keysPressed[e.key.toLowerCase()] = false;
-            });
+            window.addEventListener('keyup', (e) => { if (isTyping) return; keysPressed[e.key.toLowerCase()] = false; });
             
             document.addEventListener('mousemove', (e) => {
                 if (!isLocked) return;
-                const sensitivity = 0.002;
-                cameraYaw -= e.movementX * sensitivity;
-                cameraPitch -= e.movementY * sensitivity;
+                const sensitivity = 0.002; cameraYaw -= e.movementX * sensitivity; cameraPitch -= e.movementY * sensitivity;
                 cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch));
             });
             
-            document.addEventListener('pointerlockchange', () => {
-                isLocked = (document.pointerLockElement === document.body);
-            });
+            document.addEventListener('pointerlockchange', () => { isLocked = (document.pointerLockElement === document.body); });
             
             document.getElementById('canvas-container').addEventListener('mousedown', () => {
-                if (!isLocked && userAvatarConfig && userAvatarConfig.controlMode === 'keyboard' && !isTyping) {
-                    lockMouse();
-                }
+                if (!isLocked && userAvatarConfig && userAvatarConfig.controlMode === 'keyboard' && !isTyping) lockMouse();
             });
         }
 
         window.lockMouse = function() {
             if (userAvatarConfig && userAvatarConfig.controlMode === 'keyboard') {
-                document.body.requestPointerLock();
-                document.getElementById('start-overlay').style.display = 'none';
+                document.body.requestPointerLock(); document.getElementById('start-overlay').style.display = 'none';
             }
         }
 
         function setupPadHandlers() {
-            const stickZone = document.getElementById('joystick-zone');
-            const stickKnob = document.getElementById('joystick-knob');
-            const camZone = document.getElementById('camera-zone');
+            const stickZone = document.getElementById('joystick-zone'); const stickKnob = document.getElementById('joystick-knob'); const camZone = document.getElementById('camera-zone');
+            const maxRadius = 45; let stickTouchId = null; let stickBase = { x: 0, y: 0 };
             
-            const maxRadius = 45; 
-            let stickTouchId = null;
-            let stickBase = { x: 0, y: 0 };
+            const startStick = (clientX, clientY, identifier) => { stickTouchId = identifier; const rect = stickZone.getBoundingClientRect(); stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; updateStick(clientX, clientY); };
+            stickZone.addEventListener('touchstart', (e) => { e.preventDefault(); startStick(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.changedTouches[0].identifier); });
+            stickZone.addEventListener('mousedown', (e) => { e.preventDefault(); startStick(e.clientX, e.clientY, 'mouse'); });
             
-            const startStick = (clientX, clientY, identifier) => {
-                stickTouchId = identifier;
-                const rect = stickZone.getBoundingClientRect();
-                stickBase = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                updateStick(clientX, clientY);
-            };
-
-            stickZone.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                startStick(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.changedTouches[0].identifier);
-            });
-            stickZone.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                startStick(e.clientX, e.clientY, 'mouse');
-            });
+            const moveStick = (clientX, clientY, identifier) => { if (identifier === stickTouchId) updateStick(clientX, clientY); };
+            stickZone.addEventListener('touchmove', (e) => { e.preventDefault(); for (let i=0; i<e.changedTouches.length; i++) moveStick(e.changedTouches[i].clientX, e.changedTouches[i].clientY, e.changedTouches[i].identifier); });
+            document.addEventListener('mousemove', (e) => { if (stickTouchId === 'mouse') moveStick(e.clientX, e.clientY, 'mouse'); });
             
-            const moveStick = (clientX, clientY, identifier) => {
-                if (identifier === stickTouchId) updateStick(clientX, clientY);
-            };
-
-            stickZone.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                for (let i=0; i<e.changedTouches.length; i++) moveStick(e.changedTouches[i].clientX, e.changedTouches[i].clientY, e.changedTouches[i].identifier);
-            });
-            document.addEventListener('mousemove', (e) => {
-                if (stickTouchId === 'mouse') moveStick(e.clientX, e.clientY, 'mouse');
-            });
-            
-            const endStick = (identifier) => {
-                if (identifier === stickTouchId || identifier === 'mouse') {
-                    stickTouchId = null;
-                    padMoveDir.set(0, 0);
-                    padSpeedRatio = 0;
-                    stickKnob.style.transform = `translate(0px, 0px)`;
-                }
-            };
-            
-            stickZone.addEventListener('touchend', (e) => {
-                for (let i=0; i<e.changedTouches.length; i++) endStick(e.changedTouches[i].identifier);
-            });
-            stickZone.addEventListener('touchcancel', (e) => {
-                for (let i=0; i<e.changedTouches.length; i++) endStick(e.changedTouches[i].identifier);
-            });
+            const endStick = (identifier) => { if (identifier === stickTouchId || identifier === 'mouse') { stickTouchId = null; padMoveDir.set(0, 0); padSpeedRatio = 0; stickKnob.style.transform = `translate(0px, 0px)`; } };
+            stickZone.addEventListener('touchend', (e) => { for (let i=0; i<e.changedTouches.length; i++) endStick(e.changedTouches[i].identifier); });
+            stickZone.addEventListener('touchcancel', (e) => { for (let i=0; i<e.changedTouches.length; i++) endStick(e.changedTouches[i].identifier); });
             document.addEventListener('mouseup', () => endStick('mouse'));
             
             function updateStick(clientX, clientY) {
-                let dx = clientX - stickBase.x;
-                let dy = clientY - stickBase.y;
-                let distance = Math.hypot(dx, dy);
-                
-                if (distance > maxRadius) {
-                    dx = (dx / distance) * maxRadius;
-                    dy = (dy / distance) * maxRadius;
-                    distance = maxRadius;
-                }
-                
-                stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-                padMoveDir.set(dx / maxRadius, -dy / maxRadius); 
-                padSpeedRatio = distance / maxRadius;
+                let dx = clientX - stickBase.x; let dy = clientY - stickBase.y; let distance = Math.hypot(dx, dy);
+                if (distance > maxRadius) { dx = (dx / distance) * maxRadius; dy = (dy / distance) * maxRadius; distance = maxRadius; }
+                stickKnob.style.transform = `translate(${dx}px, ${dy}px)`; padMoveDir.set(dx / maxRadius, -dy / maxRadius); padSpeedRatio = distance / maxRadius;
             }
 
-            let camTouchId = null;
-            let lastCamPos = { x: 0, y: 0 };
-            
-            const startCam = (clientX, clientY, identifier) => {
-                camTouchId = identifier;
-                lastCamPos = { x: clientX, y: clientY };
-            };
-
-            camZone.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                startCam(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.changedTouches[0].identifier);
-            });
-            camZone.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                startCam(e.clientX, e.clientY, 'mouse');
-            });
+            let camTouchId = null; let lastCamPos = { x: 0, y: 0 };
+            const startCam = (clientX, clientY, identifier) => { camTouchId = identifier; lastCamPos = { x: clientX, y: clientY }; };
+            camZone.addEventListener('touchstart', (e) => { e.preventDefault(); startCam(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.changedTouches[0].identifier); });
+            camZone.addEventListener('mousedown', (e) => { e.preventDefault(); startCam(e.clientX, e.clientY, 'mouse'); });
             
             const moveCam = (clientX, clientY, identifier) => {
                 if (identifier === camTouchId) {
-                    const dx = clientX - lastCamPos.x;
-                    const dy = clientY - lastCamPos.y;
-                    const sensitivity = 0.005;
-                    cameraYaw -= dx * sensitivity;
-                    cameraPitch -= dy * sensitivity;
-                    cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch));
-                    lastCamPos = { x: clientX, y: clientY };
+                    const dx = clientX - lastCamPos.x; const dy = clientY - lastCamPos.y; const sensitivity = 0.005;
+                    cameraYaw -= dx * sensitivity; cameraPitch -= dy * sensitivity; cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch)); lastCamPos = { x: clientX, y: clientY };
                 }
             };
-
-            camZone.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                for (let i=0; i<e.changedTouches.length; i++) moveCam(e.changedTouches[i].clientX, e.changedTouches[i].clientY, e.changedTouches[i].identifier);
-            });
-            document.addEventListener('mousemove', (e) => {
-                if (camTouchId === 'mouse') moveCam(e.clientX, e.clientY, 'mouse');
-            });
+            camZone.addEventListener('touchmove', (e) => { e.preventDefault(); for (let i=0; i<e.changedTouches.length; i++) moveCam(e.changedTouches[i].clientX, e.changedTouches[i].clientY, e.changedTouches[i].identifier); });
+            document.addEventListener('mousemove', (e) => { if (camTouchId === 'mouse') moveCam(e.clientX, e.clientY, 'mouse'); });
             
-            const endCam = (identifier) => {
-                if (identifier === camTouchId || identifier === 'mouse') camTouchId = null;
-            };
-
-            camZone.addEventListener('touchend', (e) => {
-                for (let i=0; i<e.changedTouches.length; i++) endCam(e.changedTouches[i].identifier);
-            });
-            camZone.addEventListener('touchcancel', (e) => {
-                for (let i=0; i<e.changedTouches.length; i++) endCam(e.changedTouches[i].identifier);
-            });
+            const endCam = (identifier) => { if (identifier === camTouchId || identifier === 'mouse') camTouchId = null; };
+            camZone.addEventListener('touchend', (e) => { for (let i=0; i<e.changedTouches.length; i++) endCam(e.changedTouches[i].identifier); });
+            camZone.addEventListener('touchcancel', (e) => { for (let i=0; i<e.changedTouches.length; i++) endCam(e.changedTouches[i].identifier); });
             document.addEventListener('mouseup', () => endCam('mouse'));
             
             const btnJump = document.getElementById('v-btn-jump');
-            btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); isPadJumping = true; });
-            btnJump.addEventListener('touchend', (e) => { e.preventDefault(); isPadJumping = false; });
-            btnJump.addEventListener('mousedown', (e) => { e.preventDefault(); isPadJumping = true; });
-            btnJump.addEventListener('mouseup', (e) => { e.preventDefault(); isPadJumping = false; });
-
+            btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); isPadJumping = true; }); btnJump.addEventListener('touchend', (e) => { e.preventDefault(); isPadJumping = false; });
+            btnJump.addEventListener('mousedown', (e) => { e.preventDefault(); isPadJumping = true; }); btnJump.addEventListener('mouseup', (e) => { e.preventDefault(); isPadJumping = false; });
             const btnCam = document.getElementById('v-btn-cam');
-            btnCam.addEventListener('touchstart', (e) => { e.preventDefault(); isFPS = !isFPS; });
-            btnCam.addEventListener('mousedown', (e) => { e.preventDefault(); isFPS = !isFPS; });
+            btnCam.addEventListener('touchstart', (e) => { e.preventDefault(); isFPS = !isFPS; }); btnCam.addEventListener('mousedown', (e) => { e.preventDefault(); isFPS = !isFPS; });
         }
 
-        function deltaAngle(a, b) {
-            let diff = a - b;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            return diff;
-        }
-
-        function lerpAngle(start, end, t) {
-            return start + deltaAngle(end, start) * t;
-        }
+        function deltaAngle(a, b) { let diff = a - b; while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2; return diff; }
+        function lerpAngle(start, end, t) { return start + deltaAngle(end, start) * t; }
 
         function updateAvatarAnim(avatar, isMoving, grounded, delta, targetRot, camYaw, camPitch) {
             if (!avatar || !avatar.userData.head) return;
             const ud = avatar.userData;
             const time = clock.getElapsedTime();
             
-            if (grounded) {
-                ud.base.position.y = Math.sin(time * 2) * 0.05;
-            } else {
-                ud.base.position.y = 0;
-            }
+            if (grounded) ud.base.position.y = Math.sin(time * 2) * 0.05;
+            else ud.base.position.y = 0;
 
             if (!grounded) {
-                ud.walkTime = 0;
-                ud.tilt.rotation.x = 0.2; 
-                ud.armL.rotation.x = -Math.PI / 3; 
-                ud.armR.rotation.x = -Math.PI / 3;
-                
+                ud.walkTime = 0; ud.tilt.rotation.x = 0.2; 
+                ud.armL.rotation.x = -Math.PI / 3; ud.armR.rotation.x = -Math.PI / 3;
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
                 ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else if (isMoving) {
-                ud.walkTime += delta * 15; 
-                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
-                ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.4 - 0.1;
-                ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.4 - 0.1;
-                
+                ud.walkTime += delta * 15; ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0.25, 0.1);
+                ud.armL.rotation.x = Math.sin(ud.walkTime) * 0.4 - 0.1; ud.armR.rotation.x = -Math.sin(ud.walkTime) * 0.4 - 0.1;
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
                 ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else {
-                ud.walkTime = 0; 
-                ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
-                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
-                ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-
-                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y);
-                const limit = Math.PI / 3;
-                if (yawDiff > limit) {
-                    avatar.rotation.y += (yawDiff - limit) * 0.1;
-                    ud.head.rotation.y = limit;
-                } else if (yawDiff < -limit) {
-                    avatar.rotation.y += (yawDiff + limit) * 0.1;
-                    ud.head.rotation.y = -limit;
-                } else {
-                    ud.head.rotation.y = yawDiff;
-                }
+                ud.walkTime = 0; ud.tilt.rotation.x = THREE.MathUtils.lerp(ud.tilt.rotation.x, 0, 0.1);
+                ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1); ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
+                let yawDiff = deltaAngle(camYaw + Math.PI, avatar.rotation.y); const limit = Math.PI / 3;
+                if (yawDiff > limit) { avatar.rotation.y += (yawDiff - limit) * 0.1; ud.head.rotation.y = limit; } 
+                else if (yawDiff < -limit) { avatar.rotation.y += (yawDiff + limit) * 0.1; ud.head.rotation.y = -limit; } 
+                else { ud.head.rotation.y = yawDiff; }
             }
-            ud.head.rotation.x = camPitch; // ★修正: 首の上下を逆転 (マイナスを外す)
+            // ★ 首の上下の反転修正
+            ud.head.rotation.x = -camPitch; 
         }
 
         function checkCollision(pos) {
             const cfg = userAvatarConfig || regData;
             if (isGodMode) return { collided: false, safeY: pos.y };
             
-            // ★修正: TYPE-B (Heavy)の干渉を減らすため、当たり判定(pRadius)を少しスリムに調整
             let radiusMult = 0.3;
             if(cfg.avatarType === 'B') radiusMult = 0.25; 
             
@@ -1568,13 +1214,8 @@
             if (!isLocked && !isTyping) { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
 
-            frames++;
-            const now = performance.now();
-            if (now - lastFpsTime >= 1000) {
-                document.getElementById('val-fps').innerText = frames;
-                frames = 0;
-                lastFpsTime = now;
-            }
+            frames++; const now = performance.now();
+            if (now - lastFpsTime >= 1000) { document.getElementById('val-fps').innerText = frames; frames = 0; lastFpsTime = now; }
 
             const cfg = userAvatarConfig || regData;
 
@@ -1609,8 +1250,7 @@
 
             let moved = false;
             if (mv.lengthSq() > 0) {
-                mv.normalize().multiplyScalar(moveSpeed * delta);
-                moved = true;
+                mv.normalize().multiplyScalar(moveSpeed * delta); moved = true;
                 targetAvatarRotation = Math.atan2(mv.x, mv.z);
             }
 
@@ -1623,100 +1263,62 @@
                 if (keysPressed['e']) playerLocalPos.y += 10 * delta * adminSpeedMult;
                 if (keysPressed['q']) playerLocalPos.y -= 10 * delta * adminSpeedMult;
             } else {
-                if (isGrounded && wantsToJump) {
-                    playerVelocity.y = jumpForce; isGrounded = false;
-                }
-                playerVelocity.y += gravity * delta;
-                playerLocalPos.y += playerVelocity.y * delta;
+                if (isGrounded && wantsToJump) { playerVelocity.y = jumpForce; isGrounded = false; }
+                playerVelocity.y += gravity * delta; playerLocalPos.y += playerVelocity.y * delta;
                 const col = checkCollision(playerLocalPos);
-                if (playerLocalPos.y <= col.safeY) {
-                    playerLocalPos.y = col.safeY; playerVelocity.y = 0; isGrounded = true;
-                } else {
-                    isGrounded = false;
-                }
+                if (playerLocalPos.y <= col.safeY) { playerLocalPos.y = col.safeY; playerVelocity.y = 0; isGrounded = true; } 
+                else { isGrounded = false; }
                 if (playerLocalPos.y < -50) playerLocalPos.set(0, 20, 0);
             }
 
             warpPadsData.forEach(wp => {
                 const dist = Math.hypot(playerLocalPos.x - wp.x, playerLocalPos.z - wp.z);
                 if (dist < 2.0 && Math.abs(playerLocalPos.y - wp.y) < 3.0) {
-                    playerLocalPos.set(wp.targetX, wp.targetY, wp.targetZ);
-                    cameraYaw = 0; 
-                    showToast('info', wp.label + ' しました');
+                    playerLocalPos.set(wp.targetX, wp.targetY, wp.targetZ); cameraYaw = 0; showToast('info', wp.label + ' しました');
                 }
             });
 
             let nearGame = null;
             gameTerminalsData.forEach(gt => {
                 const dist = Math.hypot(playerLocalPos.x - gt.x, playerLocalPos.z - gt.z);
-                if (dist < (gt.triggerDistance || 5.0) && Math.abs(playerLocalPos.y - gt.y) < 5.0) {
-                    nearGame = gt;
-                }
+                if (dist < (gt.triggerDistance || 5.0) && Math.abs(playerLocalPos.y - gt.y) < 5.0) { nearGame = gt; }
             });
 
             const interactBtn = document.getElementById('interact-btn');
             if (nearGame) {
                 if (!interactBtn) {
-                    const btn = document.createElement('button');
-                    btn.id = 'interact-btn';
-                    btn.className = 'start-btn';
-                    btn.style.position = 'absolute';
-                    btn.style.bottom = '120px';
-                    btn.style.left = '50%';
-                    btn.style.transform = 'translateX(-50%)';
-                    btn.style.zIndex = '100';
+                    const btn = document.createElement('button'); btn.id = 'interact-btn'; btn.className = 'start-btn';
+                    btn.style.position = 'absolute'; btn.style.bottom = '120px'; btn.style.left = '50%'; btn.style.transform = 'translateX(-50%)'; btn.style.zIndex = '100';
                     btn.innerText = `🎮 ${nearGame.label}をプレイ (Fキー)`;
-                    btn.onclick = () => openGameIframe(nearGame.url);
-                    document.body.appendChild(btn);
+                    btn.onclick = () => openGameIframe(nearGame.url); document.body.appendChild(btn);
                 }
-                
-                if (keysPressed['f'] && !document.getElementById('iframe-modal')) {
-                    keysPressed['f'] = false; 
-                    openGameIframe(nearGame.url);
-                }
+                if (keysPressed['f'] && !document.getElementById('iframe-modal')) { keysPressed['f'] = false; openGameIframe(nearGame.url); }
             } else {
                 if (interactBtn) interactBtn.remove();
             }
 
             if (localAvatar) {
-                localAvatar.position.copy(playerLocalPos);
-                localAvatar.visible = !isFPS; 
+                localAvatar.position.copy(playerLocalPos); localAvatar.visible = !isFPS; 
                 updateAvatarAnim(localAvatar, moved && !isGodMode, isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
             }
 
             Object.values(otherPlayers).forEach(op => {
-                let isOpMoving = false;
-                if (op.userData.movingTimer > 0) {
-                    isOpMoving = true;
-                    op.userData.movingTimer -= delta;
-                }
+                let isOpMoving = false; if (op.userData.movingTimer > 0) { isOpMoving = true; op.userData.movingTimer -= delta; }
                 updateAvatarAnim(op, isOpMoving, op.userData.isGrounded, delta, op.userData.targetYaw || 0, op.userData.targetYaw || 0, op.userData.targetPitch || 0);
             });
 
             if ((moved || !isGrounded) && socket) {
-                socket.emit('playerMovement', { 
-                    x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, 
-                    rotation: localAvatar.rotation.y, pitch: cameraPitch,
-                    isGrounded: isGrounded
-                });
+                socket.emit('playerMovement', { x: playerLocalPos.x, y: playerLocalPos.y, z: playerLocalPos.z, rotation: localAvatar.rotation.y, pitch: cameraPitch, isGrounded: isGrounded });
             }
 
-            const headTarget = playerLocalPos.clone();
-            headTarget.y += 1.4 * cfg.scaleH; 
+            const headTarget = playerLocalPos.clone(); headTarget.y += 1.4 * cfg.scaleH; 
 
             if (isFPS) {
-                camera.position.copy(playerLocalPos);
-                camera.position.y += 1.5 * cfg.scaleH; 
-                const lookDir = new THREE.Vector3(
-                    -Math.sin(cameraYaw) * Math.cos(cameraPitch),
-                    Math.sin(cameraPitch),
-                    -Math.cos(cameraYaw) * Math.cos(cameraPitch)
-                );
+                camera.position.copy(playerLocalPos); camera.position.y += 1.5 * cfg.scaleH; 
+                const lookDir = new THREE.Vector3( -Math.sin(cameraYaw) * Math.cos(cameraPitch), Math.sin(cameraPitch), -Math.cos(cameraYaw) * Math.cos(cameraPitch) );
                 camera.lookAt(camera.position.clone().add(lookDir));
             } else {
-                const distance = 4.0;
-                const hDist = Math.cos(cameraPitch) * distance;
-                const vDist = Math.sin(cameraPitch) * distance;
+                const distance = 4.0; const hDist = Math.cos(cameraPitch) * distance; const vDist = Math.sin(cameraPitch) * distance;
                 const offset = new THREE.Vector3(Math.sin(cameraYaw) * hDist, -vDist, Math.cos(cameraYaw) * hDist);
                 camera.position.copy(headTarget).add(offset);
                 
@@ -1724,21 +1326,15 @@
                     const pushBack = cameraPitch * 3.0; 
                     const fwdVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     camera.position.addScaledVector(fwdVec, -pushBack);
-                    
                     const minHeight = playerLocalPos.y + 0.3 + (cameraPitch * 1.5);
-                    if (camera.position.y < minHeight) {
-                        camera.position.y = minHeight;
-                    }
+                    if (camera.position.y < minHeight) { camera.position.y = minHeight; }
                 }
-
                 if (camera.position.y < playerLocalPos.y + 0.1) camera.position.y = playerLocalPos.y + 0.1;
                 camera.lookAt(headTarget);
             }
 
-            updateBubbles();
-            renderer.render(scene, camera);
+            updateBubbles(); renderer.render(scene, camera);
         }
     </script>
 </body>
 </html>
-}
