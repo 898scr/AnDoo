@@ -1502,8 +1502,8 @@
                     ud.head.rotation.y = yawDiff;
                 }
             }
-            // ★修正: 首の上下が逆転していたのを修正 (マイナスを外す)
-            ud.head.rotation.x = camPitch; 
+            // ★修正: 首の上下の向きを正しく修正 (マイナスを付与)
+            ud.head.rotation.x = -camPitch; 
         }
 
         function checkCollision(pos) {
