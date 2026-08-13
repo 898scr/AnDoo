@@ -1190,6 +1190,14 @@
             });
         }
 
+        // ★欠落していたマウスロック＆画面切り替え関数を追加
+        window.lockMouse = function() {
+            if (userAvatarConfig && userAvatarConfig.controlMode === 'keyboard') {
+                document.body.requestPointerLock();
+                document.getElementById('start-overlay').style.display = 'none';
+            }
+        }
+
         function setupPadHandlers() {
             const stickZone = document.getElementById('joystick-zone');
             const stickKnob = document.getElementById('joystick-knob');
