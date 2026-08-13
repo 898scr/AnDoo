@@ -81,7 +81,7 @@
 
         #start-overlay {
             display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.5); z-index: 80;
+            background: rgba(0,0,0,0.5); z-index: 8; /* UIの後ろに隠れるように */
             justify-content: center; align-items: center; backdrop-filter: blur(2px);
         }
         .start-btn { padding: 15px 30px; font-size: 1.2rem; background: #00ffff; color: #000; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,255,0.5); transition: 0.2s;}
@@ -95,9 +95,6 @@
         
         .ui-text { margin: 5px 0; font-size: 0.9rem; color: #cbd5e1; }
         .ui-value { font-weight: bold; color: #fff; font-size: 1.1rem; }
-        
-        #admin-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #475569; }
-        .admin-title { color: #facc15; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
 
         /* チャットUI */
         #chat-container {
@@ -117,7 +114,7 @@
         }
         #chat-form input:focus { border-color: #00f3ff; box-shadow: 0 0 5px rgba(0, 243, 255, 0.5); }
         .chat-msg { word-wrap: break-word; }
-        .chat-msg .name { font-weight: bold; color: #00f3ff; margin-right: 5px; }
+        .chat-msg .name { font-weight: bold; margin-right: 5px; }
 
         /* 設定・送金モーダル類 */
         .modal-bg {
@@ -156,7 +153,6 @@
         .chat-bubble::after {
             content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
             border-width: 6px 6px 0; border-style: solid;
-            border-color: rgba(15, 23, 42, 0.85) transparent transparent transparent;
         }
         .chat-bubble .author { font-weight: bold; margin-right: 5px; }
 
@@ -199,8 +195,9 @@
         }
         .v-btn:active { background: rgba(0, 243, 255, 0.4); border-color: #00f3ff; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- ★ 本番用のSocket.ioをインポート -->
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
@@ -288,9 +285,7 @@
             <h2>STEP 5: SHAPE</h2>
             <div id="setup-error" class="error-msg"></div>
             
-            <div class="setup-preview" id="setup-preview-box">
-                <!-- Three.jsプレビューキャンバス -->
-            </div>
+            <div class="setup-preview" id="setup-preview-box"></div>
 
             <div class="slider-group">
                 <label>身長 (Height): <span id="val-height" style="color:#00ffff;">1.0</span></label>
@@ -345,12 +340,8 @@
         <div class="ui-text">CR: <span id="ui-money" class="ui-value" style="color:#fbbf24;">0</span></div>
         <button class="btn-success" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openTransferModal()">💸 CRを送金</button>
         <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem; margin-top:8px;" onclick="openSettingsModal()">⚙️ 設定</button>
+        <button id="btn-admin-dash" class="btn-secondary" style="display:none; padding:6px 12px; font-size:0.8rem; margin-top:8px; border-color:#facc15; color:#facc15;" onclick="openAdminDashboard()">🛡️ Admin</button>
 
-        <div id="admin-panel">
-            <div class="admin-title">👑 ADMIN CONTROLS</div>
-            <div class="ui-text" style="font-size: 0.75rem;">[Z] Toggle Fly Mode</div>
-            <div class="ui-text" style="font-size: 0.75rem;">[Q]/[E] Down / Up</div>
-        </div>
         <div id="pc-help" style="margin-top:15px; font-size: 0.75rem; color: #94a3b8;">
             [W][A][S][D]: 移動<br>
             [Shift]: ダッシュ<br>
@@ -389,6 +380,49 @@
                 <input type="range" id="setting-draw-dist" min="500" max="5000" step="100" value="2000" oninput="updateSettings()">
             </div>
             <button class="btn-primary" onclick="closeSettingsModal()">閉じる</button>
+        </div>
+    </div>
+
+    <!-- ★ Adminダッシュボード モーダル -->
+    <div id="admin-dashboard-modal" class="modal-bg">
+        <div class="panel" style="width: 80%; max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
+            <h2 style="color: #facc15; margin-bottom: 5px;">🛡️ ADMIN DASHBOARD</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; justify-content: center;">
+                <button class="btn-secondary" style="width:auto; padding:8px 15px;" onclick="fetchAdminLogs()">🔄 ログを更新</button>
+            </div>
+            
+            <div style="display: flex; gap: 20px; flex-grow: 1; overflow: hidden; text-align: left;">
+                <!-- 左側：ログ表示 -->
+                <div style="flex: 2; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+                    <h3 style="font-size: 1rem; color: #38bdf8; margin: 0; border-bottom: 1px solid #334155; padding-bottom: 5px;">📜 サーバーログ</h3>
+                    <div id="admin-logs-content" style="font-size: 0.8rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-all;">(ログの取得待ち...)</div>
+                </div>
+                
+                <!-- 右側：操作パネル -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;">
+                    <!-- 速度変更 -->
+                    <div class="slider-group" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+                        <h3 style="font-size: 0.9rem; color: #facc15; margin: 0 0 10px 0;">⚡ 自身の移動速度</h3>
+                        <label>倍率: <span id="val-admin-speed" style="color:#fff;">1.0</span>x</label>
+                        <input type="range" id="admin-speed-slider" min="0.5" max="10.0" step="0.5" value="1.0" oninput="updateAdminSpeed()">
+                        <p style="font-size: 0.7rem; color:#94a3b8; margin: 5px 0 0 0;">※Zキーで飛行モード(Fly)切替。<br>※飛行中は Q(下降) E(上昇)。</p>
+                    </div>
+
+                    <!-- プレイヤー管理 -->
+                    <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+                        <h3 style="font-size: 0.9rem; color: #f43f5e; margin: 0 0 10px 0;">👥 プレイヤー管理</h3>
+                        <input type="text" id="admin-target-user" placeholder="対象ユーザーID" style="margin-bottom: 10px; width: 100%;">
+                        
+                        <button class="btn-danger" style="margin-bottom: 5px;" onclick="adminAction('ban')">🚫 BAN (強制切断)</button>
+                        <button class="btn-success" style="margin-bottom: 15px;" onclick="adminAction('unban')">✅ BAN解除</button>
+                        
+                        <input type="number" id="admin-target-cr" placeholder="設定する金額 (CR)" style="margin-bottom: 5px; width: 100%;">
+                        <button class="btn-primary" onclick="adminAction('setMoney')">💰 所持金を強制変更</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" style="margin-top: 15px;" onclick="document.getElementById('admin-dashboard-modal').style.display='none'">ダッシュボードを閉じる</button>
         </div>
     </div>
 
@@ -677,6 +711,9 @@
         let currentUser = null, isAdmin = false, socket = null;
         let userAvatarConfig = null;
 
+        // ★ Admin機能
+        let adminSpeedMult = 1.0;
+        
         async function attemptLogin() {
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
@@ -697,7 +734,7 @@
 
                     document.getElementById('ui-id').innerText = currentUser;
                     document.getElementById('ui-money').innerText = data.cr;
-                    if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+                    if(isAdmin) document.getElementById('btn-admin-dash').style.display = 'block';
                     
                     document.getElementById('auth-container').style.display = 'none';
                     initGame();
@@ -738,7 +775,7 @@
 
                     document.getElementById('ui-id').innerText = currentUser;
                     document.getElementById('ui-money').innerText = data.cr;
-                    if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+                    if(isAdmin) document.getElementById('btn-admin-dash').style.display = 'block';
 
                     document.getElementById('auth-container').style.display = 'none';
                     initGame();
@@ -833,7 +870,6 @@
                 document.getElementById('start-overlay').style.display = 'flex';
             }
             
-            // Ping計測タイマー
             setInterval(() => {
                 if (!socket || !socket.connected) return;
                 const start = Date.now();
@@ -906,6 +942,29 @@
             socket.on('notification', (msg) => {
                 showToast(msg.type, msg.text);
             });
+
+            // ★ Admin用
+            socket.on('banned', (target) => {
+                if (target === currentUser) {
+                    alert("管理者にアカウントを停止(BAN)されました。システムから切断されます。");
+                    window.location.reload();
+                }
+            });
+            socket.on('forceUpdateCR', (data) => {
+                if (data.user === currentUser) {
+                    document.getElementById('ui-money').innerText = data.cr;
+                    showToast("info", "管理者により所持金が変更されました。");
+                }
+            });
+            socket.on('adminLogs', (logs) => {
+                let content = "=== AUTH LOGS ===\n";
+                logs.auth.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.action} : ${l.user}\n`);
+                content += "\n=== CHAT LOGS ===\n";
+                logs.chat.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.user} : ${l.text}\n`);
+                content += "\n=== MOVEMENT LOGS (Recent positions) ===\n";
+                logs.move.forEach(l => content += `[${new Date(l.time).toLocaleTimeString()}] ${l.user} : x=${l.x.toFixed(1)}, y=${l.y.toFixed(1)}, z=${l.z.toFixed(1)}\n`);
+                document.getElementById('admin-logs-content').innerText = content;
+            });
         }
 
         function addOtherPlayer(info) {
@@ -968,14 +1027,25 @@
             const container = document.getElementById('bubble-container');
             const bubble = document.createElement('div');
             bubble.className = 'chat-bubble';
+            
+            const borderCol = colorVisor.replace('#', 'rgba(') ? `border-color: ${colorVisor} transparent transparent transparent;` : '';
+            
             const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             bubble.innerHTML = `<span class="author" style="color: ${colorVisor}">${username}</span>: <span>${safeText}</span>`;
+            
+            // 吹き出しの三角形部分の色も動的変更するためのインラインスタイル追加
+            const style = document.createElement('style');
+            const uniqueClass = 'bubble-' + Date.now();
+            bubble.classList.add(uniqueClass);
+            style.innerHTML = `.${uniqueClass}::after { border-color: rgba(15, 23, 42, 0.85) transparent transparent transparent; }`; // TODO: ボーダー色対応は複雑なので背景色合わせで留める
+            document.head.appendChild(style);
+
             container.appendChild(bubble);
 
             targetMesh.userData.bubbleEl = bubble;
             targetMesh.userData.bubbleTimer = setTimeout(() => {
                 bubble.style.opacity = '0';
-                setTimeout(() => bubble.remove(), 300);
+                setTimeout(() => { bubble.remove(); style.remove(); }, 300);
                 targetMesh.userData.bubbleEl = null;
             }, 6000);
         }
@@ -1035,6 +1105,33 @@
             }
             if (scene && scene.fog) {
                 scene.fog.far = dist;
+            }
+        }
+
+        // ★ Admin機能
+        function openAdminDashboard() { 
+            document.getElementById('admin-dashboard-modal').style.display = 'flex'; 
+            fetchAdminLogs();
+        }
+        function updateAdminSpeed() {
+            adminSpeedMult = parseFloat(document.getElementById('admin-speed-slider').value);
+            document.getElementById('val-admin-speed').innerText = adminSpeedMult.toFixed(1);
+        }
+        function fetchAdminLogs() {
+            if (socket && isAdmin) socket.emit('adminCmd', { action: 'getLogs' });
+        }
+        function adminAction(actionType) {
+            const target = document.getElementById('admin-target-user').value.trim();
+            if (!target) return alert("対象ユーザーIDを入力してください。");
+            
+            let amount = 0;
+            if (actionType === 'setMoney') {
+                amount = document.getElementById('admin-target-cr').value;
+                if (!amount) return alert("金額を入力してください。");
+            }
+            if (confirm(`本当に ${target} に対して ${actionType} を実行しますか？`)) {
+                socket.emit('adminCmd', { action: actionType, target: target, amount: amount });
+                alert("コマンドを送信しました。");
             }
         }
 
@@ -1252,6 +1349,7 @@
                 ud.armL.rotation.x = -Math.PI / 3; 
                 ud.armR.rotation.x = -Math.PI / 3;
                 
+                // 空中でも移動方向に向きを変える
                 avatar.rotation.y = lerpAngle(avatar.rotation.y, targetRot, 0.15);
                 ud.head.rotation.y = lerpAngle(ud.head.rotation.y, 0, 0.15);
             } else if (isMoving) {
@@ -1311,7 +1409,6 @@
             if (!isLocked && !isTyping) { renderer.render(scene, camera); return; }
             const delta = Math.min(clock.getDelta(), 0.1); 
 
-            // --- パフォーマンス計測 ---
             frames++;
             const now = performance.now();
             if (now - lastFpsTime >= 1000) {
@@ -1328,14 +1425,15 @@
             }
 
             const mv = new THREE.Vector3(0, 0, 0);
-            let moveSpeed = speedWalk;
+            let moveSpeed = speedWalk * adminSpeedMult; // ★ アドミン速度倍率を適用
             
             const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
             const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
             let wantsToJump = false;
 
             if (cfg.controlMode === 'keyboard' && !isTyping) {
-                moveSpeed = keysPressed['shift'] ? speedRun : speedWalk;
+                if(keysPressed['shift']) moveSpeed = speedRun * adminSpeedMult;
+                // ★ 移動と前を向く挙動の修正：素直にそのまま足し引きする
                 if (keysPressed['w']) mv.add(forward);
                 if (keysPressed['s']) mv.sub(forward); 
                 if (keysPressed['a']) mv.sub(right);   
@@ -1343,7 +1441,7 @@
                 if (keysPressed[' ']) wantsToJump = true;
             } else if (cfg.controlMode === 'pad') {
                 if (padSpeedRatio > 0) {
-                    moveSpeed = (padSpeedRatio > 0.8 ? speedRun : speedWalk);
+                    if(padSpeedRatio > 0.8) moveSpeed = speedRun * adminSpeedMult;
                     const fwComp = forward.clone().multiplyScalar(padMoveDir.y);
                     const riComp = right.clone().multiplyScalar(padMoveDir.x);
                     mv.add(fwComp).add(riComp);
@@ -1355,7 +1453,7 @@
             if (mv.lengthSq() > 0) {
                 mv.normalize().multiplyScalar(moveSpeed * delta);
                 moved = true;
-                // --- 修正: Wを押した際にカメラの奥方向(-Z)を正しく向く ---
+                // ★ 修正: 前後左右へ、カメラ基準で素直に走る
                 targetAvatarRotation = Math.atan2(mv.x, mv.z);
             }
 
@@ -1365,8 +1463,8 @@
             if (!checkCollision(testPos).collided) playerLocalPos.z += mv.z;
 
             if (isGodMode) {
-                if (keysPressed['e']) playerLocalPos.y += 10 * delta;
-                if (keysPressed['q']) playerLocalPos.y -= 10 * delta;
+                if (keysPressed['e']) playerLocalPos.y += 10 * delta * adminSpeedMult;
+                if (keysPressed['q']) playerLocalPos.y -= 10 * delta * adminSpeedMult;
             } else {
                 if (isGrounded && wantsToJump) {
                     playerVelocity.y = jumpForce; isGrounded = false;
@@ -1385,6 +1483,7 @@
             if (localAvatar) {
                 localAvatar.position.copy(playerLocalPos);
                 localAvatar.visible = !isFPS; 
+                // isMovingフラグは moved が true かどうか。!isGodMode などの判定と切り離して姿勢制御に送る
                 updateAvatarAnim(localAvatar, moved && !isGodMode, isGrounded, delta, targetAvatarRotation, cameraYaw, cameraPitch);
             }
 
