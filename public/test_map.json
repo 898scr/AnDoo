@@ -1,44 +1,39 @@
 {
-"name": "HAKUYARC Central Square",
-"baseY": 0,
-"environment": {
-"groundColor": "#050814",
-"fogDensity": 0.005
-},
-"floors": [
-{ "id": "floor1", "type": "rect", "x": 0, "z": 0, "width": 100, "depth": 100, "y": -0.5, "color": "#113355" },
-{ "id": "floor2", "type": "rect", "x": 150, "z": 150, "width": 40, "depth": 40, "y": 10, "color": "#225522", "desc": "ワープ先の高台" }
-],
-"walls": [
-{ "id": "w1", "type": "rect", "x": -20, "z": -20, "width": 10, "depth": 10, "minY": 0, "maxY": 30, "color": "#00f3ff", "desc": "青いビル" },
-{ "id": "w2", "type": "circle", "x": 30, "z": 30, "radius": 5, "minY": 0, "maxY": 50, "color": "#facc15", "desc": "黄色い塔" },
-{ "id": "w3", "type": "rect", "x": 150, "z": 130, "width": 40, "depth": 5, "minY": 0, "maxY": 15, "color": "#888888", "desc": "高台の壁" }
-],
-"warpPads": [
-{
-"id": "wp1",
-"x": -10, "y": 0, "z": 20,
-"targetX": 150, "targetY": 10, "targetZ": 150,
-"color": "#00ff00",
-"label": "高台へワープ"
-},
-{
-"id": "wp2",
-"x": 150, "y": 10.5, "z": 160,
-"targetX": 0, "targetY": 0, "targetZ": 0,
-"color": "#ff00ff",
-"label": "広場へ戻る"
-}
-],
-"gameTerminals": [
-{
-"id": "game_dice",
-"x": 15, "y": 0, "z": -15,
-"width": 3, "height": 4, "depth": 3,
-"color": "#ff0055",
-"label": "サイバーダイス",
-"url": "/games/dice.html",
-"triggerDistance": 5.0
-}
-]
+  "name": "HAKUYARC Central Square",
+  "baseY": 0,
+  "environment": {
+    "groundColor": "#050814",
+    "fogDensity": 0.005
+  },
+  "floors": [],
+  "walls": [
+    { "id": "w_test1", "type": "rect", "x": 150, "z": 130, "width": 40, "depth": 5, "minY": 0, "maxY": 15, "color": "#888888", "desc": "高台の壁" }
+  ],
+  "warpPads": [
+    {
+      "id": "wp1",
+      "x": -10, "y": 0, "z": 40,
+      "targetX": 150, "targetY": 10, "targetZ": 150,
+      "color": "#00ff00",
+      "label": "東の広場へワープ"
+    },
+    {
+      "id": "wp2",
+      "x": 150, "y": 10.5, "z": 160,
+      "targetX": 0, "targetY": 0, "targetZ": 0,
+      "color": "#ff00ff",
+      "label": "中央へ戻る"
+    }
+  ],
+  "gameTerminals": [
+    {
+      "id": "game_dice",
+      "x": 15, "y": 0, "z": -40,
+      "width": 3, "height": 4, "depth": 3,
+      "color": "#ff0055",
+      "label": "サイバーダイス",
+      "url": "/games/dice.html",
+      "triggerDistance": 5.0
+    }
+  ]
 }
