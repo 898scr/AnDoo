@@ -495,7 +495,6 @@
             setTimeout(initPreview, 100);
         }
 
-        // カラーピッカー生成 (バイザー)
         const visorColors = ['#00f3ff', '#ff0055', '#00ff66', '#facc15', '#a855f7', '#ffffff'];
         const visorContainer = document.getElementById('visor-color-picker');
         visorColors.forEach(color => {
@@ -507,7 +506,7 @@
                 document.querySelectorAll('#visor-color-picker .color-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
                 selectedVisorColor = color;
-                if(previewAvatar) { // プレビュー中なら即時反映
+                if(previewAvatar) {
                     previewScene.remove(previewAvatar);
                     previewAvatar = createAvatarMesh(selectedVisorColor, selectedBodyColor, regData.avatarType);
                     previewAvatar.position.set(0, -0.5, 0); 
@@ -518,7 +517,6 @@
             visorContainer.appendChild(btn);
         });
 
-        // カラーピッカー生成 (ボディ)
         const bodyColors = ['#a0aab5', '#333333', '#1e3a8a', '#7f1d1d', '#14532d', '#78350f', '#dddddd'];
         const bodyContainer = document.getElementById('body-color-picker');
         bodyColors.forEach(color => {
@@ -561,7 +559,6 @@
             const headGroup = new THREE.Group();
             const armLGroup = new THREE.Group();
             const armRGroup = new THREE.Group();
-            // 足パーツは不要のため生成しない
 
             if (type === 'typeB') {
                 headGroup.position.y = 1.9;
@@ -681,12 +678,10 @@
                 armRGroup.add(armR); group.add(armRGroup);
             }
 
-            // アニメーション更新用に参照を保持。足は null にしておく
-            group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, legL: null, legR: null, walkTime: 0, movingTimer: 0 };
+            group.userData = { head: headGroup, armL: armLGroup, armR: armRGroup, walkTime: 0, movingTimer: 0 };
             return group;
         };
 
-        // === プレビューレンダラー ===
         let previewScene, previewCamera, previewRenderer, previewAvatar, previewReqId;
         
         function initPreview() {
@@ -714,8 +709,6 @@
                     previewReqId = requestAnimationFrame(renderPreview);
                     if(previewAvatar) {
                         previewAvatar.rotation.y += 0.015; 
-                        
-                        // 待機時のフワフワ浮遊感 (プレビュー用)
                         const time = performance.now() * 0.002;
                         previewAvatar.position.y = -0.8 + Math.sin(time) * 0.05;
                     }
@@ -793,7 +786,6 @@
         let gameTerminals = [];
         let activeInteract = null;
 
-        // ★ 初期スポーン位置。タワー(40x40)の内側にスポーンしてハマるのを防ぐため、Zをずらす
         let playerLocalPos = new THREE.Vector3(0, 5, 40); 
         let playerVelocity = new THREE.Vector3(0, 0, 0);
         let cameraYaw = 0, cameraPitch = 0;
@@ -829,33 +821,6 @@
 
         function lockMouse() {
             if(!isLocked) document.body.requestPointerLock();
-        }
-
-        function buildHakuyarcCity() {
-            const matFloor = new THREE.MeshStandardMaterial({ color: 0x050814, roughness: 0.9 });
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), matFloor);
-            floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
-            mapGroup.add(floor);
-            
-            const gridHelper = new THREE.GridHelper(2000, 100, 0x00f3ff, 0x112233);
-            gridHelper.position.y = 0.01;
-            mapGroup.add(gridHelper);
-
-            // メインタワー
-            const towerMat = new THREE.MeshStandardMaterial({ color: 0x1a202c, metalness: 0.8 });
-            const tower = new THREE.Mesh(new THREE.BoxGeometry(40, 300, 40), towerMat);
-            tower.position.set(0, 150, 0);
-            tower.castShadow = true; tower.receiveShadow = true;
-            mapGroup.add(tower);
-            collisionBoxes.push(new THREE.Box3().setFromObject(tower));
-
-            // ネオンリング
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 });
-            const ring = new THREE.Mesh(new THREE.TorusGeometry(35, 1, 16, 4), ringMat);
-            ring.rotation.x = Math.PI / 2;
-            ring.rotation.z = Math.PI / 4;
-            ring.position.set(0, 100, 0);
-            mapGroup.add(ring);
         }
 
         function buildCustomMap(mapData) {
@@ -939,8 +904,14 @@
             mapGroup = new THREE.Group();
             scene.add(mapGroup);
 
-            // フォールバック景観を生成
-            buildHakuyarcCity();
+            // フォールバック景観
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0x050814, roughness: 0.9 });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), matFloor);
+            floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+            mapGroup.add(floor);
+            const gridHelper = new THREE.GridHelper(2000, 100, 0x00f3ff, 0x112233);
+            gridHelper.position.y = 0.01;
+            mapGroup.add(gridHelper);
 
             localAvatar = createAvatarMesh(myAvatarData.visor, myAvatarData.body, myAvatarData.type);
             localAvatar.scale.set(myAvatarData.scaleW, myAvatarData.scaleH, myAvatarData.scaleW);
@@ -1111,42 +1082,32 @@
                 const swing = Math.sin(ud.walkTime);
                 ud.armL.rotation.x = swing * 0.8;
                 ud.armR.rotation.x = -swing * 0.8;
-                if(ud.legL) ud.legL.rotation.x = -swing * 0.8;
-                if(ud.legR) ud.legR.rotation.x = swing * 0.8;
                 
                 // 走る時は体を少し前傾
                 avatar.rotation.x = THREE.MathUtils.lerp(avatar.rotation.x, 0.1, 0.1);
             } else {
-                ud.walkTime += delta * 3; // 停止時のフワフワ感(浮遊感を強調)
+                ud.walkTime += delta * 3; // 停止時のフワフワ感
                 const floatY = Math.sin(ud.walkTime) * 0.1;
-                // 全体的に浮遊させる
                 avatar.position.y += floatY * delta;
                 
                 ud.armL.rotation.x = THREE.MathUtils.lerp(ud.armL.rotation.x, 0, 0.1);
                 ud.armR.rotation.x = THREE.MathUtils.lerp(ud.armR.rotation.x, 0, 0.1);
-                if(ud.legL) ud.legL.rotation.x = THREE.MathUtils.lerp(ud.legL.rotation.x, 0, 0.1);
-                if(ud.legR) ud.legR.rotation.x = THREE.MathUtils.lerp(ud.legR.rotation.x, 0, 0.1);
                 avatar.rotation.x = THREE.MathUtils.lerp(avatar.rotation.x, 0, 0.1);
             }
             
-            // 空中（ジャンプ・落下中）のポーズ
             if (!isGrd) {
                 ud.armL.rotation.x = -0.5; ud.armR.rotation.x = -0.5;
                 ud.armL.rotation.z = 0.5;  ud.armR.rotation.z = -0.5;
-                if(ud.legL) ud.legL.rotation.x = 0.2;  
-                if(ud.legR) ud.legR.rotation.x = -0.2;
                 avatar.rotation.x = 0.2;
             } else if (!isMoving) {
                 ud.armL.rotation.z = 0; ud.armR.rotation.z = 0;
             }
             
-            // 体の向きを滑らかに補間
             let diff = targetYaw - avatar.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
             avatar.rotation.y += diff * 0.15; 
 
-            // 顔をカメラの方向（正面）に向ける
             let yawDiff = cameraYaw - avatar.rotation.y;
             yawDiff += Math.PI; 
             while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
@@ -1159,7 +1120,6 @@
             ud.head.rotation.x = clampedPitch;
         }
 
-        // ★ 壁際での引っかかりを軽減するため、アバターの衝突判定ボックスを少しスリムに調整
         function checkCollision(newPos) {
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 new THREE.Vector3(newPos.x, newPos.y + 0.9, newPos.z), 
@@ -1280,10 +1240,8 @@
                     popup.style.display = 'none';
                 }
 
-                // localAvatar.position.copy(playerLocalPos); の代わりに、XとZだけ同期し、Yはアニメーションで少し揺らす
                 localAvatar.position.x = playerLocalPos.x;
                 localAvatar.position.z = playerLocalPos.z;
-                // 接地している時は浮遊感を出すために少し高めに設定
                 localAvatar.position.y = isGrounded ? playerLocalPos.y + 0.3 : playerLocalPos.y;
 
                 updateAvatarAnim(localAvatar, moved, isGrounded, delta, targetAvatarRotation, cameraPitch);
@@ -1353,7 +1311,6 @@
             renderer.render(scene, camera);
         }
 
-        // --- 各種UI機能 ---
         function sendChat() {
             const el = document.getElementById('chat-input');
             if (el.value.trim() !== '') {
